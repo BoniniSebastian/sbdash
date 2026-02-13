@@ -711,7 +711,7 @@ body{
 /* =========================
    iPad / touch: ULTRA compact
    ========================= */
-@media (max-width: 1100px) and (pointer: coarse){
+@media (max-width: 1100px){
 
   :root{
     --radius: 14px;

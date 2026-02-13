@@ -28,13 +28,14 @@ let currentIndex = 0;
 const track = document.getElementById("viewTrack");
 const nav = document.getElementById("underNav");
 const dialIcon = document.querySelector(".dialIcon");
+const KNOB_RING = "assets/ui/knob-ring.svg";
 
 const ICONS = {
-  weather: "assets/icons/icon-weather.svg",
-  news: "assets/icons/icon-news.svg",
-  todo: "assets/icons/icon-todo.svg",
-  ideas: "assets/icons/icon-ideas.svg",
-  done: "assets/icons/icon-done.svg",
+  weather: "assets/ui/icon-weather.svg",
+  news: "assets/ui/icon-news.svg",
+  todo: "assets/ui/icon-todo.svg",
+  ideas: "assets/ui/icon-ideas.svg",
+  done: "assets/ui/icon-done.svg"
 };
 
 function setViewByIndex(idx) {

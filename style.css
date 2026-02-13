@@ -1,0 +1,710 @@
+:root{
+
+  --bg:#070a0f;
+
+  --text:#e9f0ff;
+
+  --muted:#aab6d1;
+
+  --line:rgba(255,255,255,.10);
+
+  --glow:rgba(0,209,255,.22);
+
+  --radius:22px;
+
+  --shadow: 0 18px 40px rgba(0,0,0,.45);
+
+}
+
+*{box-sizing:border-box}
+
+html,body{height:100%}
+
+body{
+
+  margin:0;
+
+  min-height:100vh;
+
+  display:flex;
+
+  flex-direction:column;
+
+  background:
+
+    radial-gradient(1200px 600px at 35% 0%, rgba(0,209,255,.10), transparent 60%),
+
+    radial-gradient(900px 500px at 80% 20%, rgba(0,209,255,.06), transparent 55%),
+
+    var(--bg);
+
+  color:var(--text);
+
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+
+}
+
+/* Topbar */
+
+.topbar{
+
+  position:sticky;
+
+  top:0;
+
+  z-index:20;
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:space-between;
+
+  gap:14px;
+
+  padding:14px 18px;
+
+  border-bottom:1px solid var(--line);
+
+  background: rgba(7,10,15,.78);
+
+  backdrop-filter: blur(10px);
+
+}
+
+.brand{display:flex; align-items:center; gap:12px}
+
+.brandDot{
+
+  width:14px; height:14px; border-radius:999px;
+
+  background: linear-gradient(135deg, rgba(0,209,255,.95), rgba(0,209,255,.40));
+
+  box-shadow: 0 0 18px rgba(0,209,255,.35);
+
+}
+
+.brandTitle{font-weight:900; letter-spacing:.2px}
+
+.brandSub{font-size:12px; color:var(--muted); margin-top:2px}
+
+.pill{
+
+  border:1px solid var(--line);
+
+  background: rgba(255,255,255,.03);
+
+  color:var(--muted);
+
+  padding:8px 10px;
+
+  border-radius:999px;
+
+  font-size:12px;
+
+}
+
+/* Shell fills remaining viewport height (fix: page not long) */
+
+.shell{
+
+  flex:1;
+
+  max-width: 1400px;
+
+  width:100%;
+
+  margin: 0 auto;
+
+  padding: 14px 14px 18px;
+
+  min-height: 0; /* important */
+
+}
+
+/* Layout: desktop/iPad-first */
+
+.layout{
+
+  height: 100%;
+
+  min-height: 0;
+
+  display:grid;
+
+  grid-template-columns: 320px 1fr 360px;
+
+  gap:14px;
+
+  align-items:stretch;
+
+}
+
+/* iPad portrait / mindre laptops */
+
+@media (max-width: 1180px){
+
+  .layout{
+
+    grid-template-columns: 320px 1fr;
+
+    grid-template-areas:
+
+      "cal main"
+
+      "cal right";
+
+  }
+
+  .calendarPanel{ grid-area: cal; }
+
+  .mainPanel{ grid-area: main; }
+
+  .rightCol{ grid-area: right; }
+
+  .navBtn{ padding:12px 14px; }
+
+  .dial{ width: 240px; height: 240px; }
+
+}
+
+/* Mobil */
+
+@media (max-width: 820px){
+
+  .layout{
+
+    grid-template-columns: 1fr;
+
+    grid-template-areas:
+
+      "cal"
+
+      "main"
+
+      "right";
+
+  }
+
+}
+
+/* Panels */
+
+.panel{
+
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+
+  border:1px solid var(--line);
+
+  border-radius: var(--radius);
+
+  box-shadow: var(--shadow);
+
+  position:relative;
+
+  overflow:hidden;
+
+  display:flex;
+
+  flex-direction:column;   /* key: body scrolls inside */
+
+  min-height: 0;          /* key */
+
+}
+
+/* Glow edge */
+
+.panel::before{
+
+  content:"";
+
+  position:absolute;
+
+  inset:-2px;
+
+  border-radius: calc(var(--radius) + 2px);
+
+  background: radial-gradient(600px 240px at 40% 0%, var(--glow), transparent 55%);
+
+  opacity:.75;
+
+  pointer-events:none;
+
+}
+
+.panelHead{
+
+  position:relative;
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:space-between;
+
+  gap:10px;
+
+  padding:14px 14px 10px;
+
+  border-bottom:1px solid rgba(255,255,255,.06);
+
+  flex: 0 0 auto;
+
+}
+
+.panelHead h2{
+
+  margin:0;
+
+  font-size:14px;
+
+  letter-spacing:.3px;
+
+}
+
+.tag{
+
+  font-size:12px;
+
+  color:var(--muted);
+
+  border:1px solid rgba(255,255,255,.10);
+
+  background: rgba(255,255,255,.03);
+
+  padding:6px 10px;
+
+  border-radius:999px;
+
+}
+
+.panelBody{
+
+  position:relative;
+
+  padding:14px;
+
+  flex: 1 1 auto;
+
+  min-height: 0;     /* key */
+
+  overflow:auto;     /* key */
+
+}
+
+/* Right column stacks two panels */
+
+.rightCol{
+
+  display:flex;
+
+  flex-direction:column;
+
+  gap:14px;
+
+  min-height:0;
+
+}
+
+/* Placeholder */
+
+.placeholder{
+
+  display:flex;
+
+  flex-direction:column;
+
+  align-items:flex-start;
+
+  justify-content:center;
+
+  gap:8px;
+
+  background:
+
+    radial-gradient(900px 300px at 20% 0%, rgba(0,209,255,.08), transparent 60%);
+
+}
+
+.placeholderTitle{
+
+  font-size:18px;
+
+  font-weight:900;
+
+}
+
+.placeholderText{
+
+  color:var(--muted);
+
+  max-width: 40ch;
+
+}
+
+/* Under-nav buttons (always near main panel) */
+
+.underNav{
+
+  position:relative;
+
+  display:flex;
+
+  gap:8px;
+
+  padding:12px 14px 14px;
+
+  border-top:1px solid rgba(255,255,255,.06);
+
+  flex-wrap:wrap;
+
+  flex: 0 0 auto;
+
+}
+
+.navBtn{
+
+  border:1px solid rgba(255,255,255,.10);
+
+  background: rgba(255,255,255,.03);
+
+  color: var(--text);
+
+  padding:10px 12px;
+
+  border-radius: 14px;
+
+  cursor:pointer;
+
+  font-weight:800;
+
+  font-size:12px;
+
+}
+
+.navBtn.active{
+
+  border-color: rgba(0,209,255,.35);
+
+  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
+
+}
+
+/* =========================
+
+   MAIN PANEL (carousel)
+
+   ========================= */
+
+.mainBody{
+
+  padding:0;        /* we handle padding inside each page */
+
+  overflow:hidden;  /* hide non-active pages */
+
+}
+
+.viewTrack{
+
+  display:flex;
+
+  width:100%;
+
+  height:100%;
+
+  transform: translateX(0%);
+
+  transition: transform 280ms ease;
+
+}
+
+.viewPage{
+
+  flex: 0 0 100%;
+
+  padding: 18px 16px;
+
+  height: 100%;
+
+  min-height: 0;
+
+  overflow:auto; /* scroll inside each page */
+
+  background:
+
+    radial-gradient(900px 300px at 20% 0%, rgba(0,209,255,.08), transparent 60%);
+
+}
+
+.viewTitle{
+
+  font-size:20px;
+
+  font-weight:900;
+
+  margin-bottom: 8px;
+
+}
+
+.viewText{
+
+  color: var(--muted);
+
+  max-width: 55ch;
+
+  line-height: 1.5;
+
+}
+
+/* =========================
+
+   Small forms/lists inside views
+
+   ========================= */
+
+.miniForm{
+
+  display:flex;
+
+  gap:10px;
+
+  margin: 10px 0 12px;
+
+  flex-wrap:wrap;
+
+}
+
+.miniInput{
+
+  flex: 1 1 260px;
+
+  background: rgba(255,255,255,.04);
+
+  border:1px solid rgba(255,255,255,.10);
+
+  border-radius: 14px;
+
+  padding: 12px 12px;
+
+  color: var(--text);
+
+  outline:none;
+
+}
+
+.miniInput:focus{
+
+  border-color: rgba(0,209,255,.35);
+
+  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
+
+}
+
+.miniBtn{
+
+  border:1px solid rgba(255,255,255,.10);
+
+  background: rgba(0,209,255,.16);
+
+  color: var(--text);
+
+  padding: 12px 14px;
+
+  border-radius: 14px;
+
+  cursor:pointer;
+
+  font-weight:900;
+
+}
+
+.miniBtn:hover{ border-color: rgba(0,209,255,.35); }
+
+.miniBtn.ghost{ background: rgba(255,255,255,.03); }
+
+.miniList{
+
+  list-style:none;
+
+  margin:0;
+
+  padding:0;
+
+  display:flex;
+
+  flex-direction:column;
+
+  gap:10px;
+
+}
+
+.miniRow{
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:space-between;
+
+  gap:10px;
+
+  padding:12px 12px;
+
+  border:1px solid rgba(255,255,255,.08);
+
+  background: rgba(255,255,255,.02);
+
+  border-radius: 16px;
+
+}
+
+.miniRowLeft{
+
+  display:flex;
+
+  align-items:center;
+
+  gap:10px;
+
+  min-width:0;
+
+}
+
+.miniText{
+
+  font-weight:800;
+
+  overflow:hidden;
+
+  text-overflow:ellipsis;
+
+  white-space:nowrap;
+
+}
+
+.miniMeta{
+
+  color: var(--muted);
+
+  font-size:12px;
+
+  flex:0 0 auto;
+
+}
+
+.miniHint{
+
+  color: var(--muted);
+
+  font-size:12px;
+
+  margin-top: 10px;
+
+}
+
+.miniActions{
+
+  margin-top: 12px;
+
+  display:flex;
+
+  gap:10px;
+
+  align-items:center;
+
+  flex-wrap:wrap;
+
+}
+
+.miniIconBtn{
+
+  border:1px solid rgba(255,255,255,.10);
+
+  background: rgba(255,255,255,.03);
+
+  color: var(--text);
+
+  padding: 10px 12px;
+
+  border-radius: 14px;
+
+  cursor:pointer;
+
+  font-weight:900;
+
+}
+
+.miniIconBtn:hover{ border-color: rgba(255,255,255,.18); }
+
+/* Dial */
+
+.dialPanel{ padding-bottom: 10px; }
+
+.dialTop{ padding:14px 14px 0; }
+
+.dialDate{ font-weight:900; font-size:14px; }
+
+.dialSub{ color:var(--muted); font-size:12px; margin-top:4px; }
+
+.dialWrap{
+
+  display:flex;
+
+  justify-content:center;
+
+  padding: 10px 14px 6px;
+
+}
+
+.dial{
+
+  width: 220px;
+
+  height: 220px;
+
+  position:relative;
+
+  display:grid;
+
+  place-items:center;
+
+  user-select:none;
+
+}
+
+.dialRing{
+
+  width:100%;
+
+  height:100%;
+
+  object-fit:contain;
+
+  filter: drop-shadow(0 0 18px rgba(0,209,255,.25));
+
+}
+
+.dialIcon{
+
+  position:absolute;
+
+  width:62px;
+
+  height:62px;
+
+  object-fit:contain;
+
+  filter: drop-shadow(0 0 14px rgba(0,209,255,.25));
+
+}
+
+.dialHint{
+
+  color:var(--muted);
+
+  font-size:12px;
+
+  padding: 0 14px 14px;
+
+}
+ 

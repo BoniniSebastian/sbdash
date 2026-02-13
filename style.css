@@ -858,3 +858,7 @@ body{
   border:0;
   border-radius:14px;
 }
+/* === Google Calendar Fix (force) === */
+.calendarPanel { display:flex !important; flex-direction:column !important; }
+.calendarPanel .panelBody.calendarBody { flex:1 !important; min-height:0 !important; padding:6px !important; overflow:hidden !important; }
+.calendarPanel iframe.calFrame { display:block !important; width:100% !important; height:100% !important; min-height:700px !important; border:0 !important; border-radius:14px !important; }

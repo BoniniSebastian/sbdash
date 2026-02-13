@@ -708,3 +708,50 @@ body{
 
 }
  
+/* =========================
+   iPad / touch: compact UI
+   ========================= */
+@media (max-width: 1100px) and (pointer: coarse){
+
+  :root{
+    --radius: 18px;
+  }
+
+  /* mindre luft runt allt */
+  .shell{ padding: 10px 10px 14px; }
+
+  /* topbar lite tightare */
+  .topbar{ padding: 10px 12px; }
+  .brandTitle{ font-size: 16px; }
+  .brandSub{ font-size: 11px; }
+  .pill{ padding: 6px 9px; font-size: 11px; }
+
+  /* paneler */
+  .panelHead{ padding: 12px 12px 8px; }
+  .panelHead h2{ font-size: 13px; }
+  .tag{ padding: 5px 9px; font-size: 11px; }
+  .panelBody{ padding: 12px; }
+
+  /* huvudvy */
+  .viewTitle{ font-size: 18px; }
+  .viewText{ font-size: 13px; }
+
+  /* knappar under mittenrutan */
+  .underNav{ padding: 10px 12px 12px; gap: 7px; }
+  .navBtn{ padding: 8px 10px; border-radius: 12px; font-size: 12px; }
+
+  /* forms/listor */
+  .miniForm{ gap: 8px; }
+  .miniInput{ padding: 10px 11px; border-radius: 12px; font-size: 13px; }
+  .miniBtn{ padding: 10px 12px; border-radius: 12px; font-size: 13px; }
+  .miniRow{ padding: 10px 10px; border-radius: 14px; }
+  .miniIconBtn{ padding: 8px 10px; border-radius: 12px; }
+  .miniText{ font-size: 13px; }
+  .miniMeta{ font-size: 11px; }
+
+  /* ratten – mindre */
+  .dial{ width: 170px; height: 170px; }
+  .dialIcon{ width: 48px; height: 48px; }
+  .dialTop{ padding: 12px 12px 0; }
+  .dialHint{ padding: 0 12px 12px; font-size: 11px; }
+}

@@ -709,49 +709,121 @@ body{
 }
  
 /* =========================
-   iPad / touch: compact UI
+   iPad / touch: ULTRA compact
    ========================= */
 @media (max-width: 1100px) and (pointer: coarse){
 
   :root{
-    --radius: 18px;
+    --radius: 14px;
   }
 
-  /* mindre luft runt allt */
-  .shell{ padding: 10px 10px 14px; }
+  body{
+    font-size: 13px;
+  }
 
-  /* topbar lite tightare */
-  .topbar{ padding: 10px 12px; }
-  .brandTitle{ font-size: 16px; }
-  .brandSub{ font-size: 11px; }
-  .pill{ padding: 6px 9px; font-size: 11px; }
+  /* yttre luft */
+  .shell{
+    padding: 6px 8px 10px;
+    gap: 8px;
+  }
+
+  /* topbar */
+  .topbar{
+    padding: 6px 10px;
+  }
+  .brandTitle{
+    font-size: 14px;
+  }
+  .brandSub{
+    font-size: 10px;
+  }
+  .pill{
+    padding: 4px 8px;
+    font-size: 10px;
+  }
 
   /* paneler */
-  .panelHead{ padding: 12px 12px 8px; }
-  .panelHead h2{ font-size: 13px; }
-  .tag{ padding: 5px 9px; font-size: 11px; }
-  .panelBody{ padding: 12px; }
+  .panelHead{
+    padding: 8px 10px 6px;
+  }
+  .panelHead h2{
+    font-size: 12px;
+  }
+  .tag{
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+  .panelBody{
+    padding: 10px;
+  }
 
-  /* huvudvy */
-  .viewTitle{ font-size: 18px; }
-  .viewText{ font-size: 13px; }
+  /* mitten */
+  .viewTitle{
+    font-size: 16px;
+  }
+  .viewText{
+    font-size: 12px;
+  }
 
-  /* knappar under mittenrutan */
-  .underNav{ padding: 10px 12px 12px; gap: 7px; }
-  .navBtn{ padding: 8px 10px; border-radius: 12px; font-size: 12px; }
+  /* navknappar under */
+  .underNav{
+    padding: 8px 10px 10px;
+    gap: 6px;
+  }
+  .navBtn{
+    padding: 6px 9px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
 
-  /* forms/listor */
-  .miniForm{ gap: 8px; }
-  .miniInput{ padding: 10px 11px; border-radius: 12px; font-size: 13px; }
-  .miniBtn{ padding: 10px 12px; border-radius: 12px; font-size: 13px; }
-  .miniRow{ padding: 10px 10px; border-radius: 14px; }
-  .miniIconBtn{ padding: 8px 10px; border-radius: 12px; }
-  .miniText{ font-size: 13px; }
-  .miniMeta{ font-size: 11px; }
+  /* formulär / listor */
+  .miniForm{
+    gap: 6px;
+  }
+  .miniInput{
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+  .miniBtn{
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+  .miniRow{
+    padding: 8px 9px;
+    border-radius: 10px;
+  }
+  .miniIconBtn{
+    padding: 6px 8px;
+    border-radius: 8px;
+  }
+  .miniText{
+    font-size: 12px;
+  }
+  .miniMeta{
+    font-size: 10px;
+  }
 
-  /* ratten – mindre */
-  .dial{ width: 170px; height: 170px; }
-  .dialIcon{ width: 48px; height: 48px; }
-  .dialTop{ padding: 12px 12px 0; }
-  .dialHint{ padding: 0 12px 12px; font-size: 11px; }
+  /* ratten – ännu mindre */
+  .dial{
+    width: 140px;
+    height: 140px;
+  }
+  .dialIcon{
+    width: 40px;
+    height: 40px;
+  }
+  .dialTop{
+    padding: 8px 10px 0;
+  }
+  .dialHint{
+    padding: 0 10px 8px;
+    font-size: 10px;
+  }
+
+  /* minska höjd på paneler så sidan inte blir lång */
+  .panel{
+    min-height: auto;
+  }
 }

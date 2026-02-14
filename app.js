@@ -1,18 +1,8 @@
-/* SB Dash v3 — all-in-one update (8 views + dial live icon + haptics + sport/ib rss + pomodoro ring) */
+/* SB Dash v4 — remove innebandy + sport, keep live dial icon + tick vibration, stable views */
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---------- Utils ----------
-  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
-  const pad2 = (n) => String(n).padStart(2, "0");
-  const fmtDMHM = (d) =>
-    d.toLocaleString("sv-SE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-
-  const canVibrate = !!navigator.vibrate;
-  const tickVibe = () => { if (canVibrate) navigator.vibrate(8); };
-  const doneVibe = () => { if (canVibrate) navigator.vibrate([20, 40, 20]); };
-
-  // ---------- Date in topbar (center, no pill) ----------
+  // ---------- Date ----------
   const todayText = $("todayText");
   if (todayText) {
     const now = new Date();
@@ -21,8 +11,12 @@
     todayText.textContent = `${weekday} ${date}`;
   }
 
-  // ---------- Views ----------
-  const VIEWS = ["weather","news","innebandy","sport","todo","ideas","done","pomodoro"];
+  // ---------- Haptics (iPad kan ignorera) ----------
+  const canVibrate = !!navigator.vibrate;
+  const tick = (ms=8) => { if (canVibrate) navigator.vibrate(ms); };
+
+  // ---------- Views (6) ----------
+  const VIEWS = ["weather", "news", "todo", "ideas", "done", "pomodoro"];
   let currentIndex = 0;
 
   const track = $("viewTrack");
@@ -35,15 +29,13 @@
   const ICONS = {
     weather: "assets/ui/icon-weather.svg",
     news: "assets/ui/icon-news.svg",
-    innebandy: "assets/ui/icon-innebandy.svg",
-    sport: "assets/ui/icon-sport.svg",
     todo: "assets/ui/icon-todo.svg",
     ideas: "assets/ui/icon-ideas.svg",
     done: "assets/ui/icon-done.svg",
     pomodoro: "assets/ui/icon-pomodoro.svg",
   };
 
-  function setViewByIndex(idx, {silent=false}={}) {
+  function setViewByIndex(idx, { silent=false } = {}) {
     currentIndex = (idx + VIEWS.length) % VIEWS.length;
     const view = VIEWS[currentIndex];
 
@@ -73,7 +65,7 @@
     });
   }
 
-  // Wheel switch (desktop) on main panel only
+  // Desktop wheel: change view (prevents page scroll)
   const mainPanel = document.querySelector(".mainPanel");
   let wheelCooldown = false;
   if (mainPanel) {
@@ -82,16 +74,15 @@
       if (wheelCooldown) return;
       wheelCooldown = true;
       setViewByIndex(currentIndex + (e.deltaY > 0 ? 1 : -1));
-      setTimeout(() => (wheelCooldown = false), 260);
+      setTimeout(() => (wheelCooldown = false), 240);
     }, { passive:false });
   }
 
-  // ---------- Dial rotation with live icon + haptic tick ----------
+  // ---------- Dial live icon while rotating ----------
   let isDragging = false;
   let startAngle = 0;
   let currentRotation = 0;
   const STEP = 360 / VIEWS.length;
-
   let lastSector = 0;
 
   const angle = (cx, cy, mx, my) => Math.atan2(my - cy, mx - cx) * (180 / Math.PI);
@@ -102,20 +93,8 @@
   }
 
   function sectorFromRotation(deg) {
-    // map rotation -> nearest view sector
     const raw = Math.round(deg / STEP);
     return ((raw % VIEWS.length) + VIEWS.length) % VIEWS.length;
-  }
-
-  function liveUpdateFromRotation() {
-    const s = sectorFromRotation(currentRotation);
-    if (s !== lastSector) {
-      lastSector = s;
-      // live icon update while dragging
-      const view = VIEWS[s];
-      if (dialIcon && ICONS[view]) dialIcon.src = ICONS[view];
-      tickVibe();
-    }
   }
 
   function syncRotationToIndex() {
@@ -144,7 +123,14 @@
     const cy = r.top + r.height / 2;
 
     setRotation(angle(cx, cy, e.clientX, e.clientY) - startAngle);
-    liveUpdateFromRotation();
+
+    const s = sectorFromRotation(currentRotation);
+    if (s !== lastSector) {
+      lastSector = s;
+      const view = VIEWS[s];
+      if (dialIcon && ICONS[view]) dialIcon.src = ICONS[view]; // live change
+      tick(8);
+    }
   }
 
   function onUp(e) {
@@ -153,9 +139,9 @@
     e.preventDefault();
 
     const finalIndex = sectorFromRotation(currentRotation);
-    setViewByIndex(finalIndex, {silent:true});
+    setViewByIndex(finalIndex, { silent:true });
     syncRotationToIndex();
-    tickVibe();
+    tick(10);
   }
 
   if (dialEl) {
@@ -166,7 +152,7 @@
   }
 
   // ---------- Storage ----------
-  const LS_KEY = "sbdash_v3_store";
+  const LS_KEY = "sbdash_v4_store";
   function load() {
     try {
       const raw = localStorage.getItem(LS_KEY);
@@ -183,147 +169,4 @@
   }
   const store = load();
   const save = () => localStorage.setItem(LS_KEY, JSON.stringify(store));
-  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
-
-  // ---------- Origin-aware Done ----------
-  function toDone(fromList, item) {
-    const clean = { id: item.id, text: item.text, createdAt: item.createdAt || Date.now() };
-    store.done.unshift({ ...clean, doneAt: Date.now(), origin: fromList });
-  }
-
-  function restoreFromDone(id) {
-    const i = store.done.findIndex((x) => x.id === id);
-    if (i === -1) return;
-    const item = store.done.splice(i, 1)[0];
-    const { doneAt, origin, ...rest } = item;
-
-    const o = origin || "todo";
-    if (o === "super") store.super.unshift(rest);
-    else if (o === "ideas") store.ideas.unshift(rest);
-    else store.todo.unshift(rest);
-
-    save();
-    renderAll();
-  }
-
-  // ---------- Swipe helper ----------
-  function attachSwipe(el, onComplete) {
-    const content = el.querySelector(".swipeContent");
-    if (!content) return;
-
-    let dragging = false;
-    let pointerId = null;
-    let startX = 0, startY = 0;
-    let curX = 0;
-    let locked = false;
-    const threshold = 0.55;
-
-    const setX = (x, animate) => {
-      curX = x;
-      content.style.transition = animate ? "transform 180ms ease" : "none";
-      content.style.transform = `translateX(${x}px)`;
-    };
-
-    const onDown = (e) => {
-      dragging = true;
-      locked = false;
-      pointerId = e.pointerId;
-      startX = e.clientX;
-      startY = e.clientY;
-      setX(0, true);
-      content.setPointerCapture?.(pointerId);
-    };
-
-    const onMove = (e) => {
-      if (!dragging || e.pointerId !== pointerId) return;
-
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-
-      if (!locked) {
-        if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-          locked = true;
-          if (Math.abs(dy) > Math.abs(dx)) {
-            dragging = false;
-            pointerId = null;
-            setX(0, true);
-            return;
-          }
-        } else return;
-      }
-
-      if (dx > 0) return; // only right->left
-      e.preventDefault();
-
-      const max = -Math.min(220, el.clientWidth * 0.9);
-      setX(Math.max(dx, max), false);
-    };
-
-    const onUp = (e) => {
-      if (!dragging || e.pointerId !== pointerId) return;
-      dragging = false;
-
-      const abs = Math.abs(curX);
-      const need = el.clientWidth * threshold;
-
-      if (abs >= need) {
-        setX(-el.clientWidth, true);
-        setTimeout(() => onComplete?.(), 140);
-      } else {
-        setX(0, true);
-      }
-
-      pointerId = null;
-    };
-
-    el.addEventListener("pointerdown", onDown, { passive:true });
-    el.addEventListener("pointermove", onMove, { passive:false });
-    el.addEventListener("pointerup", onUp, { passive:true });
-    el.addEventListener("pointercancel", onUp, { passive:true });
-  }
-
-  function mkSwipeItem({ text, meta }, onComplete, onClick) {
-    const li = document.createElement("li");
-    li.className = "swipeItem";
-
-    const under = document.createElement("div");
-    under.className = "swipeUnder";
-
-    const content = document.createElement("div");
-    content.className = "swipeContent";
-
-    const left = document.createElement("div");
-    left.className = "swipeLeft";
-
-    const t = document.createElement("div");
-    t.className = "swipeText";
-    t.textContent = text;
-
-    left.appendChild(t);
-
-    const right = document.createElement("div");
-    right.className = "swipeRight";
-
-    const m = document.createElement("div");
-    m.className = "miniMeta";
-    m.textContent = meta || "";
-    right.appendChild(m);
-
-    content.appendChild(left);
-    content.appendChild(right);
-
-    li.appendChild(under);
-    li.appendChild(content);
-
-    attachSwipe(li, onComplete);
-
-    if (onClick) {
-      content.style.cursor = "pointer";
-      content.addEventListener("click", () => onClick());
-    }
-
-    return li;
-  }
-
-  // ---------- TODO ----------
-  const todoInput = $("todoInput");
+  const uid = () => (crypto.randomUUID ? crypto.random

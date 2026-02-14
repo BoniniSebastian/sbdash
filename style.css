@@ -37,7 +37,19 @@ body{
   backdrop-filter: blur(10px);
   flex:0 0 auto;
 }
+
 .brand{display:flex; align-items:center; gap:10px}
+
+.gearTop{
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  color: rgba(255,255,255,.92);
+  border-radius: 12px;
+  padding: 7px 9px;
+  font-weight: 900;
+  cursor:pointer;
+}
+
 .brandDot{
   width:10px; height:10px; border-radius:999px;
   background: linear-gradient(135deg, rgba(0,209,255,.95), rgba(0,209,255,.38));
@@ -45,6 +57,7 @@ body{
 }
 .brandTitle{font-weight:900; letter-spacing:.2px; font-size:14px}
 .brandSub{font-size:11px; color:var(--muted); margin-top:2px}
+
 .topDate{
   justify-self:center;
   color: rgba(255,255,255,.80);
@@ -64,7 +77,7 @@ body{
   min-height:0;
 }
 
-/* Layout */
+/* Desktop grid */
 .layout{
   height:100%;
   min-height:0;
@@ -74,7 +87,7 @@ body{
   align-items:stretch;
 }
 
-/* Calendar (frilagd) */
+/* Calendar */
 .calendarWrap{
   position:relative;
   border-radius: var(--radius);
@@ -154,7 +167,7 @@ body{
   overflow:auto;
 }
 
-/* MAIN carousel */
+/* Main carousel */
 .mainBody{ padding:0; overflow:hidden; }
 .viewTrack{
   display:flex;
@@ -318,19 +331,44 @@ body{
 .tomIcon{ font-size: 18px; }
 .tomText{ font-weight:900; font-size:12px; color: var(--muted); }
 
-/* Dial */
-.dialFixed{
-  position:fixed;
-  right:14px;
-  bottom:14px;
-  z-index:100;
-  pointer-events:auto;
-  background:transparent;
+/* Pomodoro */
+.pomoWrap{ max-width: 520px; }
+.pomoRing{
+  position:relative;
+  width: 280px;
+  height: 280px;
+  margin-top: 8px;
 }
+.pomoSvg{ width:100%; height:100%; transform: rotate(-90deg); }
+.pomoTrack{ fill:none; stroke: rgba(255,255,255,.08); stroke-width: 16; }
+.pomoProg{
+  fill:none;
+  stroke: rgba(0,209,255,.85);
+  stroke-width: 16;
+  stroke-linecap: round;
+  filter: url(#pomoGlow);
+  stroke-dasharray: 578;
+  stroke-dashoffset: 0;
+  transition: stroke 180ms ease;
+}
+.pomoCenter{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  transform:none;
+}
+.pomoTime{ font-size: 42px; font-weight: 900; letter-spacing: -.5px; }
+.pomoSub{ margin-top: 6px; font-size: 12px; color: var(--muted); font-weight: 900; }
+.pomoBtns{ display:flex; gap:8px; flex-wrap:wrap; margin-top: 12px; }
+
+/* Dial (used in mobile bottom right) */
 .dial{
   position:relative;
-  width: 182px;
-  height: 182px;
+  width: 150px;
+  height: 150px;
   display:grid;
   place-items:center;
   user-select:none;
@@ -345,8 +383,8 @@ body{
 }
 .dialIcon{
   position:absolute;
-  width:52px;
-  height:52px;
+  width:46px;
+  height:46px;
   object-fit:contain;
   filter: drop-shadow(0 0 12px rgba(0,209,255,.22));
 }
@@ -402,53 +440,95 @@ body{
 }
 .modalActions{ margin-top: 10px; display:flex; justify-content:flex-end; gap:10px; }
 
-/* Pomodoro */
-.pomoWrap{ max-width: 520px; }
-.pomoRing{
-  position:relative;
-  width: 280px;
-  height: 280px;
-  margin-top: 8px;
+/* Settings */
+.settingsForm{ margin-top:10px; }
+.settingsLabel{
+  display:block;
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(255,255,255,.86);
+  margin: 6px 0 6px;
 }
-.pomoSvg{ width:100%; height:100%; transform: rotate(-90deg); }
-.pomoTrack{ fill:none; stroke: rgba(255,255,255,.08); stroke-width: 16; }
-.pomoProg{
-  fill:none;
-  stroke: rgba(0,209,255,.85);
-  stroke-width: 16;
-  stroke-linecap: round;
-  filter: url(#pomoGlow);
-  stroke-dasharray: 578;
-  stroke-dashoffset: 0;
-  transition: stroke 180ms ease;
+.settingsInput{
+  width:100%;
+  background: rgba(0,0,0,.18);
+  border:1px solid rgba(255,255,255,.10);
+  border-radius: 12px;
+  padding: 10px;
+  color: rgba(255,255,255,.92);
+  font-size: 13px;
+  outline: none;
 }
-.pomoCenter{
-  position:absolute;
-  inset:0;
+.settingsInput:focus{
+  border-color: rgba(0,209,255,.35);
+  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
+}
+.settingsHint{
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.settingsActions{
+  margin-top: 12px;
   display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-direction:column;
-  .pomoCenter{
-  ...
-  transform: none;
+  gap:10px;
+  justify-content:flex-end;
+  flex-wrap:wrap;
 }
-.pomoTime{ font-size: 42px; font-weight: 900; letter-spacing: -.5px; }
-.pomoSub{ margin-top: 6px; font-size: 12px; color: var(--muted); font-weight: 900; }
-.pomoBtns{ display:flex; gap:8px; flex-wrap:wrap; margin-top: 12px; }
 
-/* Responsive */
-@media (max-width: 1100px){
-  .layout{ grid-template-columns: 240px 1fr 300px; }
-  .dial{ width: 172px; height: 172px; }
-  .dialIcon{ width: 50px; height: 50px; }
-  .pomoRing{ width: 270px; height: 270px; }
-  .weatherGrid{ grid-template-columns: 1fr; }
-}
+/* Desktop: hide mobile bottom */
+.mobileBottom{ display:none; }
+
+/* iPhone portrait layout */
 @media (max-width: 860px){
-  html,body{ overflow:auto; }
-  body{ overflow:auto; }
-  .layout{ grid-template-columns: 1fr; }
-  .dialFixed{ right:10px; bottom:10px; }
-  .calendarWrap{ height: 320px; }
+  html,body{ height:100%; overflow:hidden; }
+
+  .shell{ padding: 10px; max-width: 100%; }
+
+  .layout{
+    grid-template-columns: 1fr;
+    grid-template-rows: 25% 55% auto;
+    gap:10px;
+  }
+
+  .prioPanel{ display:none; } /* desktop prio hidden */
+
+  /* calendar bigger text */
+  .calScale{ width:120%; height:120%; transform: scale(.83); }
+
+  /* bottom zone */
+  .mobileBottom{
+    display:flex;
+    align-items:stretch;
+    justify-content:space-between;
+    gap:10px;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .mobileBottomLeft{
+    flex:1 1 auto;
+    border:1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.03);
+    border-radius: 16px;
+    padding: 12px 12px;
+    font-weight: 900;
+    font-size: 12px;
+    color: rgba(255,255,255,.86);
+    display:flex;
+    align-items:center;
+  }
+
+  .mobileBottomRight{
+    flex:0 0 auto;
+    border:1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.03);
+    border-radius: 16px;
+    padding: 6px;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+  }
+
+  .underNav{ gap:6px; padding:10px; }
+  .navBtn{ padding:7px 9px; font-size:11px; }
 }

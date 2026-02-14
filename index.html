@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>SB Dash</title>
-  <link rel="stylesheet" href="style.css?v=300" />
+  <link rel="stylesheet" href="style.css?v=400" />
 </head>
 <body>
 
@@ -18,7 +18,6 @@
     </div>
 
     <div class="topDate" id="todayText">—</div>
-
     <div class="topRight"></div>
   </header>
 
@@ -89,7 +88,7 @@
               </div>
             </div>
 
-            <!-- 2) NEWS (general) -->
+            <!-- 2) NEWS -->
             <div class="viewPage" data-view="news" id="newsPage">
               <div class="viewTitle">Nyheter</div>
               <div class="pullHint" id="newsPullHint">Dra ned för att uppdatera</div>
@@ -97,23 +96,7 @@
               <ul id="newsList" class="miniList" style="margin-top:10px;"></ul>
             </div>
 
-            <!-- 3) INNEBANDY RSS -->
-            <div class="viewPage" data-view="innebandy" id="ibPage">
-              <div class="viewTitle">Innebandy</div>
-              <div class="pullHint" id="ibPullHint">Dra ned för att uppdatera</div>
-              <div id="ibMeta" class="miniHint" style="margin-top:6px;">Laddar…</div>
-              <ul id="ibList" class="miniList" style="margin-top:10px;"></ul>
-            </div>
-
-            <!-- 4) SPORT (SportAdmin ICS) -->
-            <div class="viewPage" data-view="sport" id="sportPage">
-              <div class="viewTitle">Sport</div>
-              <div class="pullHint" id="sportPullHint">Dra ned för att uppdatera</div>
-              <div id="sportMeta" class="miniHint" style="margin-top:6px;">Laddar…</div>
-              <ul id="sportList" class="miniList" style="margin-top:10px;"></ul>
-            </div>
-
-            <!-- 5) TODO -->
+            <!-- 3) TODO -->
             <div class="viewPage" data-view="todo">
               <div class="viewTitle">Att göra</div>
               <div class="miniForm">
@@ -124,7 +107,7 @@
               <div class="miniHint">Swipe höger→vänster = slutför</div>
             </div>
 
-            <!-- 6) IDEAS -->
+            <!-- 4) IDEAS -->
             <div class="viewPage" data-view="ideas">
               <div class="viewTitle">Idéer</div>
               <div class="miniForm">
@@ -135,7 +118,7 @@
               <div class="miniHint">Swipe höger→vänster = arkivera (till Slutförda)</div>
             </div>
 
-            <!-- 7) DONE -->
+            <!-- 5) DONE -->
             <div class="viewPage" data-view="done">
               <div class="viewTitle">Slutförda</div>
               <ul id="doneList" class="miniList"></ul>
@@ -145,7 +128,7 @@
               <div class="miniHint">↩︎ återställ till rätt lista (prio/todo/idéer)</div>
             </div>
 
-            <!-- 8) POMODORO -->
+            <!-- 6) POMODORO -->
             <div class="viewPage" data-view="pomodoro">
               <div class="viewTitle">Pomodoro</div>
 
@@ -190,8 +173,6 @@
         <div class="underNav" id="underNav">
           <button class="navBtn active" data-view="weather">Väder</button>
           <button class="navBtn" data-view="news">Nyheter</button>
-          <button class="navBtn" data-view="innebandy">Innebandy</button>
-          <button class="navBtn" data-view="sport">Sport</button>
           <button class="navBtn" data-view="todo">Att göra</button>
           <button class="navBtn" data-view="ideas">Idéer</button>
           <button class="navBtn" data-view="done">Slutförda</button>
@@ -244,6 +225,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=300"></script>
+  <script src="app.js?v=400"></script>
 </body>
 </html>

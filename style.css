@@ -64,7 +64,7 @@ body{
   min-height:0;
 }
 
-/* Layout compact */
+/* Layout */
 .layout{
   height:100%;
   min-height:0;
@@ -189,33 +189,49 @@ body{
 }
 .miniBtn.ghost{ background: rgba(255,255,255,.03); }
 .miniList{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
-
 .miniHint{ color: var(--muted); font-size:11px; margin-top: 8px; }
 .miniMeta{ color: var(--muted); font-size:11px; }
 
-/* ---------- Swipe rows ---------- */
+.miniRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 10px;
+  border:1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.02);
+  border-radius: 14px;
+}
+.miniRowLeft{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+.miniText{
+  font-weight:900;
+  font-size:12px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.miniActions{ display:flex; justify-content:flex-end; gap:10px; margin-top:10px; }
+
+/* Swipe (NO green background, NO text) */
 .swipeItem{
   position:relative;
   border-radius: 14px;
   overflow:hidden;
   border:1px solid rgba(255,255,255,.08);
   background: rgba(255,255,255,.02);
-  touch-action: pan-y; /* allow vertical scroll */
+  touch-action: pan-y;
 }
-
 .swipeUnder{
   position:absolute;
   inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:flex-end;
-  padding-right:14px;
-  background: rgba(0, 200, 120, .20);
-  color: rgba(255,255,255,.92);
-  font-weight:900;
-  letter-spacing:.4px;
+  background: rgba(0,0,0,.18);   /* diskret “lager under” */
+  pointer-events:none;
 }
-
 .swipeContent{
   position:relative;
   display:flex;
@@ -227,7 +243,6 @@ body{
   transform: translateX(0px);
   will-change: transform;
 }
-
 .swipeLeft{
   display:flex;
   align-items:center;
@@ -241,11 +256,14 @@ body{
   text-overflow:ellipsis;
   white-space:nowrap;
 }
-.swipeRight{
-  flex:0 0 auto;
-  display:flex;
-  align-items:center;
-  gap:10px;
+.swipeRight{ flex:0 0 auto; display:flex; align-items:center; gap:10px; }
+
+/* Pull hint (nyheter) */
+.pullHint{
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  opacity: .75;
 }
 
 /* Calendar: scale + overlay */
@@ -307,7 +325,6 @@ body{
 }
 .weatherLabel{ color: var(--muted); font-weight: 900; }
 .weatherValue{ font-weight: 900; }
-
 .weatherTomorrow{
   margin-top: 10px;
   border:1px solid rgba(255,255,255,.08);
@@ -320,32 +337,7 @@ body{
 .tomIcon{ font-size: 18px; }
 .tomText{ font-weight:900; font-size:12px; color: var(--muted); }
 
-/* News favicon */
-.newsRow{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  min-width:0;
-}
-.favicon{
-  width:18px;
-  height:18px;
-  border-radius: 6px;
-  flex:0 0 auto;
-  background: rgba(255,255,255,.06);
-  border:1px solid rgba(255,255,255,.08);
-}
-.newsLink{
-  color: var(--text);
-  text-decoration:none;
-  font-weight:900;
-  font-size:12px;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-/* FIXED DIAL */
+/* FIXED DIAL (bigger) */
 .dialFixed{
   position:fixed;
   right:14px;
@@ -358,8 +350,8 @@ body{
 }
 .dial{
   position:relative;
-  width: 150px;
-  height: 150px;
+  width: 175px;   /* bigger */
+  height: 175px;  /* bigger */
   display:grid;
   place-items:center;
   user-select:none;
@@ -368,8 +360,8 @@ body{
 .dial::before{
   content:"";
   position:absolute;
-  width: 230px;
-  height: 230px;
+  width: 255px;
+  height: 255px;
   left:50%;
   top:50%;
   transform: translate(-50%,-50%);
@@ -384,13 +376,13 @@ body{
 }
 .dialIcon{
   position:absolute;
-  width:44px;
-  height:44px;
+  width:50px;
+  height:50px;
   object-fit:contain;
   filter: drop-shadow(0 0 12px rgba(0,209,255,.22));
 }
 
-/* Liquid glass modal */
+/* Liquid glass modal (smalare, längre, edit) */
 .modalOverlay{
   position: fixed;
   inset: 0;
@@ -403,13 +395,13 @@ body{
 .modalOverlay.show{ display:flex; }
 
 .modal{
-  width: min(720px, 92vw);
-  border-radius: 18px;
+  width: min(420px, 92vw);     /* smalare */
+  border-radius: 14px;         /* mer “fyrkantig” */
   border: 1px solid rgba(255,255,255,.18);
   background: rgba(255,255,255,.06);
   backdrop-filter: blur(18px);
   box-shadow: 0 30px 70px rgba(0,0,0,.55);
-  padding: 14px;
+  padding: 12px;
 }
 .modalHead{
   display:flex;
@@ -422,39 +414,44 @@ body{
   border:1px solid rgba(255,255,255,.12);
   background: rgba(255,255,255,.04);
   color: var(--text);
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 6px 10px;
   cursor:pointer;
   font-weight:900;
 }
-.modalBody{
+.modalEdit{
+  width:100%;
   margin-top: 10px;
-  padding: 12px;
-  border-radius: 14px;
+  height: 56vh;               /* längre */
+  resize: none;
+  border-radius: 12px;
   border:1px solid rgba(255,255,255,.10);
   background: rgba(0,0,0,.18);
   color: rgba(255,255,255,.92);
-  line-height: 1.5;
+  padding: 10px;
   font-size: 13px;
-  max-height: 52vh;
-  overflow:auto;
-  white-space: pre-wrap;
+  line-height: 1.5;
+  outline: none;
+}
+.modalEdit:focus{
+  border-color: rgba(0,209,255,.35);
+  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
 }
 .modalActions{
-  margin-top: 12px;
+  margin-top: 10px;
   display:flex;
   justify-content:flex-end;
   gap:10px;
 }
 
-/* iPad landscape extra tight */
+/* iPad landscape */
 @media (max-width: 1100px){
   .layout{ grid-template-columns: 230px 1fr 290px; gap:10px; }
-  .dial{ width: 140px; height: 140px; }
-  .dial::before{ width: 220px; height: 220px; }
+  .dial{ width: 165px; height: 165px; }
+  .dial::before{ width: 245px; height: 245px; }
 }
 
-/* Phone (stack) */
+/* Phone */
 @media (max-width: 860px){
   .layout{ grid-template-columns: 1fr; }
   .dialFixed{ right:10px; bottom:10px; }

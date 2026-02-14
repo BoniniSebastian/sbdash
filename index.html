@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SB Dash</title>
-  <link rel="stylesheet" href="style.css?v=140" />
+  <link rel="stylesheet" href="style.css?v=200" />
 </head>
 <body>
 
@@ -33,17 +33,14 @@
         </div>
 
         <div class="panelBody calendarBody">
-          <!-- Skala ner kalendern så mer text får plats på bredden -->
           <div class="calScale">
             <iframe
               class="calFrame"
               src="https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0"
               frameborder="0"
-              scrolling="no">
-            </iframe>
+              scrolling="no"></iframe>
           </div>
 
-          <!-- Dark overlay (bara över kalendern) -->
           <div class="calOverlay" aria-hidden="true"></div>
         </div>
       </aside>
@@ -99,15 +96,10 @@
               </div>
             </div>
 
-            <!-- NEWS -->
-            <div class="viewPage" data-view="news">
+            <!-- NEWS (pull-to-refresh, ingen knapp) -->
+            <div class="viewPage" data-view="news" id="newsPage">
               <div class="viewTitle">Nyheter</div>
-
-              <div class="miniActions" style="margin-top:8px;">
-                <button id="newsRefreshBtn" class="miniBtn ghost">Uppdatera</button>
-                <div id="newsMeta" class="miniHint" style="margin:0;">Laddar…</div>
-              </div>
-
+              <div id="newsMeta" class="miniHint" style="margin-top:6px;">Dra ner för att uppdatera</div>
               <ul id="newsList" class="miniList" style="margin-top:10px;"></ul>
             </div>
 
@@ -153,7 +145,6 @@
           </div>
         </div>
 
-        <!-- Knappar under mittenrutan -->
         <div class="underNav" id="underNav">
           <button class="navBtn active" data-view="weather">Väder</button>
           <button class="navBtn" data-view="news">Nyheter</button>
@@ -184,7 +175,7 @@
     </section>
   </main>
 
-  <!-- FIXED DIAL (ingen ruta) -->
+  <!-- FIXED DIAL -->
   <div class="dialFixed" aria-label="Ratt">
     <div class="dial">
       <img class="dialRing" src="assets/ui/knob-ring.svg" alt="Knob ring">
@@ -192,7 +183,7 @@
     </div>
   </div>
 
-  <!-- Liquid glass modal -->
+  <!-- Liquid glass modal (editable) -->
   <div class="modalOverlay" id="modalOverlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-label="Detaljvy">
       <div class="modalHead">
@@ -200,15 +191,14 @@
         <button class="modalClose" id="modalCloseBtn">✕</button>
       </div>
 
-      <div class="modalBody" id="modalBody">—</div>
+      <textarea class="modalEdit" id="modalEdit" placeholder="Skriv här…"></textarea>
 
       <div class="modalActions">
         <button class="miniBtn ghost" id="modalDoneBtn">Slutför</button>
-        <button class="miniBtn" id="modalOkBtn">Stäng</button>
       </div>
     </div>
   </div>
 
-  <script src="app.js?v=140"></script>
+  <script src="app.js?v=200"></script>
 </body>
 </html>

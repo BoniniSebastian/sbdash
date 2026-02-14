@@ -334,3 +334,10 @@ body{
   .layout{ grid-template-columns: 1fr; }
   .dialFixed{ right:10px; bottom:10px; }
 }
+/* Skala ner kalendern (mer text får plats) */
+.calScale{
+  width: 112%;          /* kompenserar för scale */
+  height: 112%;
+  transform: scale(.89);
+  transform-origin: top left;
+}

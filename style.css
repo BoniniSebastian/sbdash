@@ -328,6 +328,9 @@ body{
   overflow:hidden;
   position:relative;
 }
+.calendarPanel .panelBody.calendarBody{
+  border-radius: 18px;      /* ✅ rundning på själva containern */
+}
 
 .calFrame{
   width:100%;
@@ -342,9 +345,9 @@ body{
 /* overlay som mörkar Google-iframe */
 .calOverlay{
   position:absolute;
-  inset: 6px;
-  border-radius: 18px;
-  background: rgba(0,0,0,.55); /* <- mörkare/ljusare här */
+  inset: 0;                 /* ✅ täcker hela ytan, ingen glipa */
+  border-radius: 0;         /* ✅ följer panelens form */
+  background: rgba(0,0,0,.55);
   pointer-events:none;
   mix-blend-mode: multiply;
 }

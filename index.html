@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SB Dash</title>
-  <link rel="stylesheet" href="style.css?v=11" />
+  <link rel="stylesheet" href="style.css?v=140" />
 </head>
 <body>
 
@@ -29,18 +29,21 @@
       <aside class="panel calendarPanel">
         <div class="panelHead">
           <h2>Kalender</h2>
-          <span class="tag">Google</span>
+          <span class="tag">Agenda</span>
         </div>
 
         <div class="panelBody calendarBody">
-          <iframe
-            class="calFrame"
-            src="https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0"
-            frameborder="0"
-            scrolling="no">
-          </iframe>
+          <!-- Skala ner kalendern så mer text får plats på bredden -->
+          <div class="calScale">
+            <iframe
+              class="calFrame"
+              src="https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0"
+              frameborder="0"
+              scrolling="no">
+            </iframe>
+          </div>
 
-          <!-- Dark overlay because Google iframe can't be styled -->
+          <!-- Dark overlay (bara över kalendern) -->
           <div class="calOverlay" aria-hidden="true"></div>
         </div>
       </aside>
@@ -49,7 +52,7 @@
       <section class="panel mainPanel">
         <div class="panelHead">
           <h2>Main</h2>
-          <span class="tag">Scroll • Knappar • Ratt</span>
+          <span class="tag">Knappar • Ratt</span>
         </div>
 
         <div class="panelBody mainBody">
@@ -60,6 +63,8 @@
               <div class="viewTitle">Väder</div>
 
               <div class="weatherCard">
+                <div class="weatherIcon" id="weatherIcon">⛅️</div>
+
                 <div class="weatherMain">
                   <div class="weatherTemp" id="weatherTemp">—°</div>
                   <div class="weatherDesc" id="weatherDesc">Laddar…</div>
@@ -80,28 +85,30 @@
                   </div>
                 </div>
 
+                <div class="weatherTomorrow">
+                  <div class="tomLabel">Imorgon</div>
+                  <div class="tomRow">
+                    <div class="tomIcon" id="tomIcon">🌥️</div>
+                    <div class="tomText" id="tomText">—</div>
+                  </div>
+                </div>
+
                 <div class="miniActions">
                   <button id="weatherRefreshBtn" class="miniBtn ghost">Uppdatera</button>
                 </div>
               </div>
-
-              <div class="miniHint">Använder din plats om du tillåter, annars Stockholm.</div>
             </div>
 
             <!-- NEWS -->
             <div class="viewPage" data-view="news">
               <div class="viewTitle">Nyheter</div>
 
-              <div class="miniActions" style="margin-top:10px;">
+              <div class="miniActions" style="margin-top:8px;">
                 <button id="newsRefreshBtn" class="miniBtn ghost">Uppdatera</button>
                 <div id="newsMeta" class="miniHint" style="margin:0;">Laddar…</div>
               </div>
 
-              <ul id="newsList" class="miniList" style="margin-top:12px;"></ul>
-
-              <div class="miniHint">
-                Om RSS-proxy strular visar vi senaste lyckade listan (cache).
-              </div>
+              <ul id="newsList" class="miniList" style="margin-top:10px;"></ul>
             </div>
 
             <!-- TODO -->
@@ -110,11 +117,11 @@
 
               <div class="miniForm">
                 <input id="todoInput" class="miniInput" type="text" placeholder="Skriv en uppgift…" maxlength="120">
-                <button id="todoAddBtn" class="miniBtn">+ Lägg till</button>
+                <button id="todoAddBtn" class="miniBtn">+ Lägg</button>
               </div>
 
               <ul id="todoList" class="miniList"></ul>
-              <div class="miniHint">✓ slutför • 🔥 flytta till Aktiv prio</div>
+              <div class="miniHint">Swipe höger→vänster = slutför</div>
             </div>
 
             <!-- IDEAS -->
@@ -127,7 +134,7 @@
               </div>
 
               <ul id="ideasList" class="miniList"></ul>
-              <div class="miniHint">Snabba tankar och saker du vill minnas.</div>
+              <div class="miniHint">Swipe höger→vänster = arkivera (till Slutförda)</div>
             </div>
 
             <!-- DONE -->
@@ -140,7 +147,7 @@
                 <button id="doneClearBtn" class="miniBtn ghost">Rensa slutförda</button>
               </div>
 
-              <div class="miniHint">↩︎ flyttar tillbaka till Att göra.</div>
+              <div class="miniHint">↩︎ återställ till rätt lista (prio/todo/idéer)</div>
             </div>
 
           </div>
@@ -165,19 +172,19 @@
 
         <div class="panelBody">
           <div class="miniForm" style="margin-top:0;">
-            <input id="prioInput" class="miniInput" type="text" placeholder="Lägg till superprio…" maxlength="120">
+            <input id="prioInput" class="miniInput" type="text" placeholder="Lägg till superprio…" maxlength="160">
             <button id="prioAddBtn" class="miniBtn">+ Lägg</button>
           </div>
 
           <ul class="miniList" id="prioList"></ul>
-          <div class="miniHint">✓ = klart (till Slutförda)</div>
+          <div class="miniHint">Tryck = öppna • Swipe = slutför</div>
         </div>
       </aside>
 
     </section>
   </main>
 
-  <!-- FIXED DIAL: ingen ruta, ingen text -->
+  <!-- FIXED DIAL (ingen ruta) -->
   <div class="dialFixed" aria-label="Ratt">
     <div class="dial">
       <img class="dialRing" src="assets/ui/knob-ring.svg" alt="Knob ring">
@@ -185,6 +192,23 @@
     </div>
   </div>
 
-  <script src="app.js?v=11"></script>
+  <!-- Liquid glass modal -->
+  <div class="modalOverlay" id="modalOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Detaljvy">
+      <div class="modalHead">
+        <div class="modalTitle" id="modalTitle">Aktiv prio</div>
+        <button class="modalClose" id="modalCloseBtn">✕</button>
+      </div>
+
+      <div class="modalBody" id="modalBody">—</div>
+
+      <div class="modalActions">
+        <button class="miniBtn ghost" id="modalDoneBtn">Slutför</button>
+        <button class="miniBtn" id="modalOkBtn">Stäng</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=140"></script>
 </body>
 </html>

@@ -1,16 +1,15 @@
 /* SB Dash (compact single-file) */
-
 (() => {
-  // ---------- Dates ----------
   const $ = (id) => document.getElementById(id);
-  const nowPretty = () => {
+
+  // ---------- Dates ----------
+  const todayText = $("todayText");
+  if (todayText) {
     const d = new Date();
     const w = d.toLocaleDateString("sv-SE", { weekday: "long" });
     const dt = d.toLocaleDateString("sv-SE", { day: "2-digit", month: "long", year: "numeric" });
-    return `${w} ${dt}`;
-  };
-  const todayText = $("todayText");
-  if (todayText) todayText.textContent = nowPretty();
+    todayText.textContent = `${w} ${dt}`;
+  }
 
   // ---------- Views ----------
   const VIEWS = ["weather", "news", "todo", "ideas", "done"];
@@ -28,7 +27,7 @@
     done: "assets/ui/icon-done.svg",
   };
 
-  const setViewByIndex = (idx) => {
+  function setViewByIndex(idx) {
     currentIndex = (idx + VIEWS.length) % VIEWS.length;
     const view = VIEWS[currentIndex];
 
@@ -41,12 +40,12 @@
     }
 
     if (dialIcon && ICONS[view]) dialIcon.src = ICONS[view];
-  };
+  }
 
-  const setViewByName = (view) => {
+  function setViewByName(view) {
     const i = VIEWS.indexOf(view);
     if (i !== -1) setViewByIndex(i);
-  };
+  }
 
   if (nav) {
     nav.addEventListener("click", (e) => {
@@ -56,6 +55,7 @@
     });
   }
 
+  // Desktop: wheel switches pages when hovering main panel
   const mainPanel = document.querySelector(".mainPanel");
   let wheelCooldown = false;
   if (mainPanel) {
@@ -74,7 +74,7 @@
 
   // ---------- Storage ----------
   const LS_KEY = "sbdash_v1";
-  const load = () => {
+  function load() {
     try {
       const raw = localStorage.getItem(LS_KEY);
       const p = raw ? JSON.parse(raw) : {};
@@ -87,26 +87,33 @@
     } catch {
       return { todo: [], done: [], ideas: [], super: [] };
     }
-  };
+  }
+
   const store = load();
   const save = () => localStorage.setItem(LS_KEY, JSON.stringify(store));
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
   const fmt = (ts) =>
-    new Date(ts).toLocaleString("sv-SE", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
+    new Date(ts).toLocaleString("sv-SE", {
+      hour: "2-digit",
+      minute: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+    });
 
-  // ---------- Shared render helpers ----------
-  const makeBtn = (txt, title, onClick) => {
+  // ---------- UI helpers ----------
+  function makeBtn(txt, title, onClick) {
     const b = document.createElement("button");
     b.className = "miniIconBtn";
     b.textContent = txt;
     if (title) b.title = title;
     b.addEventListener("click", onClick);
     return b;
-  };
+  }
 
-  const renderList = (ul, items, { emptyText, leftBuilder, rightBuilder }) => {
+  function renderList(ul, items, { emptyText, leftBuilder, rightBuilder }) {
     if (!ul) return;
     ul.innerHTML = "";
+
     if (!items.length) {
       ul.innerHTML = `<li class="miniHint">${emptyText}</li>`;
       return;
@@ -130,13 +137,13 @@
       li.appendChild(right);
       ul.appendChild(li);
     }
-  };
+  }
 
-  const removeFrom = (listName, id) => {
+  function removeFrom(listName, id) {
     store[listName] = store[listName].filter((x) => x.id !== id);
     save();
     renderAll();
-  };
+  }
 
   // ---------- TODO / DONE ----------
   const todoInput = $("todoInput");
@@ -146,15 +153,15 @@
   const doneList = $("doneList");
   const doneClearBtn = $("doneClearBtn");
 
-  const addTodo = (text) => {
+  function addTodo(text) {
     const t = (text || "").trim();
     if (!t) return;
     store.todo.unshift({ id: uid(), text: t, createdAt: Date.now() });
     save();
     renderTodo();
-  };
+  }
 
-  const completeTodo = (id) => {
+  function completeTodo(id) {
     const i = store.todo.findIndex((x) => x.id === id);
     if (i === -1) return;
     const item = store.todo.splice(i, 1)[0];
@@ -162,9 +169,9 @@
     save();
     renderTodo();
     renderDone();
-  };
+  }
 
-  const restoreDone = (id) => {
+  function restoreDone(id) {
     const i = store.done.findIndex((x) => x.id === id);
     if (i === -1) return;
     const item = store.done.splice(i, 1)[0];
@@ -173,9 +180,9 @@
     save();
     renderTodo();
     renderDone();
-  };
+  }
 
-  const promoteTodoToPrio = (id) => {
+  function promoteTodoToPrio(id) {
     const i = store.todo.findIndex((x) => x.id === id);
     if (i === -1) return;
     const item = store.todo.splice(i, 1)[0];
@@ -183,9 +190,9 @@
     save();
     renderTodo();
     renderPrio();
-  };
+  }
 
-  const renderTodo = () => {
+  function renderTodo() {
     renderList(todoList, store.todo, {
       emptyText: "Inga uppgifter just nu.",
       leftBuilder: (left, item) => {
@@ -205,9 +212,9 @@
         right.appendChild(makeBtn("🗑️", "Ta bort", () => removeFrom("todo", item.id)));
       },
     });
-  };
+  }
 
-  const renderDone = () => {
+  function renderDone() {
     renderList(doneList, store.done, {
       emptyText: "Inget slutfört ännu.",
       leftBuilder: (left, item) => {
@@ -225,7 +232,7 @@
         right.appendChild(makeBtn("🗑️", "Ta bort", () => removeFrom("done", item.id)));
       },
     });
-  };
+  }
 
   if (todoAddBtn && todoInput) {
     todoAddBtn.addEventListener("click", () => {
@@ -254,15 +261,15 @@
   const ideaAddBtn = $("ideaAddBtn");
   const ideasList = $("ideasList");
 
-  const addIdea = (text) => {
+  function addIdea(text) {
     const t = (text || "").trim();
     if (!t) return;
     store.ideas.unshift({ id: uid(), text: t, createdAt: Date.now() });
     save();
     renderIdeas();
-  };
+  }
 
-  const renderIdeas = () => {
+  function renderIdeas() {
     renderList(ideasList, store.ideas, {
       emptyText: "Inga idéer sparade ännu.",
       leftBuilder: (left, item) => {
@@ -279,7 +286,7 @@
         right.appendChild(makeBtn("🗑️", "Ta bort", () => removeFrom("ideas", item.id)));
       },
     });
-  };
+  }
 
   if (ideaAddBtn && ideaInput) {
     ideaAddBtn.addEventListener("click", () => {
@@ -301,15 +308,15 @@
   const prioList = $("prioList");
   const prioCount = $("prioCount");
 
-  const addPrio = (text) => {
+  function addPrio(text) {
     const t = (text || "").trim();
     if (!t) return;
     store.super.unshift({ id: uid(), text: t, createdAt: Date.now() });
     save();
     renderPrio();
-  };
+  }
 
-  const completePrio = (id) => {
+  function completePrio(id) {
     const i = store.super.findIndex((x) => x.id === id);
     if (i === -1) return;
     const item = store.super.splice(i, 1)[0];
@@ -317,10 +324,11 @@
     save();
     renderPrio();
     renderDone();
-  };
+  }
 
-  const renderPrio = () => {
+  function renderPrio() {
     if (prioCount) prioCount.textContent = String(store.super.length);
+
     renderList(prioList, store.super, {
       emptyText: "Inget i Aktiv prio just nu.",
       leftBuilder: (left, item) => {
@@ -338,7 +346,7 @@
         right.appendChild(makeBtn("🗑️", "Ta bort", () => removeFrom("super", item.id)));
       },
     });
-  };
+  }
 
   if (prioAddBtn && prioInput) {
     prioAddBtn.addEventListener("click", () => {
@@ -354,21 +362,18 @@
     });
   }
 
-  const renderAll = () => {
+  function renderAll() {
     renderTodo();
     renderDone();
     renderIdeas();
     renderPrio();
-  };
+  }
 
-  // continue in DEL 2...
-  window.__SB__ = { setViewByIndex, setViewByName, VIEWS, get currentIndex(){ return currentIndex; }, set currentIndex(v){ currentIndex=v; } };
-})();
-(() => {
-  const $ = (id) => document.getElementById(id);
-  const SB = window.__SB__;
+  // ✅ IMPORTANT: Render all at startup so lists show after refresh
+  renderAll();
+  setViewByIndex(0);
 
-  // ---------- NEWS (stable RSS with cache + fallbacks) ----------
+  // ---------- NEWS ----------
   const RSS_URL = "https://news.google.com/rss?hl=sv&gl=SE&ceid=SE:sv";
   const NEWS_MAX = 10;
 
@@ -380,10 +385,10 @@
   const PROXIES = [
     (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
     (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//, "")}`,
-    (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`
+    (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
   ];
 
-  const fetchTextFallback = async (url) => {
+  async function fetchTextFallback(url) {
     let last;
     for (const p of PROXIES) {
       try {
@@ -397,21 +402,25 @@
           throw new Error("No contents");
         }
         return t;
-      } catch (e) { last = e; }
+      } catch (e) {
+        last = e;
+      }
     }
     throw last || new Error("All proxies failed");
-  };
+  }
 
-  const parseRss = (xml) => {
+  function parseRss(xml) {
     const doc = new DOMParser().parseFromString(xml, "text/xml");
-    return Array.from(doc.querySelectorAll("item")).slice(0, NEWS_MAX).map(it => ({
-      title: it.querySelector("title")?.textContent?.trim() || "Nyhet",
-      link: it.querySelector("link")?.textContent?.trim() || "#",
-      pubDate: it.querySelector("pubDate")?.textContent?.trim() || ""
-    }));
-  };
+    return Array.from(doc.querySelectorAll("item"))
+      .slice(0, NEWS_MAX)
+      .map((it) => ({
+        title: it.querySelector("title")?.textContent?.trim() || "Nyhet",
+        link: it.querySelector("link")?.textContent?.trim() || "#",
+        pubDate: it.querySelector("pubDate")?.textContent?.trim() || "",
+      }));
+  }
 
-  const renderNews = (items, metaText) => {
+  function renderNews(items, metaText) {
     if (!newsListEl || !newsMetaEl) return;
     newsMetaEl.textContent = metaText || "";
     newsListEl.innerHTML = "";
@@ -438,7 +447,6 @@
       a.style.color = "var(--text)";
       a.style.textDecoration = "none";
       a.style.fontWeight = "900";
-
       left.appendChild(a);
 
       const right = document.createElement("div");
@@ -448,30 +456,38 @@
 
       const meta = document.createElement("div");
       meta.className = "miniMeta";
-      meta.textContent = pubDate && !isNaN(pubDate.getTime())
-        ? pubDate.toLocaleString("sv-SE", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
-        : "";
+      meta.textContent =
+        pubDate && !isNaN(pubDate.getTime())
+          ? pubDate.toLocaleString("sv-SE", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
+          : "";
 
       right.appendChild(meta);
+
       li.appendChild(left);
       li.appendChild(right);
       newsListEl.appendChild(li);
     }
-  };
+  }
 
-  const saveNewsCache = (items) => {
+  function saveNewsCache(items) {
     try {
       localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify({ updatedAt: Date.now(), items }));
     } catch {}
-  };
-  const loadNewsCache = () => {
-    try { return JSON.parse(localStorage.getItem(NEWS_CACHE_KEY) || "null"); } catch { return null; }
-  };
+  }
 
-  const loadNews = async () => {
+  function loadNewsCache() {
+    try {
+      return JSON.parse(localStorage.getItem(NEWS_CACHE_KEY) || "null");
+    } catch {
+      return null;
+    }
+  }
+
+  async function loadNews() {
     if (!newsListEl || !newsMetaEl) return;
     newsMetaEl.textContent = "Laddar senaste…";
     newsListEl.innerHTML = "";
+
     try {
       const xml = await fetchTextFallback(RSS_URL);
       const items = parseRss(xml);
@@ -485,13 +501,13 @@
         renderNews([], "Nyheter kunde inte laddas just nu.");
       }
     }
-  };
+  }
 
   if (newsRefreshBtn) newsRefreshBtn.addEventListener("click", loadNews);
   loadNews();
   setInterval(loadNews, 10 * 60 * 1000);
 
-  // ---------- WEATHER (Open-Meteo, no key) ----------
+  // ---------- WEATHER ----------
   const weatherTempEl = $("weatherTemp");
   const weatherDescEl = $("weatherDesc");
   const weatherWindEl = $("weatherWind");
@@ -499,16 +515,32 @@
   const weatherUpdatedEl = $("weatherUpdated");
   const weatherRefreshBtn = $("weatherRefreshBtn");
 
-  const codeText = (c) => ({
-    0:"Klart",1:"Mestadels klart",2:"Delvis molnigt",3:"Mulet",45:"Dimma",48:"Isdimma",
-    51:"Duggregn (lätt)",53:"Duggregn",55:"Duggregn (kraftigt)",
-    61:"Regn (lätt)",63:"Regn",65:"Regn (kraftigt)",
-    71:"Snö (lätt)",73:"Snö",75:"Snö (kraftigt)",
-    80:"Skurar (lätta)",81:"Skurar",82:"Skurar (kraftiga)",
-    95:"Åska",96:"Åska + hagel (lätt)",99:"Åska + hagel"
-  }[c] || `Väderkod ${c}`);
+  const codeText = (c) =>
+    ({
+      0: "Klart",
+      1: "Mestadels klart",
+      2: "Delvis molnigt",
+      3: "Mulet",
+      45: "Dimma",
+      48: "Isdimma",
+      51: "Duggregn (lätt)",
+      53: "Duggregn",
+      55: "Duggregn (kraftigt)",
+      61: "Regn (lätt)",
+      63: "Regn",
+      65: "Regn (kraftigt)",
+      71: "Snö (lätt)",
+      73: "Snö",
+      75: "Snö (kraftigt)",
+      80: "Skurar (lätta)",
+      81: "Skurar",
+      82: "Skurar (kraftiga)",
+      95: "Åska",
+      96: "Åska + hagel (lätt)",
+      99: "Åska + hagel",
+    }[c] || `Väderkod ${c}`);
 
-  const fetchWeather = async (lat, lon, label) => {
+  async function fetchWeather(lat, lon, label) {
     const url =
       `https://api.open-meteo.com/v1/forecast` +
       `?latitude=${encodeURIComponent(lat)}` +
@@ -530,49 +562,63 @@
     if (weatherWindEl) weatherWindEl.textContent = `${w} m/s`;
     if (weatherPlaceEl) weatherPlaceEl.textContent = label;
     if (weatherUpdatedEl) {
-      weatherUpdatedEl.textContent = new Date().toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit", day:"2-digit", month:"2-digit" });
+      weatherUpdatedEl.textContent = new Date().toLocaleString("sv-SE", {
+        hour: "2-digit",
+        minute: "2-digit",
+        day: "2-digit",
+        month: "2-digit",
+      });
     }
-  };
+  }
 
-  const loadWeather = () => {
+  function loadWeather() {
     if (weatherDescEl) weatherDescEl.textContent = "Laddar…";
-    const fallback = () => fetchWeather(59.3293, 18.0686, "Stockholm").catch(() => {
-      if (weatherDescEl) weatherDescEl.textContent = "Kunde inte ladda väder.";
-    });
+
+    const fallback = () =>
+      fetchWeather(59.3293, 18.0686, "Stockholm").catch(() => {
+        if (weatherDescEl) weatherDescEl.textContent = "Kunde inte ladda väder.";
+      });
 
     if (!navigator.geolocation) return fallback();
 
     navigator.geolocation.getCurrentPosition(
       (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude, "Din plats").catch(fallback),
       fallback,
-      { enableHighAccuracy:false, timeout:7000, maximumAge:30*60*1000 }
+      { enableHighAccuracy: false, timeout: 7000, maximumAge: 30 * 60 * 1000 }
     );
-  };
+  }
 
   if (weatherRefreshBtn) weatherRefreshBtn.addEventListener("click", loadWeather);
   loadWeather();
   setInterval(loadWeather, 30 * 60 * 1000);
 
-  // ---------- DIAL (pointer/touch safe) ----------
+  // ---------- DIAL ----------
   const dialEl = document.querySelector(".dial");
   const dialRing = document.querySelector(".dialRing");
 
   let isDragging = false;
   let startAngle = 0;
   let currentRotation = 0;
-  const STEP = 360 / SB.VIEWS.length;
+  const STEP = 360 / VIEWS.length;
 
   const angle = (cx, cy, mx, my) => Math.atan2(my - cy, mx - cx) * (180 / Math.PI);
-  const setRotation = (deg) => {
+
+  function setRotation(deg) {
     currentRotation = deg;
     if (dialRing) dialRing.style.transform = `rotate(${deg}deg)`;
+  }
+
+  function syncRotationToIndex() {
+    setRotation(currentIndex * STEP);
+  }
+
+  const originalSet = setViewByIndex;
+  setViewByIndex = (idx) => {
+    originalSet(idx);
+    syncRotationToIndex();
   };
-  const sync = () => setRotation(SB.currentIndex * STEP);
 
-  const originalSet = SB.setViewByIndex;
-  SB.setViewByIndex = (idx) => { originalSet(idx); sync(); };
-
-  const onDown = (e) => {
+  function onDown(e) {
     if (!dialEl) return;
     isDragging = true;
     dialEl.setPointerCapture?.(e.pointerId);
@@ -582,9 +628,9 @@
     const cx = r.left + r.width / 2;
     const cy = r.top + r.height / 2;
     startAngle = angle(cx, cy, e.clientX, e.clientY) - currentRotation;
-  };
+  }
 
-  const onMove = (e) => {
+  function onMove(e) {
     if (!isDragging) return;
     e.preventDefault();
 
@@ -592,34 +638,27 @@
     const cx = r.left + r.width / 2;
     const cy = r.top + r.height / 2;
     setRotation(angle(cx, cy, e.clientX, e.clientY) - startAngle);
-  };
+  }
 
-  const onUp = (e) => {
+  function onUp(e) {
     if (!isDragging) return;
     isDragging = false;
     e.preventDefault();
 
     const snapped = Math.round(currentRotation / STEP);
-    const finalIndex = ((snapped % SB.VIEWS.length) + SB.VIEWS.length) % SB.VIEWS.length;
+    const finalIndex = ((snapped % VIEWS.length) + VIEWS.length) % VIEWS.length;
     originalSet(finalIndex);
-    sync();
-  };
-
-  if (dialEl) {
-    dialEl.addEventListener("pointerdown", onDown, { passive:false });
-    window.addEventListener("pointermove", onMove, { passive:false });
-    window.addEventListener("pointerup", onUp, { passive:false });
-    window.addEventListener("pointercancel", onUp, { passive:false });
+    syncRotationToIndex();
   }
 
-  // ---------- Init ----------
-  // Render lists from DEL 1
-  const triggerRender = () => {
-    // DEL 1 put renderAll inside closure; easiest: just trigger by toggling storage change.
-    // Instead, we rely on DEL 1 initial calls having run before this block executes.
-  };
+  if (dialEl) {
+    dialEl.addEventListener("pointerdown", onDown, { passive: false });
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp, { passive: false });
+    window.addEventListener("pointercancel", onUp, { passive: false });
+  }
 
-  // Set first view + sync dial
-  SB.setViewByIndex(0);
-  sync();
+  // Final sync
+  setViewByIndex(0);
+  syncRotationToIndex();
 })();

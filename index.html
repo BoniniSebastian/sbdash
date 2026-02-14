@@ -4,12 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>SB Dash</title>
-  <link rel="stylesheet" href="style.css?v=400" />
+  <link rel="stylesheet" href="style.css?v=700" />
 </head>
 <body>
 
   <header class="topbar">
     <div class="brand">
+      <button class="gearTop" id="openSettingsBtn" aria-label="Inställningar">⚙️</button>
+
       <div class="brandDot"></div>
       <div>
         <div class="brandTitle">SB Dash</div>
@@ -24,20 +26,21 @@
   <main class="shell">
     <section class="layout">
 
-      <!-- VÄNSTER: Google Kalender (FRILAGD, ingen panel) -->
-      <aside class="calendarWrap">
+      <!-- Kalender -->
+      <aside class="calendarWrap" aria-label="Kalender">
         <div class="calScale">
           <iframe
+            id="calFrame"
             class="calFrame"
-            src="https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0"
+            src=""
             frameborder="0"
-            scrolling="no">
+            scrolling="yes">
           </iframe>
         </div>
         <div class="calOverlay" aria-hidden="true"></div>
       </aside>
 
-      <!-- MITTEN: Main -->
+      <!-- Main -->
       <section class="panel mainPanel">
         <div class="panelHead">
           <h2>Main</h2>
@@ -46,7 +49,60 @@
         <div class="panelBody mainBody">
           <div class="viewTrack" id="viewTrack">
 
-            <!-- 1) WEATHER -->
+            <!-- PRIO (för iPhone – så du kan hantera prios även när högerspalten döljs) -->
+            <div class="viewPage" data-view="prio">
+              <div class="viewTitle">Aktiv prio</div>
+
+              <div class="miniForm">
+                <input id="prioInputMobile" class="miniInput" type="text" placeholder="Lägg till superprio…" maxlength="160">
+                <button id="prioAddBtnMobile" class="miniBtn">+ Lägg</button>
+              </div>
+
+              <ul class="miniList" id="prioListMobile"></ul>
+              <div class="miniHint">Tryck = öppna • Swipe höger→vänster = slutför</div>
+            </div>
+
+            <!-- TODO -->
+            <div class="viewPage" data-view="todo">
+              <div class="viewTitle">Att göra</div>
+              <div class="miniForm">
+                <input id="todoInput" class="miniInput" type="text" placeholder="Skriv en uppgift…" maxlength="120">
+                <button id="todoAddBtn" class="miniBtn">+ Lägg</button>
+              </div>
+              <ul id="todoList" class="miniList"></ul>
+              <div class="miniHint">Swipe höger→vänster = slutför</div>
+            </div>
+
+            <!-- IDEAS -->
+            <div class="viewPage" data-view="ideas">
+              <div class="viewTitle">Idéer</div>
+              <div class="miniForm">
+                <input id="ideaInput" class="miniInput" type="text" placeholder="Skriv en idé…" maxlength="160">
+                <button id="ideaAddBtn" class="miniBtn">+ Spara</button>
+              </div>
+              <ul id="ideasList" class="miniList"></ul>
+              <div class="miniHint">Swipe höger→vänster = arkivera (till Slutförda)</div>
+            </div>
+
+            <!-- DONE -->
+            <div class="viewPage" data-view="done">
+              <div class="viewTitle">Slutförda</div>
+              <ul id="doneList" class="miniList"></ul>
+              <div class="miniActions">
+                <button id="doneClearBtn" class="miniBtn ghost">Rensa slutförda</button>
+              </div>
+              <div class="miniHint">↩︎ återställ till rätt lista (prio/todo/idéer)</div>
+            </div>
+
+            <!-- NEWS -->
+            <div class="viewPage" data-view="news" id="newsPage">
+              <div class="viewTitle">Nyheter</div>
+              <div class="pullHint" id="newsPullHint">Dra ned för att uppdatera</div>
+              <div id="newsMeta" class="miniHint" style="margin-top:6px;">Laddar…</div>
+              <ul id="newsList" class="miniList" style="margin-top:10px;"></ul>
+            </div>
+
+            <!-- WEATHER -->
             <div class="viewPage" data-view="weather">
               <div class="viewTitle">Väder</div>
 
@@ -88,47 +144,7 @@
               </div>
             </div>
 
-            <!-- 2) NEWS -->
-            <div class="viewPage" data-view="news" id="newsPage">
-              <div class="viewTitle">Nyheter</div>
-              <div class="pullHint" id="newsPullHint">Dra ned för att uppdatera</div>
-              <div id="newsMeta" class="miniHint" style="margin-top:6px;">Laddar…</div>
-              <ul id="newsList" class="miniList" style="margin-top:10px;"></ul>
-            </div>
-
-            <!-- 3) TODO -->
-            <div class="viewPage" data-view="todo">
-              <div class="viewTitle">Att göra</div>
-              <div class="miniForm">
-                <input id="todoInput" class="miniInput" type="text" placeholder="Skriv en uppgift…" maxlength="120">
-                <button id="todoAddBtn" class="miniBtn">+ Lägg</button>
-              </div>
-              <ul id="todoList" class="miniList"></ul>
-              <div class="miniHint">Swipe höger→vänster = slutför</div>
-            </div>
-
-            <!-- 4) IDEAS -->
-            <div class="viewPage" data-view="ideas">
-              <div class="viewTitle">Idéer</div>
-              <div class="miniForm">
-                <input id="ideaInput" class="miniInput" type="text" placeholder="Skriv en idé…" maxlength="160">
-                <button id="ideaAddBtn" class="miniBtn">+ Spara</button>
-              </div>
-              <ul id="ideasList" class="miniList"></ul>
-              <div class="miniHint">Swipe höger→vänster = arkivera (till Slutförda)</div>
-            </div>
-
-            <!-- 5) DONE -->
-            <div class="viewPage" data-view="done">
-              <div class="viewTitle">Slutförda</div>
-              <ul id="doneList" class="miniList"></ul>
-              <div class="miniActions">
-                <button id="doneClearBtn" class="miniBtn ghost">Rensa slutförda</button>
-              </div>
-              <div class="miniHint">↩︎ återställ till rätt lista (prio/todo/idéer)</div>
-            </div>
-
-            <!-- 6) POMODORO -->
+            <!-- POMODORO -->
             <div class="viewPage" data-view="pomodoro">
               <div class="viewTitle">Pomodoro</div>
 
@@ -171,16 +187,17 @@
         </div>
 
         <div class="underNav" id="underNav">
-          <button class="navBtn active" data-view="weather">Väder</button>
-          <button class="navBtn" data-view="news">Nyheter</button>
+          <button class="navBtn active" data-view="prio">Prio</button>
           <button class="navBtn" data-view="todo">Att göra</button>
           <button class="navBtn" data-view="ideas">Idéer</button>
           <button class="navBtn" data-view="done">Slutförda</button>
+          <button class="navBtn" data-view="news">Nyheter</button>
+          <button class="navBtn" data-view="weather">Väder</button>
           <button class="navBtn" data-view="pomodoro">Pomodoro</button>
         </div>
       </section>
 
-      <!-- HÖGER: Aktiv prio -->
+      <!-- Aktiv prio (desktop) -->
       <aside class="panel prioPanel">
         <div class="panelHead">
           <h2>Aktiv prio</h2>
@@ -198,33 +215,66 @@
         </div>
       </aside>
 
+      <!-- iPhone bottenzon -->
+      <div class="mobileBottom" aria-label="Bottenzon">
+        <div class="mobileBottomLeft">
+          Aktiva prios: <span id="mobilePrioCount">0</span>
+        </div>
+
+        <div class="mobileBottomRight">
+          <div class="dialFixed" aria-label="Ratt">
+            <div class="dial" id="dial">
+              <img class="dialRing" id="dialRing" src="assets/ui/knob-ring.svg" alt="Knob ring">
+              <img class="dialIcon" id="dialIcon" src="assets/ui/icon-todo.svg" alt="Dial icon">
+            </div>
+          </div>
+        </div>
+      </div>
+
     </section>
   </main>
 
-  <!-- FIXED DIAL -->
-  <div class="dialFixed" aria-label="Ratt">
-    <div class="dial" id="dial">
-      <img class="dialRing" id="dialRing" src="assets/ui/knob-ring.svg" alt="Knob ring">
-      <img class="dialIcon" id="dialIcon" src="assets/ui/icon-weather.svg" alt="Dial icon">
-    </div>
-  </div>
-
-  <!-- Modal (prio edit) -->
-  <div class="modalOverlay" id="modalOverlay" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-label="Detaljvy">
+  <!-- Modal: Aktiv prio (detalj + edit) -->
+  <div class="modalOverlay" id="prioModalOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Aktiv prio">
       <div class="modalHead">
         <div class="modalTitle">Aktiv prio</div>
-        <button class="modalClose" id="modalCloseBtn">✕</button>
+        <button class="modalClose" id="prioModalCloseBtn">✕</button>
       </div>
 
-      <textarea class="modalEdit" id="modalEdit" placeholder="Skriv här…"></textarea>
+      <textarea class="modalEdit" id="prioModalEdit" placeholder="Skriv här…"></textarea>
 
       <div class="modalActions">
-        <button class="miniBtn" id="modalDoneBtn">Slutför</button>
+        <button class="miniBtn" id="prioModalDoneBtn">Slutför</button>
       </div>
     </div>
   </div>
 
-  <script src="app.js?v=400"></script>
+  <!-- Modal: Inställningar -->
+  <div class="modalOverlay" id="settingsOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Inställningar">
+      <div class="modalHead">
+        <div class="modalTitle">Inställningar</div>
+        <button class="modalClose" id="settingsCloseBtn">✕</button>
+      </div>
+
+      <div class="settingsForm">
+        <label class="settingsLabel">Stad (för väder)</label>
+        <input id="settingsCity" class="settingsInput" type="text" placeholder="t.ex. Värmdö eller Stockholm">
+
+        <label class="settingsLabel" style="margin-top:10px;">Google Kalender-ID (mail)</label>
+        <input id="settingsCalId" class="settingsInput" type="text" placeholder="t.ex. namn@gmail.com">
+
+        <div class="settingsHint" id="settingsHint">Sparas lokalt på den här enheten.</div>
+
+        <div class="settingsActions">
+          <button class="miniBtn" id="settingsSaveBtn">Spara</button>
+          <button class="miniBtn ghost" id="settingsResetBtn">Återställ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=700"></script>
 </body>
 </html>

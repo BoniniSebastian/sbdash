@@ -3,29 +3,21 @@
   --text:#e9f0ff;
   --muted:#aab6d1;
   --line:rgba(255,255,255,.10);
-  --glow:rgba(0,209,255,.22);
-  --radius:22px;
-  --shadow: 0 18px 40px rgba(0,0,0,.45);
+  --glow:rgba(0,209,255,.20);
+  --radius:18px;
+  --shadow: 0 14px 30px rgba(0,0,0,.42);
 }
 
 *{box-sizing:border-box}
-html,body{height:100%}
-
-/* 🔒 App-känsla: lås sidan (ingen body-scroll) */
-html, body{
-  overflow:hidden;
-}
-
+html,body{height:100%; overflow:hidden}
 body{
   margin:0;
   display:flex;
   flex-direction:column;
-
   background:
-    radial-gradient(1200px 600px at 35% 0%, rgba(0,209,255,.10), transparent 60%),
-    radial-gradient(900px 500px at 80% 20%, rgba(0,209,255,.06), transparent 55%),
+    radial-gradient(1200px 600px at 35% 0%, rgba(0,209,255,.09), transparent 60%),
+    radial-gradient(900px 500px at 80% 20%, rgba(0,209,255,.05), transparent 55%),
     var(--bg);
-
   color:var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
 }
@@ -38,59 +30,48 @@ body{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:14px;
-  padding:14px 18px;
+  gap:12px;
+  padding:10px 12px;
   border-bottom:1px solid var(--line);
   background: rgba(7,10,15,.78);
   backdrop-filter: blur(10px);
-  flex: 0 0 auto;
+  flex:0 0 auto;
 }
-
-.brand{display:flex; align-items:center; gap:12px}
+.brand{display:flex; align-items:center; gap:10px}
 .brandDot{
-  width:14px; height:14px; border-radius:999px;
-  background: linear-gradient(135deg, rgba(0,209,255,.95), rgba(0,209,255,.40));
-  box-shadow: 0 0 18px rgba(0,209,255,.35);
+  width:10px; height:10px; border-radius:999px;
+  background: linear-gradient(135deg, rgba(0,209,255,.95), rgba(0,209,255,.38));
+  box-shadow: 0 0 14px rgba(0,209,255,.28);
 }
-.brandTitle{font-weight:900; letter-spacing:.2px}
-.brandSub{font-size:12px; color:var(--muted); margin-top:2px}
-
+.brandTitle{font-weight:900; letter-spacing:.2px; font-size:14px}
+.brandSub{font-size:11px; color:var(--muted); margin-top:2px}
 .pill{
   border:1px solid var(--line);
   background: rgba(255,255,255,.03);
   color:var(--muted);
-  padding:8px 10px;
+  padding:6px 8px;
   border-radius:999px;
-  font-size:12px;
+  font-size:11px;
 }
 
-/* Shell fills remaining viewport height */
+/* Shell */
 .shell{
   flex:1;
   width:100%;
-  max-width: 1400px;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 14px 14px 18px;
+  padding: 10px 10px 12px;
   min-height:0;
 }
 
-/* Layout: 3 kolumner */
+/* Layout: compact baseline */
 .layout{
   height:100%;
   min-height:0;
-
   display:grid;
-  grid-template-columns: 320px 1fr 360px;
-  gap:14px;
+  grid-template-columns: 260px 1fr 320px;
+  gap:10px;
   align-items:stretch;
-}
-
-/* Mobil först när riktigt smalt */
-@media (max-width: 860px){
-  .layout{
-    grid-template-columns: 1fr;
-    grid-auto-rows: minmax(220px, auto);
-  }
 }
 
 /* Panels */
@@ -101,100 +82,74 @@ body{
   box-shadow: var(--shadow);
   position:relative;
   overflow:hidden;
-
   display:flex;
   flex-direction:column;
   min-height:0;
 }
-
-/* Glow edge */
 .panel::before{
   content:"";
   position:absolute;
   inset:-2px;
   border-radius: calc(var(--radius) + 2px);
-  background: radial-gradient(600px 240px at 40% 0%, var(--glow), transparent 55%);
+  background: radial-gradient(560px 220px at 40% 0%, var(--glow), transparent 58%);
   opacity:.75;
   pointer-events:none;
 }
-
 .panelHead{
   position:relative;
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:10px;
-  padding:14px 14px 10px;
+  padding:10px 10px 8px;
   border-bottom:1px solid rgba(255,255,255,.06);
   flex:0 0 auto;
 }
 .panelHead h2{
   margin:0;
-  font-size:14px;
+  font-size:13px;
   letter-spacing:.3px;
 }
 .tag{
-  font-size:12px;
+  font-size:11px;
   color:var(--muted);
   border:1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.03);
-  padding:6px 10px;
+  padding:5px 8px;
   border-radius:999px;
 }
-
-/* ✅ Scroll sker i paneler, inte i body */
 .panelBody{
   position:relative;
-  padding:14px;
+  padding:10px;
   flex:1 1 auto;
   min-height:0;
-  overflow:auto;
+  overflow:auto; /* scroll bara i panel */
 }
 
-/* =========================
-   MAIN PANEL (carousel)
-   ========================= */
-.mainBody{
-  padding:0;
-  overflow:hidden;
-}
-
+/* MAIN carousel */
+.mainBody{ padding:0; overflow:hidden; }
 .viewTrack{
   display:flex;
   width:100%;
   height:100%;
-  transform: translateX(0%);
-  transition: transform 280ms ease;
+  transition: transform 260ms ease;
 }
-
 .viewPage{
   flex: 0 0 100%;
-  padding: 18px 16px;
+  padding: 14px 12px;
   height: 100%;
   min-height: 0;
   overflow:auto;
-  background:
-    radial-gradient(900px 300px at 20% 0%, rgba(0,209,255,.08), transparent 60%);
+  background: radial-gradient(900px 300px at 20% 0%, rgba(0,209,255,.07), transparent 60%);
 }
+.viewTitle{ font-size:16px; font-weight:900; margin:0 0 6px; }
+.viewText{ color: var(--muted); max-width: 60ch; line-height: 1.45; font-size:12px; }
 
-.viewTitle{
-  font-size:20px;
-  font-weight:900;
-  margin-bottom: 8px;
-}
-
-.viewText{
-  color: var(--muted);
-  max-width: 55ch;
-  line-height: 1.5;
-}
-
-/* Under-nav buttons */
+/* Under-nav */
 .underNav{
-  position:relative;
   display:flex;
   gap:8px;
-  padding:12px 14px 14px;
+  padding:10px 10px 10px;
   border-top:1px solid rgba(255,255,255,.06);
   flex-wrap:wrap;
   flex:0 0 auto;
@@ -203,180 +158,105 @@ body{
   border:1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.03);
   color: var(--text);
-  padding:10px 12px;
-  border-radius: 14px;
+  padding:8px 10px;
+  border-radius: 12px;
   cursor:pointer;
-  font-weight:800;
-  font-size:12px;
+  font-weight:900;
+  font-size:11px;
 }
 .navBtn.active{
   border-color: rgba(0,209,255,.35);
   box-shadow: 0 0 0 3px rgba(0,209,255,.10);
 }
 
-/* =========================
-   Forms/lists
-   ========================= */
-.miniForm{
-  display:flex;
-  gap:10px;
-  margin: 10px 0 12px;
-  flex-wrap:wrap;
-}
+/* Lists/forms compact */
+.miniForm{ display:flex; gap:8px; margin: 8px 0 10px; flex-wrap:wrap; }
 .miniInput{
-  flex: 1 1 220px;
+  flex: 1 1 200px;
   background: rgba(255,255,255,.04);
   border:1px solid rgba(255,255,255,.10);
-  border-radius: 14px;
-  padding: 12px 12px;
+  border-radius: 12px;
+  padding: 9px 10px;
   color: var(--text);
   outline:none;
+  font-size:12px;
 }
-.miniInput:focus{
-  border-color: rgba(0,209,255,.35);
-  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
-}
+.miniInput:focus{ border-color: rgba(0,209,255,.35); box-shadow: 0 0 0 3px rgba(0,209,255,.10); }
 .miniBtn{
   border:1px solid rgba(255,255,255,.10);
   background: rgba(0,209,255,.16);
   color: var(--text);
-  padding: 12px 14px;
-  border-radius: 14px;
+  padding: 9px 10px;
+  border-radius: 12px;
   cursor:pointer;
   font-weight:900;
+  font-size:12px;
 }
-.miniBtn:hover{ border-color: rgba(0,209,255,.35); }
 .miniBtn.ghost{ background: rgba(255,255,255,.03); }
-
-.miniList{
-  list-style:none;
-  margin:0;
-  padding:0;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
+.miniList{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
 
 .miniRow{
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:10px;
-  padding:12px 12px;
+  padding:10px 10px;
   border:1px solid rgba(255,255,255,.08);
   background: rgba(255,255,255,.02);
-  border-radius: 16px;
+  border-radius: 14px;
 }
-
-.miniRowLeft{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  min-width:0;
-}
-
-.miniText{
-  font-weight:800;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.miniMeta{
-  color: var(--muted);
-  font-size:12px;
-  flex:0 0 auto;
-}
-
-.miniHint{
-  color: var(--muted);
-  font-size:12px;
-  margin-top: 10px;
-}
-
-.miniActions{
-  margin-top: 12px;
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-}
+.miniRowLeft{ display:flex; align-items:center; gap:8px; min-width:0; }
+.miniText{ font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
+.miniMeta{ color: var(--muted); font-size:11px; flex:0 0 auto; }
+.miniHint{ color: var(--muted); font-size:11px; margin-top: 8px; }
 
 .miniIconBtn{
   border:1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.03);
   color: var(--text);
-  padding: 10px 12px;
-  border-radius: 14px;
+  padding: 8px 10px;
+  border-radius: 12px;
   cursor:pointer;
   font-weight:900;
+  font-size:12px;
 }
 
-/* =========================
-   Calendar + dark overlay
-   ========================= */
-.calendarPanel{
-  display:flex;
-  flex-direction:column;
-  position:relative;
-  overflow:hidden;
-}
-
+/* Calendar: no padding + overlay full cover (no gap) */
+.calendarPanel{ position:relative; overflow:hidden; }
 .calendarPanel .panelBody.calendarBody{
-  padding:0;            /* ✅ inga glipor */
+  padding:0;
   overflow:hidden;
   position:relative;
-  border-radius: 18px;  /* ✅ rundning här istället */
+  border-radius: 16px;
 }
-
 .calFrame{
-  display:block;   /* ✅ tar bort “baseline gap” */
+  display:block;
   width:100%;
   height:100%;
   border:0;
-  border-radius: 0; /* rundning sköts av container */
+  border-radius: 0;
+  background:#0b1118;
 }
-
-/* overlay som mörkar Google-iframe */
 .calOverlay{
   position:absolute;
-  inset:0;                     /* ✅ täcker hela */
+  inset:0;
   background: rgba(0,0,0,.55);
   pointer-events:none;
-  mix-blend-mode:multiply;
+  mix-blend-mode: multiply;
 }
 
-/* =========================
-   Weather card
-   ========================= */
+/* Weather card compact */
 .weatherCard{
   border:1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.03);
-  border-radius: 16px;
-  padding: 14px;
+  border-radius: 14px;
+  padding: 12px;
   max-width: 520px;
 }
-.weatherMain{
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap:12px;
-}
-.weatherTemp{
-  font-size: 46px;
-  font-weight: 900;
-  letter-spacing: -.5px;
-}
-.weatherDesc{
-  color: var(--muted);
-  font-weight: 800;
-}
-.weatherMeta{
-  margin-top: 10px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
+.weatherMain{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+.weatherTemp{ font-size: 38px; font-weight: 900; letter-spacing: -.5px; }
+.weatherDesc{ color: var(--muted); font-weight: 900; font-size:12px; }
+.weatherMeta{ margin-top: 10px; display:flex; flex-direction:column; gap:8px; }
 .weatherMetaRow{
   display:flex;
   justify-content:space-between;
@@ -385,94 +265,72 @@ body{
   border-radius: 12px;
   border:1px solid rgba(255,255,255,.08);
   background: rgba(0,0,0,.15);
+  font-size:12px;
 }
-.weatherLabel{
-  color: var(--muted);
-  font-weight: 800;
-}
-.weatherValue{
-  font-weight: 900;
-}
+.weatherLabel{ color: var(--muted); font-weight: 900; }
+.weatherValue{ font-weight: 900; }
 
-/* =========================
-   FIXED DIAL (no box + bigger invisible touch area)
-   ========================= */
+/* FIXED DIAL: smaller + no box + big invisible touch area */
 .dialFixed{
   position:fixed;
-  right:16px;
-  bottom:16px;
+  right:14px;
+  bottom:14px;
   z-index:100;
   pointer-events:auto;
-
-  /* INGEN ruta bakom */
-  background: transparent;
-  border: none;
-  box-shadow: none;
+  background:transparent;
+  border:none;
+  box-shadow:none;
 }
-
 .dial{
   position:relative;
-  width: 190px;
-  height: 190px;
-
+  width: 150px;
+  height: 150px;
   display:grid;
   place-items:center;
   user-select:none;
-  touch-action: none; /* stoppar sid-scroll på touch */
+  touch-action:none;
 }
-
-/* Osynlig större touch-yta (B) */
 .dial::before{
   content:"";
   position:absolute;
-  width: 270px;
-  height: 270px;
+  width: 230px;
+  height: 230px;
   left:50%;
   top:50%;
   transform: translate(-50%,-50%);
   border-radius: 50%;
   background: transparent;
 }
-
 .dialRing{
   width:100%;
   height:100%;
   object-fit:contain;
-  filter: drop-shadow(0 0 18px rgba(0,209,255,.25));
+  filter: drop-shadow(0 0 16px rgba(0,209,255,.22));
 }
-
 .dialIcon{
   position:absolute;
-  width:54px;
-  height:54px;
+  width:44px;
+  height:44px;
   object-fit:contain;
-  filter: drop-shadow(0 0 14px rgba(0,209,255,.25));
+  filter: drop-shadow(0 0 12px rgba(0,209,255,.22));
 }
 
-/* =========================
-   iPad: 30–40% tightare men 3 kolumner kvar
-   ========================= */
+/* iPad landscape extra tight */
 @media (max-width: 1100px){
-  .shell{ padding: 10px 10px 12px; }
   .layout{
-    grid-template-columns: 240px 1fr 300px;
+    grid-template-columns: 230px 1fr 290px;
     gap:10px;
   }
+  .panelHead{ padding:9px 9px 7px; }
+  .panelBody{ padding:9px; }
+  .viewPage{ padding: 12px 10px; }
+  .navBtn{ padding:7px 9px; font-size:11px; }
+  .dial{ width: 140px; height: 140px; }
+  .dial::before{ width: 220px; height: 220px; }
+}
 
-  .panelHead{ padding: 10px 10px 8px; }
-  .panelBody{ padding: 10px; }
-
-  .viewTitle{ font-size: 17px; }
-  .viewPage{ padding: 14px 12px; }
-
-  .navBtn{ padding: 7px 9px; border-radius: 12px; }
-
-  .miniInput{ padding: 9px 10px; border-radius: 12px; font-size: 13px; }
-  .miniBtn{ padding: 9px 10px; border-radius: 12px; font-size: 13px; }
-
-  .dial{ width: 165px; height: 165px; }
-  .dial::before{ width: 235px; height: 235px; }
-  .dialIcon{ width: 46px; height: 46px; }
-
-  .weatherTemp{ font-size: 40px; }
+/* Phone (stack) */
+@media (max-width: 860px){
+  .layout{ grid-template-columns: 1fr; }
+  .dialFixed{ right:10px; bottom:10px; }
 }

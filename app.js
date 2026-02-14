@@ -1,11 +1,10 @@
 /* =========
-   SB Dash v1
+   SB Dash v1 (single file)
    - Views carousel: weather/news/todo/ideas/done
    - Todo + Ideas + Done saved in localStorage
    - Aktiv prio (superprio) on the right (stored + moves from todo)
    - News RSS
-   - Stable dial sync (mouse) - fine tune later for iPad touch
-   - Fix: page scroll stays inside panels (CSS does the heavy lifting)
+   - FIXED DIAL bottom-right + touch-safe (no page scroll)
    ========= */
 
 function setDates() {
@@ -28,14 +27,13 @@ let currentIndex = 0;
 const track = document.getElementById("viewTrack");
 const nav = document.getElementById("underNav");
 const dialIcon = document.querySelector(".dialIcon");
-const KNOB_RING = "assets/ui/knob-ring.svg";
 
 const ICONS = {
   weather: "assets/ui/icon-weather.svg",
   news: "assets/ui/icon-news.svg",
   todo: "assets/ui/icon-todo.svg",
   ideas: "assets/ui/icon-ideas.svg",
-  done: "assets/ui/icon-done.svg"
+  done: "assets/ui/icon-done.svg",
 };
 
 function setViewByIndex(idx) {
@@ -67,7 +65,7 @@ if (nav) {
   });
 }
 
-/* Mouse wheel over main panel */
+/* Mouse wheel over main panel (desktop) */
 const mainPanel = document.querySelector(".mainPanel");
 let wheelCooldown = false;
 
@@ -166,6 +164,16 @@ function removeFrom(listName, id) {
   renderTodo();
   renderDone();
   renderIdeas();
+  renderPrio();
+}
+
+function promoteTodoToPrio(id) {
+  const idx = store.todo.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  const item = store.todo.splice(idx, 1)[0];
+  store.super.unshift({ id: item.id, text: item.text, createdAt: item.createdAt });
+  saveStore();
+  renderTodo();
   renderPrio();
 }
 
@@ -377,7 +385,7 @@ if (ideaAddBtn && ideaInput) {
   });
 }
 
-/* ---------------- Aktiv prio (superprio) ---------------- */
+/* ---------------- Aktiv prio ---------------- */
 const prioInput = document.getElementById("prioInput");
 const prioAddBtn = document.getElementById("prioAddBtn");
 const prioList = document.getElementById("prioList");
@@ -388,16 +396,6 @@ function addPrio(text) {
   if (!t) return;
   store.super.unshift({ id: uid(), text: t, createdAt: Date.now() });
   saveStore();
-  renderPrio();
-}
-
-function promoteTodoToPrio(id) {
-  const idx = store.todo.findIndex(x => x.id === id);
-  if (idx === -1) return;
-  const item = store.todo.splice(idx, 1)[0]; // B: flytta bort från todo
-  store.super.unshift({ id: item.id, text: item.text, createdAt: item.createdAt });
-  saveStore();
-  renderTodo();
   renderPrio();
 }
 
@@ -555,7 +553,7 @@ async function loadNews() {
       li.appendChild(right);
       newsListEl.appendChild(li);
     }
-  } catch (err) {
+  } catch {
     newsMetaEl.textContent = "Nyheter kunde inte laddas. (RSS/proxy kan vara nere)";
     newsListEl.innerHTML = `<li class="miniHint">Testa igen om en stund.</li>`;
   }
@@ -565,7 +563,7 @@ if (newsRefreshBtn) newsRefreshBtn.addEventListener("click", loadNews);
 loadNews();
 setInterval(loadNews, 10 * 60 * 1000);
 
-/* ---------------- Dial (stable, mouse) ---------------- */
+/* ---------------- Dial (FIXED, touch-safe) ---------------- */
 const dialEl = document.querySelector(".dial");
 const dialRing = document.querySelector(".dialRing");
 
@@ -595,34 +593,48 @@ setViewByIndex = function(idx){
   syncRotationToIndex();
 };
 
+function onPointerDown(e){
+  if (!dialEl) return;
+  isDragging = true;
+  dialEl.setPointerCapture?.(e.pointerId);
+  e.preventDefault();
+
+  const rect = dialEl.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+
+  startAngle = getAngle(cx, cy, e.clientX, e.clientY) - currentRotation;
+}
+
+function onPointerMove(e){
+  if (!isDragging) return;
+  e.preventDefault();
+
+  const rect = dialEl.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+
+  const angle = getAngle(cx, cy, e.clientX, e.clientY);
+  setRotation(angle - startAngle);
+}
+
+function onPointerUp(e){
+  if (!isDragging) return;
+  isDragging = false;
+  e.preventDefault();
+
+  const snapped = Math.round(currentRotation / STEP);
+  const finalIndex = ((snapped % VIEWS.length) + VIEWS.length) % VIEWS.length;
+
+  originalSetView(finalIndex);
+  syncRotationToIndex();
+}
+
 if (dialEl) {
-  dialEl.addEventListener("mousedown", (e) => {
-    isDragging = true;
-    const rect = dialEl.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    startAngle = getAngle(cx, cy, e.clientX, e.clientY) - currentRotation;
-  });
-
-  document.addEventListener("mousemove", (e) => {
-    if (!isDragging) return;
-    const rect = dialEl.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const angle = getAngle(cx, cy, e.clientX, e.clientY);
-    setRotation(angle - startAngle);
-  });
-
-  document.addEventListener("mouseup", () => {
-    if (!isDragging) return;
-    isDragging = false;
-
-    const snapped = Math.round(currentRotation / STEP);
-    const finalIndex = ((snapped % VIEWS.length) + VIEWS.length) % VIEWS.length;
-
-    originalSetView(finalIndex);
-    syncRotationToIndex();
-  });
+  dialEl.addEventListener("pointerdown", onPointerDown, { passive:false });
+  window.addEventListener("pointermove", onPointerMove, { passive:false });
+  window.addEventListener("pointerup", onPointerUp, { passive:false });
+  window.addEventListener("pointercancel", onPointerUp, { passive:false });
 }
 
 /* Init */

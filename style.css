@@ -532,3 +532,15 @@ body{
   .underNav{ gap:6px; padding:10px; }
   .navBtn{ padding:7px 9px; font-size:11px; }
 }
+/* iOS Safari: stoppa auto-zoom vid fokus (kräver >= 16px) */
+@media (max-width: 860px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* dina specifika också, för säkerhets skull */
+  .miniInput,
+  .settingsInput,
+  .modalEdit {
+    font-size: 16px !important;
+  }

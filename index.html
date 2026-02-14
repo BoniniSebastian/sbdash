@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SB Dash</title>
-  <link rel="stylesheet" href="style.css?v=8" />
+  <link rel="stylesheet" href="style.css?v=11" />
 </head>
 <body>
 
@@ -39,6 +39,9 @@
             frameborder="0"
             scrolling="no">
           </iframe>
+
+          <!-- Dark overlay because Google iframe can't be styled -->
+          <div class="calOverlay" aria-hidden="true"></div>
         </div>
       </aside>
 
@@ -52,11 +55,40 @@
         <div class="panelBody mainBody">
           <div class="viewTrack" id="viewTrack">
 
+            <!-- WEATHER -->
             <div class="viewPage" data-view="weather">
               <div class="viewTitle">Väder</div>
-              <div class="viewText">Här kan vi lägga väderkort senare.</div>
+
+              <div class="weatherCard">
+                <div class="weatherMain">
+                  <div class="weatherTemp" id="weatherTemp">—°</div>
+                  <div class="weatherDesc" id="weatherDesc">Laddar…</div>
+                </div>
+
+                <div class="weatherMeta">
+                  <div class="weatherMetaRow">
+                    <span class="weatherLabel">Vind</span>
+                    <span class="weatherValue" id="weatherWind">—</span>
+                  </div>
+                  <div class="weatherMetaRow">
+                    <span class="weatherLabel">Plats</span>
+                    <span class="weatherValue" id="weatherPlace">—</span>
+                  </div>
+                  <div class="weatherMetaRow">
+                    <span class="weatherLabel">Uppdaterad</span>
+                    <span class="weatherValue" id="weatherUpdated">—</span>
+                  </div>
+                </div>
+
+                <div class="miniActions">
+                  <button id="weatherRefreshBtn" class="miniBtn ghost">Uppdatera</button>
+                </div>
+              </div>
+
+              <div class="miniHint">Använder din plats om du tillåter, annars Stockholm.</div>
             </div>
 
+            <!-- NEWS -->
             <div class="viewPage" data-view="news">
               <div class="viewTitle">Nyheter</div>
 
@@ -66,8 +98,13 @@
               </div>
 
               <ul id="newsList" class="miniList" style="margin-top:12px;"></ul>
+
+              <div class="miniHint">
+                Om RSS-proxy strular visar vi senaste lyckade listan (cache).
+              </div>
             </div>
 
+            <!-- TODO -->
             <div class="viewPage" data-view="todo">
               <div class="viewTitle">Att göra</div>
 
@@ -80,6 +117,7 @@
               <div class="miniHint">✓ slutför • 🔥 flytta till Aktiv prio</div>
             </div>
 
+            <!-- IDEAS -->
             <div class="viewPage" data-view="ideas">
               <div class="viewTitle">Idéer / Kom ihåg</div>
 
@@ -92,6 +130,7 @@
               <div class="miniHint">Snabba tankar och saker du vill minnas.</div>
             </div>
 
+            <!-- DONE -->
             <div class="viewPage" data-view="done">
               <div class="viewTitle">Slutförda</div>
 
@@ -117,7 +156,7 @@
         </div>
       </section>
 
-      <!-- HÖGER: Aktiv prio (ratt är fixed, så den ligger inte här) -->
+      <!-- HÖGER: Aktiv prio -->
       <aside class="panel blocksPanel">
         <div class="panelHead">
           <h2>Aktiv prio</h2>
@@ -138,21 +177,14 @@
     </section>
   </main>
 
-  <!-- FIXED DIAL: alltid nere till höger -->
+  <!-- FIXED DIAL: ingen ruta, ingen text -->
   <div class="dialFixed" aria-label="Ratt">
-    <div class="dialFixedTop">
-      <div class="dialDate" id="dialDate">—</div>
-      <div class="dialSub">Ratten styr mittenrutan</div>
-    </div>
-
-    <div class="dialWrap">
-      <div class="dial">
-        <img class="dialRing" src="assets/ui/knob-ring.svg" alt="Knob ring">
-        <img class="dialIcon" src="assets/ui/icon-weather.svg" alt="Dial icon">
-      </div>
+    <div class="dial">
+      <img class="dialRing" src="assets/ui/knob-ring.svg" alt="Knob ring">
+      <img class="dialIcon" src="assets/ui/icon-weather.svg" alt="Dial icon">
     </div>
   </div>
 
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>

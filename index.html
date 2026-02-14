@@ -38,7 +38,8 @@
               class="calFrame"
               src="https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0"
               frameborder="0"
-              scrolling="no"></iframe>
+              scrolling="no">
+            </iframe>
           </div>
 
           <div class="calOverlay" aria-hidden="true"></div>
@@ -96,10 +97,13 @@
               </div>
             </div>
 
-            <!-- NEWS (pull-to-refresh, ingen knapp) -->
+            <!-- NEWS (utan knapp, pull-to-refresh) -->
             <div class="viewPage" data-view="news" id="newsPage">
               <div class="viewTitle">Nyheter</div>
-              <div id="newsMeta" class="miniHint" style="margin-top:6px;">Dra ner för att uppdatera</div>
+
+              <div class="pullHint" id="newsPullHint">Dra ned för att uppdatera</div>
+              <div id="newsMeta" class="miniHint" style="margin:8px 0 0;">Laddar…</div>
+
               <ul id="newsList" class="miniList" style="margin-top:10px;"></ul>
             </div>
 
@@ -183,11 +187,11 @@
     </div>
   </div>
 
-  <!-- Liquid glass modal (editable) -->
+  <!-- Liquid glass modal (endast kryss) -->
   <div class="modalOverlay" id="modalOverlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-label="Detaljvy">
       <div class="modalHead">
-        <div class="modalTitle" id="modalTitle">Aktiv prio</div>
+        <div class="modalTitle">Aktiv prio</div>
         <button class="modalClose" id="modalCloseBtn">✕</button>
       </div>
 

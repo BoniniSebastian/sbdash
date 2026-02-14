@@ -1,130 +1,158 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>SB Dash</title>
-<link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SB Dash</title>
+  <link rel="stylesheet" href="style.css?v=8" />
 </head>
 <body>
-<header class="topbar">
-<div class="brand">
-<div class="brandDot"></div>
-<div>
-<div class="brandTitle">SB Dash</div>
-<div class="brandSub">Control dashboard</div>
-</div>
-</div>
-<div class="topRight">
-<div class="pill" id="todayText">—</div>
-</div>
-</header>
-<main class="shell">
-<section class="layout">
-<!-- VÄNSTER: Google Kalender -->
-<aside class="panel calendarPanel">
-  <div class="panelHead">
-    <h2>Kalender</h2>
-    <span class="tag">Google</span>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brandDot"></div>
+      <div>
+        <div class="brandTitle">SB Dash</div>
+        <div class="brandSub">Control dashboard</div>
+      </div>
+    </div>
+
+    <div class="topRight">
+      <div class="pill" id="todayText">—</div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="layout">
+
+      <!-- VÄNSTER: Google Kalender -->
+      <aside class="panel calendarPanel">
+        <div class="panelHead">
+          <h2>Kalender</h2>
+          <span class="tag">Google</span>
+        </div>
+
+        <div class="panelBody calendarBody">
+          <iframe
+            class="calFrame"
+            src="https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0"
+            frameborder="0"
+            scrolling="no">
+          </iframe>
+        </div>
+      </aside>
+
+      <!-- MITTEN: Main panel -->
+      <section class="panel mainPanel">
+        <div class="panelHead">
+          <h2>Main</h2>
+          <span class="tag">Scroll • Knappar • Ratt</span>
+        </div>
+
+        <div class="panelBody mainBody">
+          <div class="viewTrack" id="viewTrack">
+
+            <div class="viewPage" data-view="weather">
+              <div class="viewTitle">Väder</div>
+              <div class="viewText">Här kan vi lägga väderkort senare.</div>
+            </div>
+
+            <div class="viewPage" data-view="news">
+              <div class="viewTitle">Nyheter</div>
+
+              <div class="miniActions" style="margin-top:10px;">
+                <button id="newsRefreshBtn" class="miniBtn ghost">Uppdatera</button>
+                <div id="newsMeta" class="miniHint" style="margin:0;">Laddar…</div>
+              </div>
+
+              <ul id="newsList" class="miniList" style="margin-top:12px;"></ul>
+            </div>
+
+            <div class="viewPage" data-view="todo">
+              <div class="viewTitle">Att göra</div>
+
+              <div class="miniForm">
+                <input id="todoInput" class="miniInput" type="text" placeholder="Skriv en uppgift…" maxlength="120">
+                <button id="todoAddBtn" class="miniBtn">+ Lägg till</button>
+              </div>
+
+              <ul id="todoList" class="miniList"></ul>
+              <div class="miniHint">✓ slutför • 🔥 flytta till Aktiv prio</div>
+            </div>
+
+            <div class="viewPage" data-view="ideas">
+              <div class="viewTitle">Idéer / Kom ihåg</div>
+
+              <div class="miniForm">
+                <input id="ideaInput" class="miniInput" type="text" placeholder="Skriv en idé…" maxlength="160">
+                <button id="ideaAddBtn" class="miniBtn">+ Spara</button>
+              </div>
+
+              <ul id="ideasList" class="miniList"></ul>
+              <div class="miniHint">Snabba tankar och saker du vill minnas.</div>
+            </div>
+
+            <div class="viewPage" data-view="done">
+              <div class="viewTitle">Slutförda</div>
+
+              <ul id="doneList" class="miniList"></ul>
+
+              <div class="miniActions">
+                <button id="doneClearBtn" class="miniBtn ghost">Rensa slutförda</button>
+              </div>
+
+              <div class="miniHint">↩︎ flyttar tillbaka till Att göra.</div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Knappar under mittenrutan -->
+        <div class="underNav" id="underNav">
+          <button class="navBtn active" data-view="weather">Väder</button>
+          <button class="navBtn" data-view="news">Nyheter</button>
+          <button class="navBtn" data-view="todo">Att göra</button>
+          <button class="navBtn" data-view="ideas">Idéer</button>
+          <button class="navBtn" data-view="done">Slutförda</button>
+        </div>
+      </section>
+
+      <!-- HÖGER: Aktiv prio (ratt är fixed, så den ligger inte här) -->
+      <aside class="panel blocksPanel">
+        <div class="panelHead">
+          <h2>Aktiv prio</h2>
+          <span class="tag" id="prioCount">0</span>
+        </div>
+
+        <div class="panelBody">
+          <div class="miniForm" style="margin-top:0;">
+            <input id="prioInput" class="miniInput" type="text" placeholder="Lägg till superprio…" maxlength="120">
+            <button id="prioAddBtn" class="miniBtn">+ Lägg</button>
+          </div>
+
+          <ul class="miniList" id="prioList"></ul>
+          <div class="miniHint">✓ = klart (till Slutförda)</div>
+        </div>
+      </aside>
+
+    </section>
+  </main>
+
+  <!-- FIXED DIAL: alltid nere till höger -->
+  <div class="dialFixed" aria-label="Ratt">
+    <div class="dialFixedTop">
+      <div class="dialDate" id="dialDate">—</div>
+      <div class="dialSub">Ratten styr mittenrutan</div>
+    </div>
+
+    <div class="dialWrap">
+      <div class="dial">
+        <img class="dialRing" src="assets/ui/knob-ring.svg" alt="Knob ring">
+        <img class="dialIcon" src="assets/ui/icon-weather.svg" alt="Dial icon">
+      </div>
+    </div>
   </div>
 
-  <div class="panelBody calendarBody">
-    <<iframe
-  class="calFrame"
-  src="https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showDate=0"
-></iframe>
-  </div>
-</aside>
-<!-- MITTEN: Main panel -->
-<section class="panel mainPanel">
-<div class="panelHead">
-<h2>Main</h2>
-<span class="tag">Scroll • Knappar • Ratt</span>
-</div>
-<div class="panelBody mainBody">
-<div class="viewTrack" id="viewTrack">
-<div class="viewPage" data-view="weather">
-<div class="viewTitle">Väder</div>
-<div class="viewText">Här kan vi lägga väderkort senare.</div>
-</div>
-<div class="viewPage" data-view="news">
-<div class="viewTitle">Nyheter</div>
-<div class="miniActions" style="margin-top:10px;">
-<button id="newsRefreshBtn" class="miniBtn ghost">Uppdatera</button>
-<div id="newsMeta" class="miniHint" style="margin:0;">Laddar…</div>
-</div>
-<ul id="newsList" class="miniList" style="margin-top:12px;"></ul>
-</div>
-<div class="viewPage" data-view="todo">
-<div class="viewTitle">Att göra</div>
-<div class="miniForm">
-<input id="todoInput" class="miniInput" type="text" placeholder="Skriv en uppgift…" maxlength="120">
-<button id="todoAddBtn" class="miniBtn">+ Lägg till</button>
-</div>
-<ul id="todoList" class="miniList"></ul>
-<div class="miniHint">Enter lägger till. Klicka ✓ för att slutföra. Klicka 🔥 för att flytta till Aktiv prio.</div>
-</div>
-<div class="viewPage" data-view="ideas">
-<div class="viewTitle">Idéer / Kom ihåg</div>
-<div class="miniForm">
-<input id="ideaInput" class="miniInput" type="text" placeholder="Skriv en idé…" maxlength="160">
-<button id="ideaAddBtn" class="miniBtn">+ Spara</button>
-</div>
-<ul id="ideasList" class="miniList"></ul>
-<div class="miniHint">Perfekt för snabba tankar, namn, saker du vill minnas.</div>
-</div>
-<div class="viewPage" data-view="done">
-<div class="viewTitle">Slutförda</div>
-<ul id="doneList" class="miniList"></ul>
-<div class="miniActions">
-<button id="doneClearBtn" class="miniBtn ghost">Rensa slutförda</button>
-</div>
-<div class="miniHint">Klicka ↩︎ för att flytta tillbaka till Att göra.</div>
-</div>
-</div>
-</div>
-<!-- Knappar under mittenrutan -->
-<div class="underNav" id="underNav">
-<button class="navBtn active" data-view="weather">Väder</button>
-<button class="navBtn" data-view="news">Nyheter</button>
-<button class="navBtn" data-view="todo">Att göra</button>
-<button class="navBtn" data-view="ideas">Idéer</button>
-<button class="navBtn" data-view="done">Slutförda</button>
-</div>
-</section>
-<!-- HÖGER: Aktiv prio + Ratt -->
-<aside class="rightCol">
-<section class="panel blocksPanel">
-<div class="panelHead">
-<h2>Aktiv prio</h2>
-<span class="tag" id="prioCount">0</span>
-</div>
-<div class="panelBody">
-<div class="miniForm" style="margin-top:0;">
-<input id="prioInput" class="miniInput" type="text" placeholder="Lägg till superprio…" maxlength="120">
-<button id="prioAddBtn" class="miniBtn">+ Lägg</button>
-</div>
-<ul class="miniList" id="prioList"></ul>
-<div class="miniHint">✓ = klart (flyttar till Slutförda). 🗑️ tar bort.</div>
-</div>
-</section>
-<section class="panel dialPanel">
-<div class="dialTop">
-<div class="dialDate" id="dialDate">—</div>
-<div class="dialSub">Ratten styr mittenrutan</div>
-</div>
-<div class="dialWrap">
-<div class="dial">
-<img class="dialRing" src="assets/ui/knob-ring.svg" alt="Knob ring">
-<img class="dialIcon" src="assets/icons/icon-weather.svg" alt="Dial icon">
-</div>
-</div>
-<div class="dialHint">Du kan finjustera ratten när du testar på iPad.</div>
-</section>
-</aside>
-</section>
-</main>
-<script src="app.js"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>
- 

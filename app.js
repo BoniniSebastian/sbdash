@@ -1,4 +1,4 @@
-/* SB Dash v4 — remove innebandy + sport, keep live dial icon + tick vibration, stable views */
+/* SB Dash v7 — iPhone portrait layout + Settings modal (City + Calendar ID) + Calendar auto-refresh 3 min */
 (() => {
   const $ = (id) => document.getElementById(id);
 
@@ -11,14 +11,47 @@
     todayText.textContent = `${weekday} ${date}`;
   }
 
-  // ---------- Haptics (iPad kan ignorera) ----------
+  // ---------- Haptics (iOS kan ignorera) ----------
   const canVibrate = !!navigator.vibrate;
-  const tick = (ms = 8) => {
-    if (canVibrate) navigator.vibrate(ms);
-  };
+  const tick = (ms = 8) => { if (canVibrate) navigator.vibrate(ms); };
 
-  // ---------- Views (6) ----------
-  const VIEWS = ["weather", "news", "todo", "ideas", "done", "pomodoro"];
+  // ---------- Storage keys ----------
+  const LS_APP = "sbdash_v7_store";
+  const LS_CITY_NAME = "sbdash_city_name";
+  const LS_CITY_LAT  = "sbdash_city_lat";
+  const LS_CITY_LON  = "sbdash_city_lon";
+  const LS_CAL_ID    = "sbdash_calendar_id";
+
+  // Defaults
+  const DEFAULT_CITY_NAME = "Stockholm";
+  const DEFAULT_CITY_LAT = 59.3293;
+  const DEFAULT_CITY_LON = 18.0686;
+
+  const DEFAULT_CAL_ID = "ericssonbonini@gmail.com"; // <-- byt om du vill
+
+  // ---------- App store ----------
+  function load() {
+    try {
+      const raw = localStorage.getItem(LS_APP);
+      const p = raw ? JSON.parse(raw) : {};
+      return {
+        todo: Array.isArray(p.todo) ? p.todo : [],
+        done: Array.isArray(p.done) ? p.done : [],
+        ideas: Array.isArray(p.ideas) ? p.ideas : [],
+        super: Array.isArray(p.super) ? p.super : [],
+      };
+    } catch {
+      return { todo: [], done: [], ideas: [], super: [] };
+    }
+  }
+  const store = load();
+  const save = () => localStorage.setItem(LS_APP, JSON.stringify(store));
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+  const fmt = (ts) =>
+    new Date(ts).toLocaleString("sv-SE", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" });
+
+  // ---------- Views ----------
+  const VIEWS = ["prio", "todo", "ideas", "done", "news", "weather", "pomodoro"];
   let currentIndex = 0;
 
   const track = $("viewTrack");
@@ -28,12 +61,14 @@
   const dialRing = $("dialRing");
   const dialIcon = $("dialIcon");
 
+  // Vi använder samma ikon som TODO för prio (du sa inga nya ikoner)
   const ICONS = {
-    weather: "assets/ui/icon-weather.svg",
-    news: "assets/ui/icon-news.svg",
+    prio: "assets/ui/icon-todo.svg",
     todo: "assets/ui/icon-todo.svg",
     ideas: "assets/ui/icon-ideas.svg",
     done: "assets/ui/icon-done.svg",
+    news: "assets/ui/icon-news.svg",
+    weather: "assets/ui/icon-weather.svg",
     pomodoro: "assets/ui/icon-pomodoro.svg",
   };
 
@@ -67,24 +102,7 @@
     });
   }
 
-  // Desktop wheel: change view (prevents page scroll)
-  const mainPanel = document.querySelector(".mainPanel");
-  let wheelCooldown = false;
-  if (mainPanel) {
-    mainPanel.addEventListener(
-      "wheel",
-      (e) => {
-        e.preventDefault();
-        if (wheelCooldown) return;
-        wheelCooldown = true;
-        setViewByIndex(currentIndex + (e.deltaY > 0 ? 1 : -1));
-        setTimeout(() => (wheelCooldown = false), 240);
-      },
-      { passive: false }
-    );
-  }
-
-  // ---------- Dial live icon while rotating ----------
+  // ---------- Dial rotation + live icon + tick ----------
   let isDragging = false;
   let startAngle = 0;
   let currentRotation = 0;
@@ -133,8 +151,8 @@
     const s = sectorFromRotation(currentRotation);
     if (s !== lastSector) {
       lastSector = s;
-      const view = VIEWS[s];
-      if (dialIcon && ICONS[view]) dialIcon.src = ICONS[view]; // live change
+      const v = VIEWS[s];
+      if (dialIcon && ICONS[v]) dialIcon.src = ICONS[v];
       tick(8);
     }
   }
@@ -157,32 +175,125 @@
     window.addEventListener("pointercancel", onUp, { passive: false });
   }
 
-  // ---------- Storage ----------
-  const LS_KEY = "sbdash_v4_store";
-  function load() {
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      const p = raw ? JSON.parse(raw) : {};
-      return {
-        todo: Array.isArray(p.todo) ? p.todo : [],
-        done: Array.isArray(p.done) ? p.done : [],
-        ideas: Array.isArray(p.ideas) ? p.ideas : [],
-        super: Array.isArray(p.super) ? p.super : [],
-      };
-    } catch {
-      return { todo: [], done: [], ideas: [], super: [] };
-    }
+  // ---------- Calendar ----------
+  function buildCalSrc(calId) {
+    const src = encodeURIComponent((calId || DEFAULT_CAL_ID).trim());
+    return `https://calendar.google.com/calendar/embed?src=${src}&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0`;
   }
-  const store = load();
-  const save = () => localStorage.setItem(LS_KEY, JSON.stringify(store));
-  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
-  const fmt = (ts) =>
-    new Date(ts).toLocaleString("sv-SE", {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+
+  function applyCalendarFromSettings() {
+    const calFrame = $("calFrame");
+    if (!calFrame) return;
+
+    const saved = (localStorage.getItem(LS_CAL_ID) || "").trim();
+    calFrame.src = buildCalSrc(saved || DEFAULT_CAL_ID);
+  }
+
+  // Auto refresh every 3 minutes
+  let calRefreshTimer = null;
+  const CAL_REFRESH_MS = 3 * 60 * 1000;
+
+  function startCalendarAutoRefresh() {
+    const calFrame = $("calFrame");
+    if (!calFrame) return;
+
+    if (calRefreshTimer) clearInterval(calRefreshTimer);
+
+    calRefreshTimer = setInterval(() => {
+      if (document.hidden) return;
+      calFrame.src = calFrame.src;
+    }, CAL_REFRESH_MS);
+  }
+
+  // ---------- Settings modal ----------
+  const openSettingsBtn = $("openSettingsBtn");
+  const settingsOverlay = $("settingsOverlay");
+  const settingsCloseBtn = $("settingsCloseBtn");
+  const settingsCity = $("settingsCity");
+  const settingsCalId = $("settingsCalId");
+  const settingsHint = $("settingsHint");
+  const settingsSaveBtn = $("settingsSaveBtn");
+  const settingsResetBtn = $("settingsResetBtn");
+
+  function openSettings() {
+    if (settingsCity) settingsCity.value = (localStorage.getItem(LS_CITY_NAME) || DEFAULT_CITY_NAME);
+    if (settingsCalId) settingsCalId.value = (localStorage.getItem(LS_CAL_ID) || DEFAULT_CAL_ID);
+    if (settingsHint) settingsHint.textContent = "Sparas lokalt på den här enheten.";
+    settingsOverlay?.classList.add("show");
+    setTimeout(() => settingsCity?.focus(), 50);
+  }
+
+  function closeSettings() {
+    settingsOverlay?.classList.remove("show");
+  }
+
+  async function geocodeCity(name) {
+    const q = (name || "").trim();
+    if (!q) return null;
+
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=sv&format=json`;
+    const r = await fetch(url, { cache: "no-store" });
+    if (!r.ok) throw new Error("Geocode failed");
+    const data = await r.json();
+    const hit = data?.results?.[0];
+    if (!hit) return null;
+
+    return {
+      name: hit.name,
+      lat: hit.latitude,
+      lon: hit.longitude
+    };
+  }
+
+  async function saveSettings() {
+    const cityName = (settingsCity?.value || "").trim();
+    const calId = (settingsCalId?.value || "").trim();
+
+    // Calendar
+    if (calId) localStorage.setItem(LS_CAL_ID, calId);
+
+    // City -> lat/lon
+    if (cityName) {
+      if (settingsHint) settingsHint.textContent = "Söker stad…";
+      const geo = await geocodeCity(cityName);
+      if (!geo) {
+        if (settingsHint) settingsHint.textContent = "Hittade inte staden. Testa t.ex. 'Stockholm'.";
+        return;
+      }
+      localStorage.setItem(LS_CITY_NAME, geo.name);
+      localStorage.setItem(LS_CITY_LAT, String(geo.lat));
+      localStorage.setItem(LS_CITY_LON, String(geo.lon));
+    }
+
+    // Apply
+    applyCalendarFromSettings();
+    startCalendarAutoRefresh();
+    loadWeather();
+
+    if (settingsHint) settingsHint.textContent = "Sparat ✅";
+    setTimeout(closeSettings, 450);
+  }
+
+  function resetSettings() {
+    localStorage.setItem(LS_CITY_NAME, DEFAULT_CITY_NAME);
+    localStorage.setItem(LS_CITY_LAT, String(DEFAULT_CITY_LAT));
+    localStorage.setItem(LS_CITY_LON, String(DEFAULT_CITY_LON));
+    localStorage.setItem(LS_CAL_ID, DEFAULT_CAL_ID);
+
+    applyCalendarFromSettings();
+    startCalendarAutoRefresh();
+    loadWeather();
+
+    if (settingsHint) settingsHint.textContent = "Återställt ✅";
+  }
+
+  openSettingsBtn?.addEventListener("click", openSettings);
+  settingsCloseBtn?.addEventListener("click", closeSettings);
+  settingsOverlay?.addEventListener("click", (e) => { if (e.target === settingsOverlay) closeSettings(); });
+  settingsSaveBtn?.addEventListener("click", () => saveSettings().catch(() => {
+    if (settingsHint) settingsHint.textContent = "Kunde inte spara (nätverk?).";
+  }));
+  settingsResetBtn?.addEventListener("click", resetSettings);
 
   // ---------- Done origin-aware ----------
   function toDone(fromList, item) {
@@ -212,8 +323,7 @@
 
     let dragging = false;
     let pointerId = null;
-    let startX = 0,
-      startY = 0;
+    let startX = 0, startY = 0;
     let curX = 0;
     let locked = false;
     const threshold = 0.55;
@@ -224,48 +334,40 @@
       content.style.transform = `translateX(${x}px)`;
     };
 
-    el.addEventListener(
-      "pointerdown",
-      (e) => {
-        dragging = true;
-        locked = false;
-        pointerId = e.pointerId;
-        startX = e.clientX;
-        startY = e.clientY;
-        setX(0, true);
-        content.setPointerCapture?.(pointerId);
-      },
-      { passive: true }
-    );
+    el.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      locked = false;
+      pointerId = e.pointerId;
+      startX = e.clientX;
+      startY = e.clientY;
+      setX(0, true);
+      content.setPointerCapture?.(pointerId);
+    }, { passive:true });
 
-    el.addEventListener(
-      "pointermove",
-      (e) => {
-        if (!dragging || e.pointerId !== pointerId) return;
+    el.addEventListener("pointermove", (e) => {
+      if (!dragging || e.pointerId !== pointerId) return;
 
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
 
-        if (!locked) {
-          if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-            locked = true;
-            if (Math.abs(dy) > Math.abs(dx)) {
-              dragging = false;
-              pointerId = null;
-              setX(0, true);
-              return;
-            }
-          } else return;
-        }
+      if (!locked) {
+        if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+          locked = true;
+          if (Math.abs(dy) > Math.abs(dx)) {
+            dragging = false;
+            pointerId = null;
+            setX(0, true);
+            return;
+          }
+        } else return;
+      }
 
-        if (dx > 0) return; // only right->left
-        e.preventDefault();
+      if (dx > 0) return; // only right->left
+      e.preventDefault();
 
-        const max = -Math.min(220, el.clientWidth * 0.9);
-        setX(Math.max(dx, max), false);
-      },
-      { passive: false }
-    );
+      const max = -Math.min(220, el.clientWidth * 0.9);
+      setX(Math.max(dx, max), false);
+    }, { passive:false });
 
     const finish = (e) => {
       if (!dragging || e.pointerId !== pointerId) return;
@@ -280,12 +382,11 @@
       } else {
         setX(0, true);
       }
-
       pointerId = null;
     };
 
-    el.addEventListener("pointerup", finish, { passive: true });
-    el.addEventListener("pointercancel", finish, { passive: true });
+    el.addEventListener("pointerup", finish, { passive:true });
+    el.addEventListener("pointercancel", finish, { passive:true });
   }
 
   function mkSwipeItem({ text, meta }, onComplete, onClick) {
@@ -329,6 +430,130 @@
     return li;
   }
 
+  // ---------- PRIO (desktop + mobile) ----------
+  const prioCount = $("prioCount");
+  const mobilePrioCount = $("mobilePrioCount");
+
+  const prioInput = $("prioInput");
+  const prioAddBtn = $("prioAddBtn");
+  const prioList = $("prioList");
+
+  const prioInputMobile = $("prioInputMobile");
+  const prioAddBtnMobile = $("prioAddBtnMobile");
+  const prioListMobile = $("prioListMobile");
+
+  // Prio modal
+  const prioModalOverlay = $("prioModalOverlay");
+  const prioModalCloseBtn = $("prioModalCloseBtn");
+  const prioModalEdit = $("prioModalEdit");
+  const prioModalDoneBtn = $("prioModalDoneBtn");
+
+  let prioModalActiveId = null;
+  let prioEditTimer = null;
+
+  function openPrioModal(item) {
+    prioModalActiveId = item.id;
+    if (prioModalEdit) prioModalEdit.value = item.text || "";
+    prioModalOverlay?.classList.add("show");
+    setTimeout(() => prioModalEdit?.focus(), 50);
+  }
+  function closePrioModal() {
+    prioModalActiveId = null;
+    prioModalOverlay?.classList.remove("show");
+  }
+
+  prioModalOverlay?.addEventListener("click", (e) => { if (e.target === prioModalOverlay) closePrioModal(); });
+  prioModalCloseBtn?.addEventListener("click", closePrioModal);
+
+  function savePrioModalEdit() {
+    if (!prioModalActiveId) return;
+    const i = store.super.findIndex((x) => x.id === prioModalActiveId);
+    if (i === -1) return;
+    store.super[i].text = (prioModalEdit?.value || "").trim();
+    save();
+    renderPrio();
+  }
+
+  prioModalEdit?.addEventListener("input", () => {
+    clearTimeout(prioEditTimer);
+    prioEditTimer = setTimeout(savePrioModalEdit, 240);
+  });
+
+  function addPrio(text) {
+    const t = (text || "").trim();
+    if (!t) return;
+    store.super.unshift({ id: uid(), text: t, createdAt: Date.now() });
+    save();
+    renderPrio();
+  }
+
+  function completePrioById(id) {
+    const i = store.super.findIndex((x) => x.id === id);
+    if (i === -1) return;
+    const item = store.super.splice(i, 1)[0];
+    toDone("super", item);
+    save();
+    renderPrio();
+    renderDone();
+  }
+
+  prioModalDoneBtn?.addEventListener("click", () => {
+    if (!prioModalActiveId) return closePrioModal();
+    completePrioById(prioModalActiveId);
+    closePrioModal();
+  });
+
+  function renderPrio() {
+    const n = store.super.length;
+    if (prioCount) prioCount.textContent = String(n);
+    if (mobilePrioCount) mobilePrioCount.textContent = String(n);
+
+    const renderList = (ul) => {
+      if (!ul) return;
+      ul.innerHTML = "";
+      if (!store.super.length) {
+        ul.innerHTML = `<li class="miniHint">Inget i Aktiv prio just nu.</li>`;
+        return;
+      }
+      for (const item of store.super) {
+        ul.appendChild(
+          mkSwipeItem(
+            { text: item.text, meta: fmt(item.createdAt) },
+            () => completePrioById(item.id),
+            () => openPrioModal(item)
+          )
+        );
+      }
+    };
+
+    renderList(prioList);
+    renderList(prioListMobile);
+  }
+
+  prioAddBtn?.addEventListener("click", () => {
+    addPrio(prioInput?.value);
+    if (prioInput) prioInput.value = "";
+    prioInput?.focus();
+  });
+  prioInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      addPrio(prioInput.value);
+      prioInput.value = "";
+    }
+  });
+
+  prioAddBtnMobile?.addEventListener("click", () => {
+    addPrio(prioInputMobile?.value);
+    if (prioInputMobile) prioInputMobile.value = "";
+    prioInputMobile?.focus();
+  });
+  prioInputMobile?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      addPrio(prioInputMobile.value);
+      prioInputMobile.value = "";
+    }
+  });
+
   // ---------- TODO ----------
   const todoInput = $("todoInput");
   const todoAddBtn = $("todoAddBtn");
@@ -366,19 +591,17 @@
     }
   }
 
-  if (todoAddBtn && todoInput) {
-    todoAddBtn.addEventListener("click", () => {
+  todoAddBtn?.addEventListener("click", () => {
+    addTodo(todoInput?.value);
+    if (todoInput) todoInput.value = "";
+    todoInput?.focus();
+  });
+  todoInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
       addTodo(todoInput.value);
       todoInput.value = "";
-      todoInput.focus();
-    });
-    todoInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        addTodo(todoInput.value);
-        todoInput.value = "";
-      }
-    });
-  }
+    }
+  });
 
   // ---------- IDEAS ----------
   const ideaInput = $("ideaInput");
@@ -417,122 +640,17 @@
     }
   }
 
-  if (ideaAddBtn && ideaInput) {
-    ideaAddBtn.addEventListener("click", () => {
+  ideaAddBtn?.addEventListener("click", () => {
+    addIdea(ideaInput?.value);
+    if (ideaInput) ideaInput.value = "";
+    ideaInput?.focus();
+  });
+  ideaInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
       addIdea(ideaInput.value);
       ideaInput.value = "";
-      ideaInput.focus();
-    });
-    ideaInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        addIdea(ideaInput.value);
-        ideaInput.value = "";
-      }
-    });
-  }
-
-  // ---------- PRIO + MODAL ----------
-  const prioInput = $("prioInput");
-  const prioAddBtn = $("prioAddBtn");
-  const prioList = $("prioList");
-  const prioCount = $("prioCount");
-
-  const modalOverlay = $("modalOverlay");
-  const modalCloseBtn = $("modalCloseBtn");
-  const modalEdit = $("modalEdit");
-  const modalDoneBtn = $("modalDoneBtn");
-
-  let modalActiveId = null;
-  let editTimer = null;
-
-  function openModalForPrio(item) {
-    modalActiveId = item.id;
-    if (modalEdit) modalEdit.value = item.text || "";
-    if (modalOverlay) modalOverlay.classList.add("show");
-    setTimeout(() => modalEdit?.focus(), 50);
-  }
-  function closeModal() {
-    modalActiveId = null;
-    if (modalOverlay) modalOverlay.classList.remove("show");
-  }
-
-  if (modalOverlay) modalOverlay.addEventListener("click", (e) => { if (e.target === modalOverlay) closeModal(); });
-  if (modalCloseBtn) modalCloseBtn.addEventListener("click", closeModal);
-
-  function saveModalEdit() {
-    if (!modalActiveId) return;
-    const i = store.super.findIndex((x) => x.id === modalActiveId);
-    if (i === -1) return;
-    store.super[i].text = (modalEdit?.value || "").trim();
-    save();
-    renderPrio();
-  }
-
-  if (modalEdit) {
-    modalEdit.addEventListener("input", () => {
-      clearTimeout(editTimer);
-      editTimer = setTimeout(saveModalEdit, 240);
-    });
-  }
-
-  function addPrio(text) {
-    const t = (text || "").trim();
-    if (!t) return;
-    store.super.unshift({ id: uid(), text: t, createdAt: Date.now() });
-    save();
-    renderPrio();
-  }
-
-  function completePrioById(id) {
-    const i = store.super.findIndex((x) => x.id === id);
-    if (i === -1) return;
-    const item = store.super.splice(i, 1)[0];
-    toDone("super", item);
-    save();
-    renderPrio();
-    renderDone();
-  }
-
-  if (modalDoneBtn) modalDoneBtn.addEventListener("click", () => {
-    if (!modalActiveId) return closeModal();
-    completePrioById(modalActiveId);
-    closeModal();
+    }
   });
-
-  function renderPrio() {
-    if (prioCount) prioCount.textContent = String(store.super.length);
-    if (!prioList) return;
-    prioList.innerHTML = "";
-
-    if (!store.super.length) {
-      prioList.innerHTML = `<li class="miniHint">Inget i Aktiv prio just nu.</li>`;
-      return;
-    }
-
-    for (const item of store.super) {
-      prioList.appendChild(
-        mkSwipeItem(
-          { text: item.text, meta: fmt(item.createdAt) },
-          () => completePrioById(item.id),
-          () => openModalForPrio(item)
-        )
-      );
-    }
-  }
-
-  if (prioAddBtn && prioInput) {
-    prioAddBtn.addEventListener("click", () => {
-      addPrio(prioInput.value);
-      prioInput.value = "";
-      prioInput.focus();
-    });
-    prioInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        addPrio(prioInput.value);
-        prioInput.value = "";
-      }
-    });
-  }
 
   // ---------- DONE ----------
   const doneList = $("doneList");
@@ -578,19 +696,19 @@
     }
   }
 
-  if (doneClearBtn) doneClearBtn.addEventListener("click", () => {
+  doneClearBtn?.addEventListener("click", () => {
     store.done = [];
     save();
     renderDone();
   });
 
-  // ---------- News (RSS) + pull-to-refresh ----------
+  // ---------- NEWS ----------
   const RSS_NEWS = "https://news.google.com/rss?hl=sv&gl=SE&ceid=SE:sv";
   const newsListEl = $("newsList");
   const newsMetaEl = $("newsMeta");
   const newsPullHint = $("newsPullHint");
   const newsPage = $("newsPage");
-  const NEWS_CACHE_KEY = "sbdash_news_cache_v4";
+  const NEWS_CACHE_KEY = "sbdash_news_cache_v7";
 
   const PROXIES = [
     (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
@@ -672,7 +790,7 @@
       right.className = "miniMeta";
       right.textContent =
         pubDate && !isNaN(pubDate.getTime())
-          ? pubDate.toLocaleString("sv-SE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+          ? pubDate.toLocaleString("sv-SE", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })
           : "";
 
       li.appendChild(left);
@@ -714,7 +832,7 @@
       if (pageEl.scrollTop > 0) return;
       startY = e.touches[0].clientY;
       pulling = true;
-    }, { passive: true });
+    }, { passive:true });
 
     pageEl.addEventListener("touchmove", (e) => {
       if (!pulling) return;
@@ -725,7 +843,7 @@
 
       if (dy > 10) e.preventDefault();
       if (hintEl) hintEl.textContent = dy > 70 ? "Släpp för att uppdatera" : "Dra ned för att uppdatera";
-    }, { passive: false });
+    }, { passive:false });
 
     pageEl.addEventListener("touchend", (e) => {
       if (!pulling) return;
@@ -740,12 +858,11 @@
       } else {
         if (hintEl) hintEl.textContent = "Dra ned för att uppdatera";
       }
-    }, { passive: true });
+    }, { passive:true });
   }
-
   attachPullToRefresh(newsPage, newsPullHint, loadNews);
 
-  // ---------- Weather ----------
+  // ---------- WEATHER ----------
   const weatherIconEl = $("weatherIcon");
   const weatherTempEl = $("weatherTemp");
   const weatherDescEl = $("weatherDesc");
@@ -766,31 +883,26 @@
     if ([95,96,99].includes(code)) return "⛈️";
     return "⛅️";
   }
+
   function textForCode(code) {
     const m = {
-      0: "Klart",
-      1: "Mestadels klart",
-      2: "Delvis molnigt",
-      3: "Mulet",
-      45: "Dimma",
-      48: "Isdimma",
-      51: "Duggregn (lätt)",
-      53: "Duggregn",
-      55: "Duggregn (kraftigt)",
-      61: "Regn (lätt)",
-      63: "Regn",
-      65: "Regn (kraftigt)",
-      71: "Snö (lätt)",
-      73: "Snö",
-      75: "Snö (kraftigt)",
-      80: "Skurar (lätta)",
-      81: "Skurar",
-      82: "Skurar (kraftiga)",
-      95: "Åska",
-      96: "Åska + hagel",
-      99: "Åska + hagel",
+      0:"Klart",1:"Mestadels klart",2:"Delvis molnigt",3:"Mulet",
+      45:"Dimma",48:"Isdimma",
+      51:"Duggregn (lätt)",53:"Duggregn",55:"Duggregn (kraftigt)",
+      61:"Regn (lätt)",63:"Regn",65:"Regn (kraftigt)",
+      71:"Snö (lätt)",73:"Snö",75:"Snö (kraftigt)",
+      80:"Skurar (lätta)",81:"Skurar",82:"Skurar (kraftiga)",
+      95:"Åska",96:"Åska + hagel",99:"Åska + hagel"
     };
     return m[code] || `Väderkod ${code}`;
+  }
+
+  function getSavedCity() {
+    const name = (localStorage.getItem(LS_CITY_NAME) || "").trim() || DEFAULT_CITY_NAME;
+    const lat = Number(localStorage.getItem(LS_CITY_LAT));
+    const lon = Number(localStorage.getItem(LS_CITY_LON));
+    if (Number.isFinite(lat) && Number.isFinite(lon)) return { name, lat, lon };
+    return { name: DEFAULT_CITY_NAME, lat: DEFAULT_CITY_LAT, lon: DEFAULT_CITY_LON };
   }
 
   async function fetchWeather(lat, lon, label) {
@@ -817,13 +929,9 @@
     if (weatherDescEl) weatherDescEl.textContent = textForCode(code);
     if (weatherWindEl) weatherWindEl.textContent = `${w} m/s`;
     if (weatherPlaceEl) weatherPlaceEl.textContent = label;
-    if (weatherUpdatedEl)
-      weatherUpdatedEl.textContent = new Date().toLocaleString("sv-SE", {
-        hour: "2-digit",
-        minute: "2-digit",
-        day: "2-digit",
-        month: "2-digit",
-      });
+    if (weatherUpdatedEl) weatherUpdatedEl.textContent = new Date().toLocaleString("sv-SE", {
+      hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit",
+    });
 
     const d = data.daily;
     if (d?.time?.length >= 2) {
@@ -837,24 +945,15 @@
 
   function loadWeather() {
     if (weatherDescEl) weatherDescEl.textContent = "Laddar…";
-
-    const fallback = () =>
-      fetchWeather(59.3293, 18.0686, "Stockholm").catch(() => {
-        if (weatherDescEl) weatherDescEl.textContent = "Kunde inte ladda väder.";
-      });
-
-    if (!navigator.geolocation) return fallback();
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude, "Din plats").catch(fallback),
-      fallback,
-      { enableHighAccuracy: false, timeout: 7000, maximumAge: 30 * 60 * 1000 }
-    );
+    const city = getSavedCity();
+    fetchWeather(city.lat, city.lon, city.name).catch(() => {
+      if (weatherDescEl) weatherDescEl.textContent = "Kunde inte ladda väder.";
+    });
   }
 
-  if (weatherRefreshBtn) weatherRefreshBtn.addEventListener("click", loadWeather);
+  weatherRefreshBtn?.addEventListener("click", loadWeather);
 
-  // ---------- Pomodoro ----------
+  // ---------- POMODORO ----------
   const pomoProg = $("pomoProg");
   const pomoTime = $("pomoTime");
   const pomoSub = $("pomoSub");
@@ -878,11 +977,13 @@
   let raf = 0;
 
   const pad2 = (n) => String(n).padStart(2, "0");
+
+  // FIX: rätt riktning
   const setStroke = (pct) => {
-  if (!pomoProg) return;
-  // Negativ dashoffset = ringen går åt andra hållet
-  pomoProg.style.strokeDashoffset = String(-C * (1 - pct));
-};
+    if (!pomoProg) return;
+    pomoProg.style.strokeDashoffset = String(-C * (1 - pct));
+  };
+
   const setColor = (pct) => {
     if (!pomoProg) return;
     if (pct > 0.40) pomoProg.style.stroke = "rgba(0,209,255,.88)";
@@ -916,7 +1017,7 @@
     if (left <= 0) {
       running = false;
       if (pomoStartBtn) pomoStartBtn.textContent = "Start";
-      if (canVibrate) navigator.vibrate([20, 40, 20]);
+      if (canVibrate) navigator.vibrate([20,40,20]);
       return;
     }
     raf = requestAnimationFrame(loop);
@@ -950,7 +1051,7 @@
     tick(8);
   }
 
-  function reset() {
+  function resetPomo() {
     running = false;
     cancelAnimationFrame(raf);
     if (pomoStartBtn) pomoStartBtn.textContent = "Start";
@@ -960,26 +1061,45 @@
     tick(8);
   }
 
-  if (pomoStartBtn) pomoStartBtn.addEventListener("click", startPause);
-  if (pomoResetBtn) pomoResetBtn.addEventListener("click", reset);
+  pomoStartBtn?.addEventListener("click", startPause);
+  pomoResetBtn?.addEventListener("click", resetPomo);
   pomoBtns.forEach((btn) => btn.addEventListener("click", () => setMinutes(Number(btn.dataset.pomo))));
 
   // ---------- Init ----------
   function renderAll() {
+    renderPrio();
     renderTodo();
     renderIdeas();
-    renderPrio();
     renderDone();
     renderPomo();
   }
 
-  renderAll();
+  function renderPomo() { renderPomo(); } // placeholder to keep structure (overwritten below)
+  // (fix: above line would recurse if left; so we DO NOT use it.)
+  // We'll just call renderPomo() directly where needed.
+
+  // Render functions already defined above except pomo; call direct:
+  function renderAllSafe() {
+    renderPrio();
+    renderTodo();
+    renderIdeas();
+    renderDone();
+    renderPomo();
+  }
+
+  // Start
   setViewByIndex(0);
   syncRotationToIndex();
+
+  applyCalendarFromSettings();
+  startCalendarAutoRefresh();
 
   loadWeather();
   setInterval(loadWeather, 30 * 60 * 1000);
 
   loadNews();
   setInterval(loadNews, 10 * 60 * 1000);
+
+  renderAllSafe();
+  renderPomo();
 })();

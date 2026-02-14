@@ -3,7 +3,7 @@
   --text:#e9f0ff;
   --muted:#aab6d1;
   --line:rgba(255,255,255,.10);
-  --glow:rgba(0,209,255,.20);
+  --glow:rgba(0,209,255,.18);
   --radius:18px;
   --shadow: 0 14px 30px rgba(0,0,0,.42);
 }
@@ -15,7 +15,7 @@ body{
   display:flex;
   flex-direction:column;
   background:
-    radial-gradient(1200px 600px at 35% 0%, rgba(0,209,255,.09), transparent 60%),
+    radial-gradient(1200px 600px at 35% 0%, rgba(0,209,255,.08), transparent 60%),
     radial-gradient(900px 500px at 80% 20%, rgba(0,209,255,.05), transparent 55%),
     var(--bg);
   color:var(--text);
@@ -64,7 +64,7 @@ body{
   min-height:0;
 }
 
-/* Layout: compact baseline */
+/* Layout compact */
 .layout{
   height:100%;
   min-height:0;
@@ -105,11 +105,7 @@ body{
   border-bottom:1px solid rgba(255,255,255,.06);
   flex:0 0 auto;
 }
-.panelHead h2{
-  margin:0;
-  font-size:13px;
-  letter-spacing:.3px;
-}
+.panelHead h2{margin:0; font-size:13px; letter-spacing:.3px}
 .tag{
   font-size:11px;
   color:var(--muted);
@@ -123,7 +119,7 @@ body{
   padding:10px;
   flex:1 1 auto;
   min-height:0;
-  overflow:auto; /* scroll bara i panel */
+  overflow:auto;
 }
 
 /* MAIN carousel */
@@ -135,15 +131,14 @@ body{
   transition: transform 260ms ease;
 }
 .viewPage{
-  flex: 0 0 100%;
+  flex:0 0 100%;
   padding: 14px 12px;
   height: 100%;
-  min-height: 0;
+  min-height:0;
   overflow:auto;
   background: radial-gradient(900px 300px at 20% 0%, rgba(0,209,255,.07), transparent 60%);
 }
 .viewTitle{ font-size:16px; font-weight:900; margin:0 0 6px; }
-.viewText{ color: var(--muted); max-width: 60ch; line-height: 1.45; font-size:12px; }
 
 /* Under-nav */
 .underNav{
@@ -169,7 +164,7 @@ body{
   box-shadow: 0 0 0 3px rgba(0,209,255,.10);
 }
 
-/* Lists/forms compact */
+/* Forms/lists */
 .miniForm{ display:flex; gap:8px; margin: 8px 0 10px; flex-wrap:wrap; }
 .miniInput{
   flex: 1 1 200px;
@@ -195,33 +190,65 @@ body{
 .miniBtn.ghost{ background: rgba(255,255,255,.03); }
 .miniList{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
 
-.miniRow{
+.miniHint{ color: var(--muted); font-size:11px; margin-top: 8px; }
+.miniMeta{ color: var(--muted); font-size:11px; }
+
+/* ---------- Swipe rows ---------- */
+.swipeItem{
+  position:relative;
+  border-radius: 14px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.02);
+  touch-action: pan-y; /* allow vertical scroll */
+}
+
+.swipeUnder{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  padding-right:14px;
+  background: rgba(0, 200, 120, .20);
+  color: rgba(255,255,255,.92);
+  font-weight:900;
+  letter-spacing:.4px;
+}
+
+.swipeContent{
+  position:relative;
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:10px;
   padding:10px 10px;
-  border:1px solid rgba(255,255,255,.08);
   background: rgba(255,255,255,.02);
-  border-radius: 14px;
+  transform: translateX(0px);
+  will-change: transform;
 }
-.miniRowLeft{ display:flex; align-items:center; gap:8px; min-width:0; }
-.miniText{ font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
-.miniMeta{ color: var(--muted); font-size:11px; flex:0 0 auto; }
-.miniHint{ color: var(--muted); font-size:11px; margin-top: 8px; }
 
-.miniIconBtn{
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  color: var(--text);
-  padding: 8px 10px;
-  border-radius: 12px;
-  cursor:pointer;
+.swipeLeft{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+.swipeText{
   font-weight:900;
   font-size:12px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.swipeRight{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  gap:10px;
 }
 
-/* Calendar: no padding + overlay full cover (no gap) */
+/* Calendar: scale + overlay */
 .calendarPanel{ position:relative; overflow:hidden; }
 .calendarPanel .panelBody.calendarBody{
   padding:0;
@@ -229,12 +256,17 @@ body{
   position:relative;
   border-radius: 16px;
 }
+.calScale{
+  width: 112%;
+  height: 112%;
+  transform: scale(.89);
+  transform-origin: top left;
+}
 .calFrame{
   display:block;
   width:100%;
   height:100%;
   border:0;
-  border-radius: 0;
   background:#0b1118;
 }
 .calOverlay{
@@ -245,13 +277,19 @@ body{
   mix-blend-mode: multiply;
 }
 
-/* Weather card compact */
+/* Weather */
 .weatherCard{
   border:1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.03);
   border-radius: 14px;
   padding: 12px;
-  max-width: 520px;
+  max-width: 560px;
+}
+.weatherIcon{
+  font-size: 34px;
+  line-height: 1;
+  margin-bottom: 6px;
+  filter: drop-shadow(0 0 14px rgba(0,209,255,.15));
 }
 .weatherMain{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
 .weatherTemp{ font-size: 38px; font-weight: 900; letter-spacing: -.5px; }
@@ -270,7 +308,44 @@ body{
 .weatherLabel{ color: var(--muted); font-weight: 900; }
 .weatherValue{ font-weight: 900; }
 
-/* FIXED DIAL: smaller + no box + big invisible touch area */
+.weatherTomorrow{
+  margin-top: 10px;
+  border:1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.12);
+  border-radius: 12px;
+  padding:10px;
+}
+.tomLabel{ font-weight:900; font-size:12px; margin-bottom:6px; color: rgba(255,255,255,.92); }
+.tomRow{ display:flex; align-items:center; gap:10px; }
+.tomIcon{ font-size: 18px; }
+.tomText{ font-weight:900; font-size:12px; color: var(--muted); }
+
+/* News favicon */
+.newsRow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+.favicon{
+  width:18px;
+  height:18px;
+  border-radius: 6px;
+  flex:0 0 auto;
+  background: rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.08);
+}
+.newsLink{
+  color: var(--text);
+  text-decoration:none;
+  font-weight:900;
+  font-size:12px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* FIXED DIAL */
 .dialFixed{
   position:fixed;
   right:14px;
@@ -315,16 +390,66 @@ body{
   filter: drop-shadow(0 0 12px rgba(0,209,255,.22));
 }
 
+/* Liquid glass modal */
+.modalOverlay{
+  position: fixed;
+  inset: 0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index: 999;
+  background: rgba(0,0,0,.45);
+}
+.modalOverlay.show{ display:flex; }
+
+.modal{
+  width: min(720px, 92vw);
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.06);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 30px 70px rgba(0,0,0,.55);
+  padding: 14px;
+}
+.modalHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.modalTitle{ font-weight:900; font-size:14px; }
+.modalClose{
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 6px 10px;
+  cursor:pointer;
+  font-weight:900;
+}
+.modalBody{
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.18);
+  color: rgba(255,255,255,.92);
+  line-height: 1.5;
+  font-size: 13px;
+  max-height: 52vh;
+  overflow:auto;
+  white-space: pre-wrap;
+}
+.modalActions{
+  margin-top: 12px;
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+
 /* iPad landscape extra tight */
 @media (max-width: 1100px){
-  .layout{
-    grid-template-columns: 230px 1fr 290px;
-    gap:10px;
-  }
-  .panelHead{ padding:9px 9px 7px; }
-  .panelBody{ padding:9px; }
-  .viewPage{ padding: 12px 10px; }
-  .navBtn{ padding:7px 9px; font-size:11px; }
+  .layout{ grid-template-columns: 230px 1fr 290px; gap:10px; }
   .dial{ width: 140px; height: 140px; }
   .dial::before{ width: 220px; height: 220px; }
 }
@@ -333,11 +458,4 @@ body{
 @media (max-width: 860px){
   .layout{ grid-template-columns: 1fr; }
   .dialFixed{ right:10px; bottom:10px; }
-}
-/* Skala ner kalendern (mer text får plats) */
-.calScale{
-  width: 112%;          /* kompenserar för scale */
-  height: 112%;
-  transform: scale(.89);
-  transform-origin: top left;
 }

@@ -11,7 +11,7 @@
 *{box-sizing:border-box}
 html,body{height:100%}
 
-/* 🔒 FIX: Ingen body-scroll. Dashboard känns som app. */
+/* 🔒 App-känsla: lås sidan (ingen body-scroll) */
 html, body{
   overflow:hidden;
 }
@@ -142,12 +142,13 @@ body{
   border-radius:999px;
 }
 
+/* ✅ Scroll sker i paneler, inte i body */
 .panelBody{
   position:relative;
   padding:14px;
   flex:1 1 auto;
   min-height:0;
-  overflow:auto; /* ✅ scroll sker i paneler, inte i body */
+  overflow:auto;
 }
 
 /* =========================
@@ -171,7 +172,7 @@ body{
   padding: 18px 16px;
   height: 100%;
   min-height: 0;
-  overflow:auto; /* ✅ scroll i vyn */
+  overflow:auto;
   background:
     radial-gradient(900px 300px at 20% 0%, rgba(0,209,255,.08), transparent 60%);
 }
@@ -312,14 +313,22 @@ body{
 }
 
 /* =========================
-   Calendar
+   Calendar + dark overlay
    ========================= */
-.calendarPanel{ display:flex; flex-direction:column; }
+.calendarPanel{
+  display:flex;
+  flex-direction:column;
+  position:relative;
+  overflow:hidden;
+}
+
 .calendarPanel .panelBody.calendarBody{
   flex:1; min-height:0;
   padding:6px;
-  overflow:hidden; /* inga dubbla scrollbars */
+  overflow:hidden;
+  position:relative;
 }
+
 .calFrame{
   width:100%;
   height:100%;
@@ -328,55 +337,113 @@ body{
   border-radius: 18px;
   background:#0b1118;
   display:block;
-  /* “mörkar ner” Google lite utan att döda läsbarhet */
-  filter: brightness(.92) contrast(1.08) saturate(.92);
+}
+
+/* overlay som mörkar Google-iframe */
+.calOverlay{
+  position:absolute;
+  inset: 6px;
+  border-radius: 18px;
+  background: rgba(0,0,0,.55); /* <- mörkare/ljusare här */
+  pointer-events:none;
+  mix-blend-mode: multiply;
 }
 
 /* =========================
-   FIXED DIAL (bottom-right)
+   Weather card
+   ========================= */
+.weatherCard{
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  border-radius: 16px;
+  padding: 14px;
+  max-width: 520px;
+}
+.weatherMain{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+}
+.weatherTemp{
+  font-size: 46px;
+  font-weight: 900;
+  letter-spacing: -.5px;
+}
+.weatherDesc{
+  color: var(--muted);
+  font-weight: 800;
+}
+.weatherMeta{
+  margin-top: 10px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.weatherMetaRow{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border:1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.15);
+}
+.weatherLabel{
+  color: var(--muted);
+  font-weight: 800;
+}
+.weatherValue{
+  font-weight: 900;
+}
+
+/* =========================
+   FIXED DIAL (no box + bigger invisible touch area)
    ========================= */
 .dialFixed{
   position:fixed;
   right:16px;
   bottom:16px;
-  width: 300px;
-  max-width: 42vw;
-  z-index:50;
+  z-index:100;
+  pointer-events:auto;
 
-  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-  border:1px solid rgba(255,255,255,.10);
-  border-radius: 20px;
-  box-shadow: var(--shadow);
-  overflow:hidden;
-  backdrop-filter: blur(10px);
+  /* INGEN ruta bakom */
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
-.dialFixedTop{
-  padding:12px 12px 0;
-}
-.dialDate{ font-weight:900; font-size:13px; }
-.dialSub{ color:var(--muted); font-size:11px; margin-top:4px; }
 
-.dialWrap{
-  display:flex;
-  justify-content:center;
-  padding: 6px 12px 12px;
-}
 .dial{
+  position:relative;
   width: 190px;
   height: 190px;
-  position:relative;
+
   display:grid;
   place-items:center;
   user-select:none;
-  /* ✅ superviktigt: låser touch-scroll på ratten */
-  touch-action: none;
+  touch-action: none; /* stoppar sid-scroll på touch */
 }
+
+/* Osynlig större touch-yta (B) */
+.dial::before{
+  content:"";
+  position:absolute;
+  width: 270px;
+  height: 270px;
+  left:50%;
+  top:50%;
+  transform: translate(-50%,-50%);
+  border-radius: 50%;
+  background: transparent;
+}
+
 .dialRing{
   width:100%;
   height:100%;
   object-fit:contain;
   filter: drop-shadow(0 0 18px rgba(0,209,255,.25));
 }
+
 .dialIcon{
   position:absolute;
   width:54px;
@@ -406,7 +473,9 @@ body{
   .miniInput{ padding: 9px 10px; border-radius: 12px; font-size: 13px; }
   .miniBtn{ padding: 9px 10px; border-radius: 12px; font-size: 13px; }
 
-  .dialFixed{ right:12px; bottom:12px; width: 280px; }
-  .dial{ width: 170px; height: 170px; }
+  .dial{ width: 165px; height: 165px; }
+  .dial::before{ width: 235px; height: 235px; }
   .dialIcon{ width: 46px; height: 46px; }
+
+  .weatherTemp{ font-size: 40px; }
 }

@@ -193,16 +193,45 @@ body{
 .miniHint{ color: var(--muted); font-size:11px; margin-top: 8px; }
 .miniMeta{ color: var(--muted); font-size:11px; }
 
-/* ---------- Swipe rows ---------- */
+/* “Before” look for rows */
+.miniRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 10px;
+  border:1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.02);
+  border-radius: 14px;
+}
+.miniRowLeft{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+.miniText{
+  font-weight:900;
+  font-size:12px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.miniRowRight{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+/* Swipe rows (NO green, NO text) */
 .swipeItem{
   position:relative;
   border-radius: 14px;
   overflow:hidden;
   border:1px solid rgba(255,255,255,.08);
   background: rgba(255,255,255,.02);
-  touch-action: pan-y; /* allow vertical scroll */
+  touch-action: pan-y;
 }
-
 .swipeUnder{
   position:absolute;
   inset:0;
@@ -210,12 +239,10 @@ body{
   align-items:center;
   justify-content:flex-end;
   padding-right:14px;
-  background: rgba(0, 200, 120, .20);
-  color: rgba(255,255,255,.92);
+  background: rgba(255,255,255,.03); /* subtle, not green */
+  color: rgba(255,255,255,.0);       /* hidden */
   font-weight:900;
-  letter-spacing:.4px;
 }
-
 .swipeContent{
   position:relative;
   display:flex;
@@ -227,7 +254,6 @@ body{
   transform: translateX(0px);
   will-change: transform;
 }
-
 .swipeLeft{
   display:flex;
   align-items:center;
@@ -248,7 +274,7 @@ body{
   gap:10px;
 }
 
-/* Calendar: scale + overlay */
+/* Calendar */
 .calendarPanel{ position:relative; overflow:hidden; }
 .calendarPanel .panelBody.calendarBody{
   padding:0;
@@ -288,174 +314,4 @@ body{
 .weatherIcon{
   font-size: 34px;
   line-height: 1;
-  margin-bottom: 6px;
-  filter: drop-shadow(0 0 14px rgba(0,209,255,.15));
-}
-.weatherMain{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
-.weatherTemp{ font-size: 38px; font-weight: 900; letter-spacing: -.5px; }
-.weatherDesc{ color: var(--muted); font-weight: 900; font-size:12px; }
-.weatherMeta{ margin-top: 10px; display:flex; flex-direction:column; gap:8px; }
-.weatherMetaRow{
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  border:1px solid rgba(255,255,255,.08);
-  background: rgba(0,0,0,.15);
-  font-size:12px;
-}
-.weatherLabel{ color: var(--muted); font-weight: 900; }
-.weatherValue{ font-weight: 900; }
-
-.weatherTomorrow{
-  margin-top: 10px;
-  border:1px solid rgba(255,255,255,.08);
-  background: rgba(0,0,0,.12);
-  border-radius: 12px;
-  padding:10px;
-}
-.tomLabel{ font-weight:900; font-size:12px; margin-bottom:6px; color: rgba(255,255,255,.92); }
-.tomRow{ display:flex; align-items:center; gap:10px; }
-.tomIcon{ font-size: 18px; }
-.tomText{ font-weight:900; font-size:12px; color: var(--muted); }
-
-/* News favicon */
-.newsRow{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  min-width:0;
-}
-.favicon{
-  width:18px;
-  height:18px;
-  border-radius: 6px;
-  flex:0 0 auto;
-  background: rgba(255,255,255,.06);
-  border:1px solid rgba(255,255,255,.08);
-}
-.newsLink{
-  color: var(--text);
-  text-decoration:none;
-  font-weight:900;
-  font-size:12px;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-/* FIXED DIAL */
-.dialFixed{
-  position:fixed;
-  right:14px;
-  bottom:14px;
-  z-index:100;
-  pointer-events:auto;
-  background:transparent;
-  border:none;
-  box-shadow:none;
-}
-.dial{
-  position:relative;
-  width: 150px;
-  height: 150px;
-  display:grid;
-  place-items:center;
-  user-select:none;
-  touch-action:none;
-}
-.dial::before{
-  content:"";
-  position:absolute;
-  width: 230px;
-  height: 230px;
-  left:50%;
-  top:50%;
-  transform: translate(-50%,-50%);
-  border-radius: 50%;
-  background: transparent;
-}
-.dialRing{
-  width:100%;
-  height:100%;
-  object-fit:contain;
-  filter: drop-shadow(0 0 16px rgba(0,209,255,.22));
-}
-.dialIcon{
-  position:absolute;
-  width:44px;
-  height:44px;
-  object-fit:contain;
-  filter: drop-shadow(0 0 12px rgba(0,209,255,.22));
-}
-
-/* Liquid glass modal */
-.modalOverlay{
-  position: fixed;
-  inset: 0;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index: 999;
-  background: rgba(0,0,0,.45);
-}
-.modalOverlay.show{ display:flex; }
-
-.modal{
-  width: min(720px, 92vw);
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,.18);
-  background: rgba(255,255,255,.06);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 30px 70px rgba(0,0,0,.55);
-  padding: 14px;
-}
-.modalHead{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
-.modalTitle{ font-weight:900; font-size:14px; }
-.modalClose{
-  border:1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.04);
-  color: var(--text);
-  border-radius: 12px;
-  padding: 6px 10px;
-  cursor:pointer;
-  font-weight:900;
-}
-.modalBody{
-  margin-top: 10px;
-  padding: 12px;
-  border-radius: 14px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.18);
-  color: rgba(255,255,255,.92);
-  line-height: 1.5;
-  font-size: 13px;
-  max-height: 52vh;
-  overflow:auto;
-  white-space: pre-wrap;
-}
-.modalActions{
-  margin-top: 12px;
-  display:flex;
-  justify-content:flex-end;
-  gap:10px;
-}
-
-/* iPad landscape extra tight */
-@media (max-width: 1100px){
-  .layout{ grid-template-columns: 230px 1fr 290px; gap:10px; }
-  .dial{ width: 140px; height: 140px; }
-  .dial::before{ width: 220px; height: 220px; }
-}
-
-/* Phone (stack) */
-@media (max-width: 860px){
-  .layout{ grid-template-columns: 1fr; }
-  .dialFixed{ right:10px; bottom:10px; }
-}
+  margin-bottom:

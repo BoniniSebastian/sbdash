@@ -544,3 +544,131 @@ body{
   .modalEdit {
     font-size: 16px !important;
   }
+/* =========================
+   iPhone portrait layout
+   - fixed page (no body scroll)
+   - 3 rows: Calendar / Main / Bottom (prio + dial)
+   ========================= */
+
+@media (max-width: 560px) and (orientation: portrait) {
+
+  html, body {
+    height: 100%;
+    overflow: hidden;           /* stoppa hela sid-scroll */
+    overscroll-behavior: none;
+    touch-action: manipulation;
+  }
+
+  /* använd dynamisk höjd (iOS adressrad) */
+  .app {
+    height: 100dvh;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* gör allt kant-till-kant och tightare */
+  .topbar {
+    padding: 10px 12px;
+  }
+
+  /* huvudgrid blir en kolumn */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 25dvh 55dvh 20dvh; /* dina procent */
+    gap: 10px;
+    height: calc(100dvh - 56px); /* ungefär topbar-höjd */
+    padding: 10px;
+    box-sizing: border-box;
+  }
+
+  /* Kalender: fyll sin rad */
+  .calendarPanel {
+    height: 100%;
+    min-height: 0;
+    border-radius: 18px;
+    overflow: hidden; /* så embed inte sticker ut */
+  }
+  .calendarPanel iframe,
+  .calendarPanel .calendarEmbed {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* Main: fyll sin rad, intern scroll */
+  .mainPanel {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .mainPanel .panelBody {
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* själva pages-delen ska scrolla – inte hela sidan */
+  #viewTrackWrap, /* om du har wrapper */
+  #viewTrack,
+  .viewTrackWrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .viewPage {
+    height: 100%;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* nav-knappar: 2 rader om det behövs */
+  #underNav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 10px;
+  }
+  #underNav .navBtn {
+    padding: 10px 12px;
+    font-size: 14px;
+    border-radius: 14px;
+  }
+
+  /* Bottom: prio vänster + större dial höger */
+  .bottomBar {
+    height: 100%;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 170px; /* tom/prio + dial */
+    gap: 10px;
+    align-items: center;
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  .bottomLeft {
+    height: 100%;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    padding: 14px;
+    font-weight: 900;
+    font-size: 18px;
+  }
+
+  /* dial större */
+  #dial {
+    width: 170px;
+    height: 170px;
+    margin: 0 auto;
+  }
+  #dialRing {
+    width: 170px;
+    height: 170px;
+  }
+  #dialIcon {
+    width: 56px;
+    height: 56px;
+  }

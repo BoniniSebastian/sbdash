@@ -1,33 +1,49 @@
-/* SB Dash v1 — swipe lists + origin restore + modal edit + pull-to-refresh news */
+/* SB Dash v3 — all-in-one update (8 views + dial live icon + haptics + sport/ib rss + pomodoro ring) */
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---------------- Dates ----------------
+  // ---------- Utils ----------
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const fmtDMHM = (d) =>
+    d.toLocaleString("sv-SE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+  const canVibrate = !!navigator.vibrate;
+  const tickVibe = () => { if (canVibrate) navigator.vibrate(8); };
+  const doneVibe = () => { if (canVibrate) navigator.vibrate([20, 40, 20]); };
+
+  // ---------- Date in topbar (center, no pill) ----------
   const todayText = $("todayText");
   if (todayText) {
-    const d = new Date();
-    const w = d.toLocaleDateString("sv-SE", { weekday: "long" });
-    const dt = d.toLocaleDateString("sv-SE", { day: "2-digit", month: "long", year: "numeric" });
-    todayText.textContent = `${w} ${dt}`;
+    const now = new Date();
+    const weekday = now.toLocaleDateString("sv-SE", { weekday: "long" });
+    const date = now.toLocaleDateString("sv-SE", { day: "2-digit", month: "long", year: "numeric" });
+    todayText.textContent = `${weekday} ${date}`;
   }
 
-  // ---------------- Views ----------------
-  const VIEWS = ["weather", "news", "todo", "ideas", "done"];
+  // ---------- Views ----------
+  const VIEWS = ["weather","news","innebandy","sport","todo","ideas","done","pomodoro"];
   let currentIndex = 0;
 
   const track = $("viewTrack");
   const nav = $("underNav");
-  const dialIcon = document.querySelector(".dialIcon");
+
+  const dialEl = $("dial");
+  const dialRing = $("dialRing");
+  const dialIcon = $("dialIcon");
 
   const ICONS = {
     weather: "assets/ui/icon-weather.svg",
     news: "assets/ui/icon-news.svg",
+    innebandy: "assets/ui/icon-innebandy.svg",
+    sport: "assets/ui/icon-sport.svg",
     todo: "assets/ui/icon-todo.svg",
     ideas: "assets/ui/icon-ideas.svg",
     done: "assets/ui/icon-done.svg",
+    pomodoro: "assets/ui/icon-pomodoro.svg",
   };
 
-  function setViewByIndex(idx) {
+  function setViewByIndex(idx, {silent=false}={}) {
     currentIndex = (idx + VIEWS.length) % VIEWS.length;
     const view = VIEWS[currentIndex];
 
@@ -40,6 +56,8 @@
     }
 
     if (dialIcon && ICONS[view]) dialIcon.src = ICONS[view];
+
+    if (!silent) syncRotationToIndex();
   }
 
   function setViewByName(view) {
@@ -55,25 +73,100 @@
     });
   }
 
-  // Desktop wheel switches pages over main panel
+  // Wheel switch (desktop) on main panel only
   const mainPanel = document.querySelector(".mainPanel");
   let wheelCooldown = false;
   if (mainPanel) {
-    mainPanel.addEventListener(
-      "wheel",
-      (e) => {
-        e.preventDefault();
-        if (wheelCooldown) return;
-        wheelCooldown = true;
-        setViewByIndex(currentIndex + (e.deltaY > 0 ? 1 : -1));
-        setTimeout(() => (wheelCooldown = false), 320);
-      },
-      { passive: false }
-    );
+    mainPanel.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      if (wheelCooldown) return;
+      wheelCooldown = true;
+      setViewByIndex(currentIndex + (e.deltaY > 0 ? 1 : -1));
+      setTimeout(() => (wheelCooldown = false), 260);
+    }, { passive:false });
   }
 
-  // ---------------- Storage ----------------
-  const LS_KEY = "sbdash_v3";
+  // ---------- Dial rotation with live icon + haptic tick ----------
+  let isDragging = false;
+  let startAngle = 0;
+  let currentRotation = 0;
+  const STEP = 360 / VIEWS.length;
+
+  let lastSector = 0;
+
+  const angle = (cx, cy, mx, my) => Math.atan2(my - cy, mx - cx) * (180 / Math.PI);
+
+  function setRotation(deg) {
+    currentRotation = deg;
+    if (dialRing) dialRing.style.transform = `rotate(${deg}deg)`;
+  }
+
+  function sectorFromRotation(deg) {
+    // map rotation -> nearest view sector
+    const raw = Math.round(deg / STEP);
+    return ((raw % VIEWS.length) + VIEWS.length) % VIEWS.length;
+  }
+
+  function liveUpdateFromRotation() {
+    const s = sectorFromRotation(currentRotation);
+    if (s !== lastSector) {
+      lastSector = s;
+      // live icon update while dragging
+      const view = VIEWS[s];
+      if (dialIcon && ICONS[view]) dialIcon.src = ICONS[view];
+      tickVibe();
+    }
+  }
+
+  function syncRotationToIndex() {
+    setRotation(currentIndex * STEP);
+    lastSector = currentIndex;
+  }
+
+  function onDown(e) {
+    if (!dialEl) return;
+    isDragging = true;
+    dialEl.setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+
+    const r = dialEl.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    startAngle = angle(cx, cy, e.clientX, e.clientY) - currentRotation;
+  }
+
+  function onMove(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+
+    const r = dialEl.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+
+    setRotation(angle(cx, cy, e.clientX, e.clientY) - startAngle);
+    liveUpdateFromRotation();
+  }
+
+  function onUp(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    e.preventDefault();
+
+    const finalIndex = sectorFromRotation(currentRotation);
+    setViewByIndex(finalIndex, {silent:true});
+    syncRotationToIndex();
+    tickVibe();
+  }
+
+  if (dialEl) {
+    dialEl.addEventListener("pointerdown", onDown, { passive:false });
+    window.addEventListener("pointermove", onMove, { passive:false });
+    window.addEventListener("pointerup", onUp, { passive:false });
+    window.addEventListener("pointercancel", onUp, { passive:false });
+  }
+
+  // ---------- Storage ----------
+  const LS_KEY = "sbdash_v3_store";
   function load() {
     try {
       const raw = localStorage.getItem(LS_KEY);
@@ -91,10 +184,8 @@
   const store = load();
   const save = () => localStorage.setItem(LS_KEY, JSON.stringify(store));
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
-  const fmt = (ts) =>
-    new Date(ts).toLocaleString("sv-SE", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
 
-  // ---------------- Origin-aware Done ----------------
+  // ---------- Origin-aware Done ----------
   function toDone(fromList, item) {
     const clean = { id: item.id, text: item.text, createdAt: item.createdAt || Date.now() };
     store.done.unshift({ ...clean, doneAt: Date.now(), origin: fromList });
@@ -115,7 +206,7 @@
     renderAll();
   }
 
-  // ---------------- Swipe helper (no green, no text) ----------------
+  // ---------- Swipe helper ----------
   function attachSwipe(el, onComplete) {
     const content = el.querySelector(".swipeContent");
     if (!content) return;
@@ -185,10 +276,10 @@
       pointerId = null;
     };
 
-    el.addEventListener("pointerdown", onDown, { passive: true });
-    el.addEventListener("pointermove", onMove, { passive: false });
-    el.addEventListener("pointerup", onUp, { passive: true });
-    el.addEventListener("pointercancel", onUp, { passive: true });
+    el.addEventListener("pointerdown", onDown, { passive:true });
+    el.addEventListener("pointermove", onMove, { passive:false });
+    el.addEventListener("pointerup", onUp, { passive:true });
+    el.addEventListener("pointercancel", onUp, { passive:true });
   }
 
   function mkSwipeItem({ text, meta }, onComplete, onClick) {
@@ -234,618 +325,5 @@
     return li;
   }
 
-  // ---------------- Todo ----------------
+  // ---------- TODO ----------
   const todoInput = $("todoInput");
-  const todoAddBtn = $("todoAddBtn");
-  const todoList = $("todoList");
-
-  function addTodo(text) {
-    const t = (text || "").trim();
-    if (!t) return;
-    store.todo.unshift({ id: uid(), text: t, createdAt: Date.now() });
-    save();
-    renderTodo();
-  }
-
-  function completeTodoById(id) {
-    const i = store.todo.findIndex((x) => x.id === id);
-    if (i === -1) return;
-    const item = store.todo.splice(i, 1)[0];
-    toDone("todo", item);
-    save();
-    renderTodo();
-    renderDone();
-  }
-
-  function renderTodo() {
-    if (!todoList) return;
-    todoList.innerHTML = "";
-    if (!store.todo.length) {
-      todoList.innerHTML = `<li class="miniHint">Inga uppgifter just nu.</li>`;
-      return;
-    }
-    for (const item of store.todo) {
-      todoList.appendChild(
-        mkSwipeItem({ text: item.text, meta: fmt(item.createdAt) }, () => completeTodoById(item.id), null)
-      );
-    }
-  }
-
-  if (todoAddBtn && todoInput) {
-    todoAddBtn.addEventListener("click", () => {
-      addTodo(todoInput.value);
-      todoInput.value = "";
-      todoInput.focus();
-    });
-    todoInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        addTodo(todoInput.value);
-        todoInput.value = "";
-      }
-    });
-  }
-
-  // ---------------- Ideas (swipe = archive to done) ----------------
-  const ideaInput = $("ideaInput");
-  const ideaAddBtn = $("ideaAddBtn");
-  const ideasList = $("ideasList");
-
-  function addIdea(text) {
-    const t = (text || "").trim();
-    if (!t) return;
-    store.ideas.unshift({ id: uid(), text: t, createdAt: Date.now() });
-    save();
-    renderIdeas();
-  }
-
-  function archiveIdeaById(id) {
-    const i = store.ideas.findIndex((x) => x.id === id);
-    if (i === -1) return;
-    const item = store.ideas.splice(i, 1)[0];
-    toDone("ideas", item);
-    save();
-    renderIdeas();
-    renderDone();
-  }
-
-  function renderIdeas() {
-    if (!ideasList) return;
-    ideasList.innerHTML = "";
-    if (!store.ideas.length) {
-      ideasList.innerHTML = `<li class="miniHint">Inga idéer sparade ännu.</li>`;
-      return;
-    }
-    for (const item of store.ideas) {
-      ideasList.appendChild(
-        mkSwipeItem({ text: item.text, meta: fmt(item.createdAt) }, () => archiveIdeaById(item.id), null)
-      );
-    }
-  }
-
-  if (ideaAddBtn && ideaInput) {
-    ideaAddBtn.addEventListener("click", () => {
-      addIdea(ideaInput.value);
-      ideaInput.value = "";
-      ideaInput.focus();
-    });
-    ideaInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        addIdea(ideaInput.value);
-        ideaInput.value = "";
-      }
-    });
-  }
-
-  // ---------------- Aktiv prio + modal edit ----------------
-  const prioInput = $("prioInput");
-  const prioAddBtn = $("prioAddBtn");
-  const prioList = $("prioList");
-  const prioCount = $("prioCount");
-
-  const modalOverlay = $("modalOverlay");
-  const modalCloseBtn = $("modalCloseBtn");
-  const modalEdit = $("modalEdit");
-  const modalDoneBtn = $("modalDoneBtn");
-
-  let modalActiveId = null;
-  let editTimer = null;
-
-  function openModalForPrio(item) {
-    modalActiveId = item.id;
-    if (modalEdit) modalEdit.value = item.text || "";
-    if (modalOverlay) modalOverlay.classList.add("show");
-    setTimeout(() => modalEdit?.focus(), 50);
-  }
-  function closeModal() {
-    modalActiveId = null;
-    if (modalOverlay) modalOverlay.classList.remove("show");
-  }
-
-  if (modalOverlay) {
-    modalOverlay.addEventListener("click", (e) => {
-      if (e.target === modalOverlay) closeModal();
-    });
-  }
-  if (modalCloseBtn) modalCloseBtn.addEventListener("click", closeModal);
-
-  function saveModalEdit() {
-    if (!modalActiveId) return;
-    const i = store.super.findIndex((x) => x.id === modalActiveId);
-    if (i === -1) return;
-    store.super[i].text = (modalEdit?.value || "").trim();
-    save();
-    renderPrio();
-  }
-
-  if (modalEdit) {
-    modalEdit.addEventListener("input", () => {
-      clearTimeout(editTimer);
-      editTimer = setTimeout(saveModalEdit, 250); // autospara
-    });
-  }
-
-  function addPrio(text) {
-    const t = (text || "").trim();
-    if (!t) return;
-    store.super.unshift({ id: uid(), text: t, createdAt: Date.now() });
-    save();
-    renderPrio();
-  }
-
-  function completePrioById(id) {
-    const i = store.super.findIndex((x) => x.id === id);
-    if (i === -1) return;
-    const item = store.super.splice(i, 1)[0];
-    toDone("super", item);
-    save();
-    renderPrio();
-    renderDone();
-  }
-
-  if (modalDoneBtn) {
-    modalDoneBtn.addEventListener("click", () => {
-      if (!modalActiveId) return closeModal();
-      completePrioById(modalActiveId);
-      closeModal();
-    });
-  }
-
-  function renderPrio() {
-    if (prioCount) prioCount.textContent = String(store.super.length);
-    if (!prioList) return;
-    prioList.innerHTML = "";
-
-    if (!store.super.length) {
-      prioList.innerHTML = `<li class="miniHint">Inget i Aktiv prio just nu.</li>`;
-      return;
-    }
-
-    for (const item of store.super) {
-      prioList.appendChild(
-        mkSwipeItem(
-          { text: item.text, meta: fmt(item.createdAt) },
-          () => completePrioById(item.id),
-          () => openModalForPrio(item)
-        )
-      );
-    }
-  }
-
-  if (prioAddBtn && prioInput) {
-    prioAddBtn.addEventListener("click", () => {
-      addPrio(prioInput.value);
-      prioInput.value = "";
-      prioInput.focus();
-    });
-    prioInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        addPrio(prioInput.value);
-        prioInput.value = "";
-      }
-    });
-  }
-
-  // ---------------- Done (back to old look) ----------------
-  const doneList = $("doneList");
-  const doneClearBtn = $("doneClearBtn");
-
-  function renderDone() {
-    if (!doneList) return;
-    doneList.innerHTML = "";
-
-    if (!store.done.length) {
-      doneList.innerHTML = `<li class="miniHint">Inget slutfört ännu.</li>`;
-      return;
-    }
-
-    for (const item of store.done) {
-      const li = document.createElement("li");
-      li.className = "miniRow";
-
-      const left = document.createElement("div");
-      left.className = "miniRowLeft";
-
-      const back = document.createElement("button");
-      back.className = "miniBtn ghost";
-      back.textContent = "↩︎";
-      back.style.padding = "6px 10px";
-      back.style.fontSize = "12px";
-      back.addEventListener("click", () => restoreFromDone(item.id));
-
-      const txt = document.createElement("div");
-      txt.className = "miniText";
-      txt.textContent = item.text;
-
-      left.appendChild(back);
-      left.appendChild(txt);
-
-      const right = document.createElement("div");
-      right.className = "miniMeta";
-      right.textContent = fmt(item.doneAt);
-
-      li.appendChild(left);
-      li.appendChild(right);
-      doneList.appendChild(li);
-    }
-  }
-
-  if (doneClearBtn) {
-    doneClearBtn.addEventListener("click", () => {
-      store.done = [];
-      save();
-      renderDone();
-    });
-  }
-
-  // ---------------- News (back to old style) + pull-to-refresh ----------------
-  const RSS_URL = "https://news.google.com/rss?hl=sv&gl=SE&ceid=SE:sv";
-  const NEWS_MAX = 12;
-  const newsListEl = $("newsList");
-  const newsMetaEl = $("newsMeta");
-  const newsPage = $("newsPage");
-  const newsPullHint = $("newsPullHint");
-  const NEWS_CACHE_KEY = "sbdash_news_cache_v3";
-
-  const PROXIES = [
-    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-    (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//, "")}`,
-    (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
-  ];
-
-  async function fetchTextFallback(url) {
-    let last;
-    for (const p of PROXIES) {
-      try {
-        const u = p(url);
-        const r = await fetch(u, { cache: "no-store" });
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const t = await r.text();
-        if (u.includes("/get?url=")) {
-          const obj = JSON.parse(t);
-          if (obj?.contents) return obj.contents;
-          throw new Error("No contents");
-        }
-        return t;
-      } catch (e) {
-        last = e;
-      }
-    }
-    throw last || new Error("All proxies failed");
-  }
-
-  function parseRss(xml) {
-    const doc = new DOMParser().parseFromString(xml, "text/xml");
-    return Array.from(doc.querySelectorAll("item"))
-      .slice(0, NEWS_MAX)
-      .map((it) => ({
-        title: it.querySelector("title")?.textContent?.trim() || "Nyhet",
-        link: it.querySelector("link")?.textContent?.trim() || "#",
-        pubDate: it.querySelector("pubDate")?.textContent?.trim() || "",
-      }));
-  }
-
-  function renderNews(items, metaText) {
-    if (!newsListEl || !newsMetaEl) return;
-    newsMetaEl.textContent = metaText || "";
-    newsListEl.innerHTML = "";
-
-    if (!items?.length) {
-      newsListEl.innerHTML = `<li class="miniHint">Inga nyheter just nu.</li>`;
-      return;
-    }
-
-    for (const it of items) {
-      const pubDate = it.pubDate ? new Date(it.pubDate) : null;
-
-      const li = document.createElement("li");
-      li.className = "miniRow";
-
-      const left = document.createElement("div");
-      left.className = "miniRowLeft";
-
-      const a = document.createElement("a");
-      a.href = it.link;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.textContent = it.title;
-      a.style.color = "var(--text)";
-      a.style.textDecoration = "none";
-      a.style.fontWeight = "900";
-      a.style.fontSize = "12px";
-      a.style.overflow = "hidden";
-      a.style.textOverflow = "ellipsis";
-      a.style.whiteSpace = "nowrap";
-      left.appendChild(a);
-
-      const right = document.createElement("div");
-      right.className = "miniMeta";
-      right.textContent =
-        pubDate && !isNaN(pubDate.getTime())
-          ? pubDate.toLocaleString("sv-SE", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
-          : "";
-
-      li.appendChild(left);
-      li.appendChild(right);
-      newsListEl.appendChild(li);
-    }
-  }
-
-  function saveNewsCache(items) {
-    try {
-      localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify({ updatedAt: Date.now(), items }));
-    } catch {}
-  }
-
-  function loadNewsCache() {
-    try {
-      return JSON.parse(localStorage.getItem(NEWS_CACHE_KEY) || "null");
-    } catch {
-      return null;
-    }
-  }
-
-  let newsLoading = false;
-  async function loadNews() {
-    if (!newsListEl || !newsMetaEl) return;
-    if (newsLoading) return;
-    newsLoading = true;
-
-    newsMetaEl.textContent = "Laddar senaste…";
-    try {
-      const xml = await fetchTextFallback(RSS_URL);
-      const items = parseRss(xml);
-      renderNews(items, `Uppdaterad: ${new Date().toLocaleString("sv-SE")}`);
-      saveNewsCache(items);
-    } catch {
-      const c = loadNewsCache();
-      if (c?.items?.length) {
-        renderNews(c.items, `Visar cache (senast: ${new Date(c.updatedAt).toLocaleString("sv-SE")})`);
-      } else {
-        renderNews([], "Nyheter kunde inte laddas just nu.");
-      }
-    } finally {
-      newsLoading = false;
-      if (newsPullHint) newsPullHint.textContent = "Dra ned för att uppdatera";
-    }
-  }
-
-  // Pull-to-refresh (på nyhetssidan)
-  if (newsPage) {
-    let startY = 0;
-    let pulling = false;
-
-    newsPage.addEventListener("touchstart", (e) => {
-      if (newsPage.scrollTop > 0) return;
-      startY = e.touches[0].clientY;
-      pulling = true;
-    }, { passive: true });
-
-    newsPage.addEventListener("touchmove", (e) => {
-      if (!pulling) return;
-      if (newsPage.scrollTop > 0) return;
-
-      const dy = e.touches[0].clientY - startY;
-      if (dy <= 0) return;
-
-      // vi behöver stoppa "rubber band" lite
-      if (dy > 10) e.preventDefault();
-
-      if (newsPullHint) {
-        newsPullHint.textContent = dy > 70 ? "Släpp för att uppdatera" : "Dra ned för att uppdatera";
-      }
-    }, { passive: false });
-
-    newsPage.addEventListener("touchend", (e) => {
-      if (!pulling) return;
-      pulling = false;
-
-      const endY = (e.changedTouches?.[0]?.clientY ?? startY);
-      const dy = endY - startY;
-
-      if (newsPage.scrollTop === 0 && dy > 70) {
-        if (newsPullHint) newsPullHint.textContent = "Uppdaterar…";
-        loadNews();
-      } else {
-        if (newsPullHint) newsPullHint.textContent = "Dra ned för att uppdatera";
-      }
-    }, { passive: true });
-  }
-
-  // ---------------- Weather (current + tomorrow) ----------------
-  const weatherIconEl = $("weatherIcon");
-  const weatherTempEl = $("weatherTemp");
-  const weatherDescEl = $("weatherDesc");
-  const weatherWindEl = $("weatherWind");
-  const weatherPlaceEl = $("weatherPlace");
-  const weatherUpdatedEl = $("weatherUpdated");
-  const weatherRefreshBtn = $("weatherRefreshBtn");
-  const tomIconEl = $("tomIcon");
-  const tomTextEl = $("tomText");
-
-  function iconForCode(code) {
-    if (code === 0) return "☀️";
-    if (code === 1 || code === 2) return "🌤️";
-    if (code === 3) return "☁️";
-    if (code === 45 || code === 48) return "🌫️";
-    if ([51,53,55,61,63,65,80,81,82].includes(code)) return "🌧️";
-    if ([71,73,75].includes(code)) return "🌨️";
-    if ([95,96,99].includes(code)) return "⛈️";
-    return "⛅️";
-  }
-
-  function textForCode(code) {
-    const m = {
-      0:"Klart",1:"Mestadels klart",2:"Delvis molnigt",3:"Mulet",
-      45:"Dimma",48:"Isdimma",
-      51:"Duggregn (lätt)",53:"Duggregn",55:"Duggregn (kraftigt)",
-      61:"Regn (lätt)",63:"Regn",65:"Regn (kraftigt)",
-      71:"Snö (lätt)",73:"Snö",75:"Snö (kraftigt)",
-      80:"Skurar (lätta)",81:"Skurar",82:"Skurar (kraftiga)",
-      95:"Åska",96:"Åska + hagel (lätt)",99:"Åska + hagel"
-    };
-    return m[code] || `Väderkod ${code}`;
-  }
-
-  async function fetchWeather(lat, lon, label) {
-    const url =
-      `https://api.open-meteo.com/v1/forecast` +
-      `?latitude=${encodeURIComponent(lat)}` +
-      `&longitude=${encodeURIComponent(lon)}` +
-      `&current=temperature_2m,wind_speed_10m,weather_code` +
-      `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
-      `&forecast_days=2` +
-      `&timezone=Europe%2FStockholm`;
-
-    const r = await fetch(url, { cache: "no-store" });
-    if (!r.ok) throw new Error("Weather fetch failed");
-    const data = await r.json();
-
-    const cur = data.current;
-    const t = Math.round(cur.temperature_2m);
-    const w = Math.round(cur.wind_speed_10m);
-    const code = cur.weather_code;
-
-    if (weatherIconEl) weatherIconEl.textContent = iconForCode(code);
-    if (weatherTempEl) weatherTempEl.textContent = `${t}°`;
-    if (weatherDescEl) weatherDescEl.textContent = textForCode(code);
-    if (weatherWindEl) weatherWindEl.textContent = `${w} m/s`;
-    if (weatherPlaceEl) weatherPlaceEl.textContent = label;
-    if (weatherUpdatedEl) weatherUpdatedEl.textContent = new Date().toLocaleString("sv-SE", {
-      hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit",
-    });
-
-    const d = data.daily;
-    if (d?.time?.length >= 2) {
-      const tmax = Math.round(d.temperature_2m_max[1]);
-      const tmin = Math.round(d.temperature_2m_min[1]);
-      const c2 = d.weather_code[1];
-      if (tomIconEl) tomIconEl.textContent = iconForCode(c2);
-      if (tomTextEl) tomTextEl.textContent = `${textForCode(c2)} • ${tmin}°–${tmax}°`;
-    }
-  }
-
-  function loadWeather() {
-    if (weatherDescEl) weatherDescEl.textContent = "Laddar…";
-
-    const fallback = () =>
-      fetchWeather(59.3293, 18.0686, "Stockholm").catch(() => {
-        if (weatherDescEl) weatherDescEl.textContent = "Kunde inte ladda väder.";
-      });
-
-    if (!navigator.geolocation) return fallback();
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude, "Din plats").catch(fallback),
-      fallback,
-      { enableHighAccuracy: false, timeout: 7000, maximumAge: 30 * 60 * 1000 }
-    );
-  }
-
-  if (weatherRefreshBtn) weatherRefreshBtn.addEventListener("click", loadWeather);
-
-  // ---------------- Dial ----------------
-  const dialEl = document.querySelector(".dial");
-  const dialRing = document.querySelector(".dialRing");
-
-  let isDragging = false;
-  let startAngle = 0;
-  let currentRotation = 0;
-  const STEP = 360 / VIEWS.length;
-
-  const angle = (cx, cy, mx, my) => Math.atan2(my - cy, mx - cx) * (180 / Math.PI);
-
-  function setRotation(deg) {
-    currentRotation = deg;
-    if (dialRing) dialRing.style.transform = `rotate(${deg}deg)`;
-  }
-  function syncRotationToIndex() {
-    setRotation(currentIndex * STEP);
-  }
-
-  const originalSet = setViewByIndex;
-  setViewByIndex = (idx) => {
-    originalSet(idx);
-    syncRotationToIndex();
-  };
-
-  function onDown(e) {
-    if (!dialEl) return;
-    isDragging = true;
-    dialEl.setPointerCapture?.(e.pointerId);
-    e.preventDefault();
-
-    const r = dialEl.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    startAngle = angle(cx, cy, e.clientX, e.clientY) - currentRotation;
-  }
-
-  function onMove(e) {
-    if (!isDragging) return;
-    e.preventDefault();
-
-    const r = dialEl.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-
-    setRotation(angle(cx, cy, e.clientX, e.clientY) - startAngle);
-  }
-
-  function onUp(e) {
-    if (!isDragging) return;
-    isDragging = false;
-    e.preventDefault();
-
-    const snapped = Math.round(currentRotation / STEP);
-    const finalIndex = ((snapped % VIEWS.length) + VIEWS.length) % VIEWS.length;
-
-    originalSet(finalIndex);
-    syncRotationToIndex();
-  }
-
-  if (dialEl) {
-    dialEl.addEventListener("pointerdown", onDown, { passive: false });
-    window.addEventListener("pointermove", onMove, { passive: false });
-    window.addEventListener("pointerup", onUp, { passive: false });
-    window.addEventListener("pointercancel", onUp, { passive: false });
-  }
-
-  // ---------------- Render all + init ----------------
-  function renderAll() {
-    renderTodo();
-    renderIdeas();
-    renderPrio();
-    renderDone();
-  }
-
-  // init
-  renderAll();
-  setViewByIndex(0);
-  syncRotationToIndex();
-
-  loadWeather();
-  setInterval(loadWeather, 30 * 60 * 1000);
-
-  loadNews();
-  setInterval(loadNews, 10 * 60 * 1000);
-})();

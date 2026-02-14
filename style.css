@@ -1,864 +1,412 @@
 :root{
-
   --bg:#070a0f;
-
   --text:#e9f0ff;
-
   --muted:#aab6d1;
-
   --line:rgba(255,255,255,.10);
-
   --glow:rgba(0,209,255,.22);
-
   --radius:22px;
-
   --shadow: 0 18px 40px rgba(0,0,0,.45);
-
 }
 
 *{box-sizing:border-box}
-
 html,body{height:100%}
 
+/* 🔒 FIX: Ingen body-scroll. Dashboard känns som app. */
+html, body{
+  overflow:hidden;
+}
+
 body{
-
   margin:0;
-
-  min-height:100vh;
-
   display:flex;
-
   flex-direction:column;
 
   background:
-
     radial-gradient(1200px 600px at 35% 0%, rgba(0,209,255,.10), transparent 60%),
-
     radial-gradient(900px 500px at 80% 20%, rgba(0,209,255,.06), transparent 55%),
-
     var(--bg);
 
   color:var(--text);
-
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-
 }
 
 /* Topbar */
-
 .topbar{
-
   position:sticky;
-
   top:0;
-
   z-index:20;
-
   display:flex;
-
   align-items:center;
-
   justify-content:space-between;
-
   gap:14px;
-
   padding:14px 18px;
-
   border-bottom:1px solid var(--line);
-
   background: rgba(7,10,15,.78);
-
   backdrop-filter: blur(10px);
-
+  flex: 0 0 auto;
 }
 
 .brand{display:flex; align-items:center; gap:12px}
-
 .brandDot{
-
   width:14px; height:14px; border-radius:999px;
-
   background: linear-gradient(135deg, rgba(0,209,255,.95), rgba(0,209,255,.40));
-
   box-shadow: 0 0 18px rgba(0,209,255,.35);
-
 }
-
 .brandTitle{font-weight:900; letter-spacing:.2px}
-
 .brandSub{font-size:12px; color:var(--muted); margin-top:2px}
 
 .pill{
-
   border:1px solid var(--line);
-
   background: rgba(255,255,255,.03);
-
   color:var(--muted);
-
   padding:8px 10px;
-
   border-radius:999px;
-
   font-size:12px;
-
 }
 
-/* Shell fills remaining viewport height (fix: page not long) */
-
+/* Shell fills remaining viewport height */
 .shell{
-
   flex:1;
-
-  max-width: 1400px;
-
   width:100%;
-
+  max-width: 1400px;
   margin: 0 auto;
-
   padding: 14px 14px 18px;
-
-  min-height: 0; /* important */
-
+  min-height:0;
 }
 
-/* Layout: desktop/iPad-first */
-
+/* Layout: 3 kolumner */
 .layout{
-
-  height: 100%;
-
-  min-height: 0;
+  height:100%;
+  min-height:0;
 
   display:grid;
-
   grid-template-columns: 320px 1fr 360px;
-
   gap:14px;
-
   align-items:stretch;
-
 }
 
-/* iPad portrait / mindre laptops */
-
-@media (max-width: 1180px){
-
+/* Mobil först när riktigt smalt */
+@media (max-width: 860px){
   .layout{
-
-    grid-template-columns: 320px 1fr;
-
-    grid-template-areas:
-
-      "cal main"
-
-      "cal right";
-
-  }
-
-  .calendarPanel{ grid-area: cal; }
-
-  .mainPanel{ grid-area: main; }
-
-  .rightCol{ grid-area: right; }
-
-  .navBtn{ padding:12px 14px; }
-
-  .dial{ width: 240px; height: 240px; }
-
-}
-
-/* Mobil */
-
-@media (max-width: 820px){
-
-  .layout{
-
     grid-template-columns: 1fr;
-
-    grid-template-areas:
-
-      "cal"
-
-      "main"
-
-      "right";
-
+    grid-auto-rows: minmax(220px, auto);
   }
-
 }
 
 /* Panels */
-
 .panel{
-
   background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-
   border:1px solid var(--line);
-
   border-radius: var(--radius);
-
   box-shadow: var(--shadow);
-
   position:relative;
-
   overflow:hidden;
 
   display:flex;
-
-  flex-direction:column;   /* key: body scrolls inside */
-
-  min-height: 0;          /* key */
-
+  flex-direction:column;
+  min-height:0;
 }
 
 /* Glow edge */
-
 .panel::before{
-
   content:"";
-
   position:absolute;
-
   inset:-2px;
-
   border-radius: calc(var(--radius) + 2px);
-
   background: radial-gradient(600px 240px at 40% 0%, var(--glow), transparent 55%);
-
   opacity:.75;
-
   pointer-events:none;
-
 }
 
 .panelHead{
-
   position:relative;
-
   display:flex;
-
   align-items:center;
-
   justify-content:space-between;
-
   gap:10px;
-
   padding:14px 14px 10px;
-
   border-bottom:1px solid rgba(255,255,255,.06);
-
-  flex: 0 0 auto;
-
+  flex:0 0 auto;
 }
-
 .panelHead h2{
-
   margin:0;
-
   font-size:14px;
-
   letter-spacing:.3px;
-
 }
-
 .tag{
-
   font-size:12px;
-
   color:var(--muted);
-
   border:1px solid rgba(255,255,255,.10);
-
   background: rgba(255,255,255,.03);
-
   padding:6px 10px;
-
   border-radius:999px;
-
 }
 
 .panelBody{
-
   position:relative;
-
   padding:14px;
-
-  flex: 1 1 auto;
-
-  min-height: 0;     /* key */
-
-  overflow:auto;     /* key */
-
-}
-
-/* Right column stacks two panels */
-
-.rightCol{
-
-  display:flex;
-
-  flex-direction:column;
-
-  gap:14px;
-
+  flex:1 1 auto;
   min-height:0;
-
-}
-
-/* Placeholder */
-
-.placeholder{
-
-  display:flex;
-
-  flex-direction:column;
-
-  align-items:flex-start;
-
-  justify-content:center;
-
-  gap:8px;
-
-  background:
-
-    radial-gradient(900px 300px at 20% 0%, rgba(0,209,255,.08), transparent 60%);
-
-}
-
-.placeholderTitle{
-
-  font-size:18px;
-
-  font-weight:900;
-
-}
-
-.placeholderText{
-
-  color:var(--muted);
-
-  max-width: 40ch;
-
-}
-
-/* Under-nav buttons (always near main panel) */
-
-.underNav{
-
-  position:relative;
-
-  display:flex;
-
-  gap:8px;
-
-  padding:12px 14px 14px;
-
-  border-top:1px solid rgba(255,255,255,.06);
-
-  flex-wrap:wrap;
-
-  flex: 0 0 auto;
-
-}
-
-.navBtn{
-
-  border:1px solid rgba(255,255,255,.10);
-
-  background: rgba(255,255,255,.03);
-
-  color: var(--text);
-
-  padding:10px 12px;
-
-  border-radius: 14px;
-
-  cursor:pointer;
-
-  font-weight:800;
-
-  font-size:12px;
-
-}
-
-.navBtn.active{
-
-  border-color: rgba(0,209,255,.35);
-
-  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
-
+  overflow:auto; /* ✅ scroll sker i paneler, inte i body */
 }
 
 /* =========================
-
    MAIN PANEL (carousel)
-
    ========================= */
-
 .mainBody{
-
-  padding:0;        /* we handle padding inside each page */
-
-  overflow:hidden;  /* hide non-active pages */
-
+  padding:0;
+  overflow:hidden;
 }
 
 .viewTrack{
-
   display:flex;
-
   width:100%;
-
   height:100%;
-
   transform: translateX(0%);
-
   transition: transform 280ms ease;
-
 }
 
 .viewPage{
-
   flex: 0 0 100%;
-
   padding: 18px 16px;
-
   height: 100%;
-
   min-height: 0;
-
-  overflow:auto; /* scroll inside each page */
-
+  overflow:auto; /* ✅ scroll i vyn */
   background:
-
     radial-gradient(900px 300px at 20% 0%, rgba(0,209,255,.08), transparent 60%);
-
 }
 
 .viewTitle{
-
   font-size:20px;
-
   font-weight:900;
-
   margin-bottom: 8px;
-
 }
 
 .viewText{
-
   color: var(--muted);
-
   max-width: 55ch;
-
   line-height: 1.5;
+}
 
+/* Under-nav buttons */
+.underNav{
+  position:relative;
+  display:flex;
+  gap:8px;
+  padding:12px 14px 14px;
+  border-top:1px solid rgba(255,255,255,.06);
+  flex-wrap:wrap;
+  flex:0 0 auto;
+}
+.navBtn{
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  color: var(--text);
+  padding:10px 12px;
+  border-radius: 14px;
+  cursor:pointer;
+  font-weight:800;
+  font-size:12px;
+}
+.navBtn.active{
+  border-color: rgba(0,209,255,.35);
+  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
 }
 
 /* =========================
-
-   Small forms/lists inside views
-
+   Forms/lists
    ========================= */
-
 .miniForm{
-
   display:flex;
-
   gap:10px;
-
   margin: 10px 0 12px;
-
   flex-wrap:wrap;
-
 }
-
 .miniInput{
-
-  flex: 1 1 260px;
-
+  flex: 1 1 220px;
   background: rgba(255,255,255,.04);
-
   border:1px solid rgba(255,255,255,.10);
-
   border-radius: 14px;
-
   padding: 12px 12px;
-
   color: var(--text);
-
   outline:none;
-
 }
-
 .miniInput:focus{
-
   border-color: rgba(0,209,255,.35);
-
   box-shadow: 0 0 0 3px rgba(0,209,255,.10);
-
 }
-
 .miniBtn{
-
   border:1px solid rgba(255,255,255,.10);
-
   background: rgba(0,209,255,.16);
-
   color: var(--text);
-
   padding: 12px 14px;
-
   border-radius: 14px;
-
   cursor:pointer;
-
   font-weight:900;
-
 }
-
 .miniBtn:hover{ border-color: rgba(0,209,255,.35); }
-
 .miniBtn.ghost{ background: rgba(255,255,255,.03); }
 
 .miniList{
-
   list-style:none;
-
   margin:0;
-
   padding:0;
-
   display:flex;
-
   flex-direction:column;
-
   gap:10px;
-
 }
 
 .miniRow{
-
   display:flex;
-
   align-items:center;
-
   justify-content:space-between;
-
   gap:10px;
-
   padding:12px 12px;
-
   border:1px solid rgba(255,255,255,.08);
-
   background: rgba(255,255,255,.02);
-
   border-radius: 16px;
-
 }
 
 .miniRowLeft{
-
   display:flex;
-
   align-items:center;
-
   gap:10px;
-
   min-width:0;
-
 }
 
 .miniText{
-
   font-weight:800;
-
   overflow:hidden;
-
   text-overflow:ellipsis;
-
   white-space:nowrap;
-
 }
 
 .miniMeta{
-
   color: var(--muted);
-
   font-size:12px;
-
   flex:0 0 auto;
-
 }
 
 .miniHint{
-
   color: var(--muted);
-
   font-size:12px;
-
   margin-top: 10px;
-
 }
 
 .miniActions{
-
   margin-top: 12px;
-
   display:flex;
-
   gap:10px;
-
   align-items:center;
-
   flex-wrap:wrap;
-
 }
 
 .miniIconBtn{
-
   border:1px solid rgba(255,255,255,.10);
-
   background: rgba(255,255,255,.03);
-
   color: var(--text);
-
   padding: 10px 12px;
-
   border-radius: 14px;
-
   cursor:pointer;
-
   font-weight:900;
-
 }
 
-.miniIconBtn:hover{ border-color: rgba(255,255,255,.18); }
+/* =========================
+   Calendar
+   ========================= */
+.calendarPanel{ display:flex; flex-direction:column; }
+.calendarPanel .panelBody.calendarBody{
+  flex:1; min-height:0;
+  padding:6px;
+  overflow:hidden; /* inga dubbla scrollbars */
+}
+.calFrame{
+  width:100%;
+  height:100%;
+  min-height: 700px;
+  border:0;
+  border-radius: 18px;
+  background:#0b1118;
+  display:block;
+  /* “mörkar ner” Google lite utan att döda läsbarhet */
+  filter: brightness(.92) contrast(1.08) saturate(.92);
+}
 
-/* Dial */
+/* =========================
+   FIXED DIAL (bottom-right)
+   ========================= */
+.dialFixed{
+  position:fixed;
+  right:16px;
+  bottom:16px;
+  width: 300px;
+  max-width: 42vw;
+  z-index:50;
 
-.dialPanel{ padding-bottom: 10px; }
-
-.dialTop{ padding:14px 14px 0; }
-
-.dialDate{ font-weight:900; font-size:14px; }
-
-.dialSub{ color:var(--muted); font-size:12px; margin-top:4px; }
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  border:1px solid rgba(255,255,255,.10);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  overflow:hidden;
+  backdrop-filter: blur(10px);
+}
+.dialFixedTop{
+  padding:12px 12px 0;
+}
+.dialDate{ font-weight:900; font-size:13px; }
+.dialSub{ color:var(--muted); font-size:11px; margin-top:4px; }
 
 .dialWrap{
-
   display:flex;
-
   justify-content:center;
-
-  padding: 10px 14px 6px;
-
+  padding: 6px 12px 12px;
 }
-
 .dial{
-
-  width: 220px;
-
-  height: 220px;
-
+  width: 190px;
+  height: 190px;
   position:relative;
-
   display:grid;
-
   place-items:center;
-
   user-select:none;
-
+  /* ✅ superviktigt: låser touch-scroll på ratten */
+  touch-action: none;
 }
-
 .dialRing{
-
   width:100%;
-
   height:100%;
-
   object-fit:contain;
-
   filter: drop-shadow(0 0 18px rgba(0,209,255,.25));
-
 }
-
 .dialIcon{
-
   position:absolute;
-
-  width:62px;
-
-  height:62px;
-
+  width:54px;
+  height:54px;
   object-fit:contain;
-
   filter: drop-shadow(0 0 14px rgba(0,209,255,.25));
-
 }
 
-.dialHint{
-
-  color:var(--muted);
-
-  font-size:12px;
-
-  padding: 0 14px 14px;
-
-}
- 
 /* =========================
-   iPad / touch: ULTRA compact
+   iPad: 30–40% tightare men 3 kolumner kvar
    ========================= */
 @media (max-width: 1100px){
-
-  :root{
-    --radius: 14px;
+  .shell{ padding: 10px 10px 12px; }
+  .layout{
+    grid-template-columns: 240px 1fr 300px;
+    gap:10px;
   }
 
-  body{
-    font-size: 13px;
-  }
+  .panelHead{ padding: 10px 10px 8px; }
+  .panelBody{ padding: 10px; }
 
-  /* yttre luft */
-  .shell{
-    padding: 6px 8px 10px;
-    gap: 8px;
-  }
+  .viewTitle{ font-size: 17px; }
+  .viewPage{ padding: 14px 12px; }
 
-  /* topbar */
-  .topbar{
-    padding: 6px 10px;
-  }
-  .brandTitle{
-    font-size: 14px;
-  }
-  .brandSub{
-    font-size: 10px;
-  }
-  .pill{
-    padding: 4px 8px;
-    font-size: 10px;
-  }
+  .navBtn{ padding: 7px 9px; border-radius: 12px; }
 
-  /* paneler */
-  .panelHead{
-    padding: 8px 10px 6px;
-  }
-  .panelHead h2{
-    font-size: 12px;
-  }
-  .tag{
-    padding: 4px 8px;
-    font-size: 10px;
-  }
-  .panelBody{
-    padding: 10px;
-  }
+  .miniInput{ padding: 9px 10px; border-radius: 12px; font-size: 13px; }
+  .miniBtn{ padding: 9px 10px; border-radius: 12px; font-size: 13px; }
 
-  /* mitten */
-  .viewTitle{
-    font-size: 16px;
-  }
-  .viewText{
-    font-size: 12px;
-  }
-
-  /* navknappar under */
-  .underNav{
-    padding: 8px 10px 10px;
-    gap: 6px;
-  }
-  .navBtn{
-    padding: 6px 9px;
-    border-radius: 10px;
-    font-size: 11px;
-  }
-
-  /* formulär / listor */
-  .miniForm{
-    gap: 6px;
-  }
-  .miniInput{
-    padding: 8px 10px;
-    border-radius: 10px;
-    font-size: 12px;
-  }
-  .miniBtn{
-    padding: 8px 10px;
-    border-radius: 10px;
-    font-size: 12px;
-  }
-  .miniRow{
-    padding: 8px 9px;
-    border-radius: 10px;
-  }
-  .miniIconBtn{
-    padding: 6px 8px;
-    border-radius: 8px;
-  }
-  .miniText{
-    font-size: 12px;
-  }
-  .miniMeta{
-    font-size: 10px;
-  }
-
-  /* ratten – ännu mindre */
-  .dial{
-    width: 140px;
-    height: 140px;
-  }
-  .dialIcon{
-    width: 40px;
-    height: 40px;
-  }
-  .dialTop{
-    padding: 8px 10px 0;
-  }
-  .dialHint{
-    padding: 0 10px 8px;
-    font-size: 10px;
-  }
-
-  /* minska höjd på paneler så sidan inte blir lång */
-  .panel{
-    min-height: auto;
-  }
+  .dialFixed{ right:12px; bottom:12px; width: 280px; }
+  .dial{ width: 170px; height: 170px; }
+  .dialIcon{ width: 46px; height: 46px; }
 }
-.calendarBody{
-  padding: 8px;
-}
-
-.calFrame{
-  width: 100%;
-  height: 100%;
-  min-height: 520px;
-  border: 0;
-  border-radius: 14px;
-  background: rgba(0,0,0,.25);
-}
-/* === Google Calendar Fix === */
-
-.calendarPanel{
-  display:flex;
-  flex-direction:column;
-}
-
-.calendarPanel .panelBody{
-  flex:1;
-  padding:6px;
-}
-
-.calFrame{
-  width:100%;
-  height:100%;
-  min-height:600px;
-  border:0;
-  border-radius:14px;
-}
-/* === Google Calendar Fix (force) === */
-.calendarPanel { display:flex !important; flex-direction:column !important; }
-.calendarPanel .panelBody.calendarBody { flex:1 !important; min-height:0 !important; padding:6px !important; overflow:hidden !important; }
-.calendarPanel iframe.calFrame { display:block !important; width:100% !important; height:100% !important; min-height:700px !important; border:0 !important; border-radius:14px !important; }

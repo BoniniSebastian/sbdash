@@ -1,796 +1,402 @@
 :root{
-  --bg:#070a0f;
-  --text:#e9f0ff;
-  --muted:#aab6d1;
-  --line:rgba(255,255,255,.10);
-  --glow:rgba(0,209,255,.18);
-  --radius:16px;
-  --shadow: 0 14px 30px rgba(0,0,0,.42);
+  --bg:#05080c;
+  --panel1: rgba(10,35,45,.65);
+  --panel2: rgba(10,35,45,.35);
+  --glass: rgba(255,255,255,.06);
+  --stroke: rgba(255,255,255,.10);
+  --stroke2: rgba(0,209,255,.25);
+  --text: rgba(255,255,255,.92);
+  --muted: rgba(255,255,255,.65);
+  --shadow: 0 18px 60px rgba(0,0,0,.55);
+  --r: 18px;
 }
 
-*{box-sizing:border-box}
-html,body{height:100%; overflow:hidden}
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
 body{
   margin:0;
-  display:flex;
-  flex-direction:column;
-  background:
-    radial-gradient(1200px 600px at 35% 0%, rgba(0,209,255,.08), transparent 60%),
-    radial-gradient(900px 500px at 80% 20%, rgba(0,209,255,.05), transparent 55%),
-    var(--bg);
-  color:var(--text);
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  background: radial-gradient(1200px 600px at 30% 20%, rgba(0,209,255,.08), transparent 60%),
+              radial-gradient(1200px 600px at 70% 80%, rgba(0,209,255,.06), transparent 60%),
+              var(--bg);
+  color: var(--text);
+  overflow:hidden; /* viktig: sidan ska inte bli “lång” */
 }
 
-/* Topbar */
 .topbar{
-  position:sticky;
-  top:0;
-  z-index:30;
-  display:grid;
-  grid-template-columns: 1fr auto 1fr;
+  height:76px;
+  display:flex;
   align-items:center;
-  gap:12px;
-  padding:10px 12px;
-  border-bottom:1px solid var(--line);
-  background: rgba(7,10,15,.78);
-  backdrop-filter: blur(10px);
-  flex:0 0 auto;
+  justify-content:space-between;
+  padding:16px 18px;
 }
 
-.brand{display:flex; align-items:center; gap:10px}
-
-.gearTop{
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  color: rgba(255,255,255,.92);
-  border-radius: 12px;
-  padding: 7px 9px;
-  font-weight: 900;
-  cursor:pointer;
-}
-
+.brand{ display:flex; gap:12px; align-items:center; }
 .brandDot{
-  width:10px; height:10px; border-radius:999px;
-  background: linear-gradient(135deg, rgba(0,209,255,.95), rgba(0,209,255,.38));
-  box-shadow: 0 0 14px rgba(0,209,255,.28);
+  width:12px; height:12px; border-radius:50%;
+  background: rgba(0,209,255,.75);
+  box-shadow: 0 0 18px rgba(0,209,255,.55);
 }
-.brandTitle{font-weight:900; letter-spacing:.2px; font-size:14px}
-.brandSub{font-size:11px; color:var(--muted); margin-top:2px}
+.brandTitle{ font-weight:900; letter-spacing:.2px; }
+.brandSub{ font-size:12px; color: var(--muted); margin-top:2px; }
 
 .topDate{
-  justify-self:center;
-  color: rgba(255,255,255,.80);
-  font-size:12px;
+  font-weight:800;
+  color: var(--muted);
+  letter-spacing:.2px;
+}
+
+.shell{
+  height: calc(100% - 76px);
+  padding: 14px 14px 18px;
+}
+
+.layout{
+  height:100%;
+  display:grid;
+  gap:14px;
+  grid-template-columns: 320px 1fr 360px;
+  grid-template-rows: 1fr 240px;
+  grid-template-areas:
+    "cal main prio"
+    "cal main dial";
+}
+
+.calendarPanel{ grid-area: cal; }
+.mainPanel{ grid-area: main; }
+.prioPanel{ grid-area: prio; }
+.dialPanel{ grid-area: dial; }
+
+.panel{
+  background: linear-gradient(180deg, var(--panel1), var(--panel2));
+  border: 1px solid var(--stroke);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  overflow:hidden;
+  min-height:0;
+}
+
+.panelHead{
+  height:56px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.panelHead h2{
+  margin:0;
+  font-size:15px;
   font-weight:900;
   letter-spacing:.2px;
 }
-.topRight{justify-self:end}
 
-/* Shell */
-.shell{
-  flex:1;
-  width:100%;
-  max-width: 1320px;
-  margin: 0 auto;
-  padding: 10px 10px 12px;
-  min-height:0;
+.tag{
+  font-size:12px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.18);
+  color: var(--muted);
 }
 
-/* Desktop grid */
-.layout{
-  height:100%;
-  min-height:0;
-  display:grid;
-  grid-template-columns: 260px 1fr 320px;
-  gap:10px;
-  align-items:stretch;
-}
+.panelBody{ padding: 14px; height: calc(100% - 56px); min-height:0; }
 
-/* Calendar */
-.calendarWrap{
+/* Kalender */
+.calendarBody{ display:flex; flex-direction:column; gap:10px; }
+.calWrap{
   position:relative;
-  border-radius: var(--radius);
+  flex:1;
+  border-radius: 18px;
   overflow:hidden;
-  border:1px solid rgba(255,255,255,.08);
-  background: rgba(255,255,255,.02);
-  box-shadow: var(--shadow);
-  min-height:0;
-}
-.calScale{
-  width:112%;
-  height:112%;
-  transform: scale(.89);
-  transform-origin: top left;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.25);
 }
 .calFrame{
-  display:block;
   width:100%;
   height:100%;
   border:0;
-  background:#0b1118;
 }
 .calOverlay{
-  position:absolute;
-  inset:0;
-  background: rgba(0,0,0,.58);
   pointer-events:none;
-  mix-blend-mode: multiply;
-}
-
-/* Panels */
-.panel{
-  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-  border:1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  position:relative;
-  overflow:hidden;
-  display:flex;
-  flex-direction:column;
-  min-height:0;
-}
-.panel::before{
-  content:"";
-  position:absolute;
-  inset:-2px;
-  border-radius: calc(var(--radius) + 2px);
-  background: radial-gradient(560px 220px at 40% 0%, var(--glow), transparent 58%);
-  opacity:.70;
-  pointer-events:none;
-}
-.panelHead{
-  position:relative;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:10px 10px 8px;
-  border-bottom:1px solid rgba(255,255,255,.06);
-  flex:0 0 auto;
-}
-.panelHead h2{margin:0; font-size:13px; letter-spacing:.3px}
-.countPill{
-  font-size:12px;
-  font-weight:900;
-  color: rgba(255,255,255,.80);
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  padding:5px 9px;
-  border-radius:999px;
-}
-.panelBody{
-  position:relative;
-  padding: 10px;
-  flex:1 1 auto;
-  min-height:0;
-  overflow:auto;
+  position:absolute; inset:0;
+  background: rgba(0,0,0,.35);
 }
 
 /* Main carousel */
-.mainBody{ padding:0; overflow:hidden; }
+.mainBody{ padding: 0; height: calc(100% - 56px); }
 .viewTrack{
-  display:flex;
-  width:100%;
   height:100%;
+  width:600%;
+  display:flex;
   transition: transform 260ms ease;
 }
 .viewPage{
-  flex:0 0 100%;
-  padding: 12px 12px;
-  height: 100%;
-  min-height:0;
+  width:100%;
+  padding:16px;
   overflow:auto;
-  background: radial-gradient(900px 300px at 20% 0%, rgba(0,209,255,.07), transparent 60%);
+  -webkit-overflow-scrolling: touch;
 }
-.viewTitle{ font-size:16px; font-weight:900; margin:0 0 6px; }
+.viewTitle{
+  font-size:26px;
+  font-weight:1000;
+  margin:6px 0 14px;
+}
 
-/* Under-nav */
 .underNav{
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255,255,255,.08);
   display:flex;
-  gap:8px;
-  padding:10px 10px 10px;
-  border-top:1px solid rgba(255,255,255,.06);
+  gap:10px;
   flex-wrap:wrap;
-  flex:0 0 auto;
 }
 .navBtn{
   border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
+  background: rgba(0,0,0,.18);
   color: var(--text);
-  padding:7px 10px;
-  border-radius: 12px;
-  cursor:pointer;
+  padding:10px 14px;
+  border-radius: 14px;
   font-weight:900;
-  font-size:11px;
+  font-size:13px;
 }
 .navBtn.active{
-  border-color: rgba(0,209,255,.35);
-  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
+  border-color: rgba(0,209,255,.45);
+  box-shadow: 0 0 0 2px rgba(0,209,255,.10) inset;
 }
 
-/* Forms/lists */
-.miniForm{ display:flex; gap:8px; margin: 8px 0 10px; flex-wrap:wrap; }
+/* Mini UI */
+.miniForm{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  margin: 10px 0 12px;
+}
 .miniInput{
-  flex: 1 1 200px;
-  background: rgba(255,255,255,.04);
+  flex:1;
+  padding:12px 14px;
+  border-radius: 14px;
   border:1px solid rgba(255,255,255,.10);
-  border-radius: 12px;
-  padding: 9px 10px;
+  background: rgba(0,0,0,.18);
   color: var(--text);
   outline:none;
-  font-size:12px;
+  font-weight:800;
+  font-size:16px; /* iOS zoom-fix */
 }
-.miniInput:focus{ border-color: rgba(0,209,255,.35); box-shadow: 0 0 0 3px rgba(0,209,255,.10); }
 .miniBtn{
+  padding:12px 14px;
+  border-radius: 14px;
   border:1px solid rgba(255,255,255,.10);
   background: rgba(0,209,255,.16);
   color: var(--text);
-  padding: 9px 10px;
-  border-radius: 12px;
-  cursor:pointer;
   font-weight:900;
-  font-size:12px;
+  font-size:14px;
 }
-.miniBtn.ghost{ background: rgba(255,255,255,.03); }
-.miniList{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
-.miniHint{ color: var(--muted); font-size:11px; margin-top: 8px; }
-.miniMeta{ color: var(--muted); font-size:11px; }
-.miniActions{ display:flex; justify-content:flex-end; gap:10px; margin-top:10px; }
+.miniBtn.ghost{ background: rgba(0,0,0,.18); }
 
-.miniRow{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:10px 10px;
-  border:1px solid rgba(255,255,255,.08);
-  background: rgba(255,255,255,.02);
-  border-radius: 14px;
-}
-.miniRowLeft{ display:flex; align-items:center; gap:10px; min-width:0; }
-.miniText{
-  font-weight:900;
-  font-size:12px;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+.miniList{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px; }
+.miniHint{ color: var(--muted); font-size:13px; margin-top:10px; }
+
+.countPill{
+  width:28px; height:28px;
+  border-radius: 999px;
+  display:grid; place-items:center;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.18);
+  font-weight:1000;
+  color: var(--muted);
 }
 
-/* Swipe */
-.swipeItem{
-  position:relative;
-  border-radius: 14px;
-  overflow:hidden;
-  border:1px solid rgba(255,255,255,.08);
-  background: rgba(255,255,255,.02);
-  touch-action: pan-y;
+/* Swipe item */
+.swipeItem{ position:relative; border-radius: 16px; overflow:hidden; }
+.swipeUnder{
+  position:absolute; inset:0;
+  background: rgba(0,209,255,.12);
 }
-.swipeUnder{ position:absolute; inset:0; background: rgba(0,0,0,.18); pointer-events:none; }
 .swipeContent{
   position:relative;
   display:flex;
-  align-items:center;
   justify-content:space-between;
   gap:10px;
-  padding:10px 10px;
-  background: rgba(255,255,255,.02);
-  transform: translateX(0px);
-  will-change: transform;
+  padding:14px;
+  border-radius: 16px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.18);
 }
-.swipeLeft{ display:flex; align-items:center; gap:10px; min-width:0; }
 .swipeText{
-  font-weight:900;
-  font-size:12px;
+  font-weight:1000;
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
 }
-.swipeRight{ flex:0 0 auto; display:flex; align-items:center; gap:10px; }
+.miniMeta{ color: var(--muted); font-size:12px; font-weight:800; white-space:nowrap; }
 
-.pullHint{ margin-top: 6px; font-size: 11px; color: var(--muted); opacity: .75; }
+/* DONE rows */
+.miniRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:12px 14px;
+  border-radius: 16px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.18);
+}
+.miniRowLeft{ display:flex; align-items:center; gap:10px; min-width:0; }
+.miniText{ font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 /* Weather */
 .weatherCard{
   border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  border-radius: 14px;
-  padding: 12px;
-  max-width: 620px;
+  background: rgba(0,0,0,.16);
+  border-radius: 18px;
+  padding:16px;
 }
-.weatherRow{display:flex; align-items:center; gap:12px}
-.weatherIcon{ font-size: 32px; line-height: 1; filter: drop-shadow(0 0 14px rgba(0,209,255,.15)); }
-.weatherBig{display:flex; flex-direction:column}
-.weatherTemp{ font-size: 34px; font-weight: 900; letter-spacing: -.5px; }
-.weatherDesc{ color: var(--muted); font-weight: 900; font-size:12px; margin-top:2px; }
+.weatherRow{ display:flex; gap:14px; align-items:center; }
+.weatherIcon{ font-size:44px; }
+.weatherTemp{ font-size:56px; font-weight:1100; line-height:1; }
+.weatherDesc{ color: var(--muted); font-weight:900; margin-top:6px; }
 
 .weatherGrid{
+  margin-top:14px;
   display:grid;
+  gap:10px;
   grid-template-columns: repeat(3, 1fr);
-  gap:8px;
-  margin-top:10px;
 }
 .wCell{
-  border:1px solid rgba(255,255,255,.08);
-  background: rgba(0,0,0,.12);
-  border-radius:12px;
-  padding:10px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.16);
+  border-radius: 16px;
+  padding:12px;
 }
-.wLabel{ color: var(--muted); font-weight: 900; font-size:11px; }
-.wValue{ font-weight: 900; font-size:12px; margin-top:4px; }
+.wLabel{ color: var(--muted); font-weight:900; font-size:12px; }
+.wValue{ font-weight:1000; margin-top:6px; }
 
 .tomorrowBox{
   margin-top:10px;
-  border:1px solid rgba(255,255,255,.08);
-  background: rgba(0,0,0,.12);
-  border-radius: 12px;
-  padding:10px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.16);
+  border-radius: 16px;
+  padding:12px;
 }
-.tomLabel{ font-weight:900; font-size:12px; margin-bottom:6px; color: rgba(255,255,255,.92); }
-.tomRow{ display:flex; align-items:center; gap:10px; }
-.tomIcon{ font-size: 18px; }
-.tomText{ font-weight:900; font-size:12px; color: var(--muted); }
+.tomLabel{ color: var(--muted); font-weight:900; font-size:12px; }
+.tomRow{ display:flex; gap:10px; align-items:center; margin-top:8px; }
+.tomIcon{ font-size:20px; }
+.tomText{ font-weight:1000; }
+
+/* News */
+.pullHint{
+  font-size:12px;
+  color: var(--muted);
+  font-weight:900;
+  opacity:.9;
+}
+
+/* Dial */
+.dialBody{ display:flex; align-items:center; justify-content:flex-end; height:100%; }
+.dialWrap{ width:100%; display:flex; justify-content:flex-end; align-items:center; }
+.dial{
+  width:190px; height:190px;
+  position:relative;
+  user-select:none;
+  -webkit-user-select:none;
+  touch-action:none;
+}
+.dialRing{
+  position:absolute; inset:0;
+  width:100%; height:100%;
+}
+.dialIcon{
+  position:absolute;
+  width:58px; height:58px;
+  left:50%; top:50%;
+  transform: translate(-50%,-50%);
+  filter: drop-shadow(0 0 12px rgba(0,209,255,.25));
+}
+
+/* Modal */
+.modalOverlay{
+  position:fixed; inset:0;
+  background: rgba(0,0,0,.55);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:14px;
+}
+.modalOverlay.show{ display:flex; }
+.modal{
+  width:min(520px, 92vw);
+  border-radius: 20px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(10,20,25,.72);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow);
+  overflow:hidden;
+}
+.modalHead{
+  padding:14px 14px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-bottom:1px solid rgba(255,255,255,.10);
+}
+.modalTitle{ font-weight:1000; }
+.modalClose{
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.18);
+  color: var(--text);
+  border-radius: 12px;
+  padding:8px 10px;
+  font-weight:1000;
+}
+.modalEdit{
+  width:100%;
+  min-height: 220px;
+  border:0;
+  background: transparent;
+  color: var(--text);
+  padding:14px;
+  outline:none;
+  font-weight:900;
+  font-size:16px; /* iOS zoom-fix */
+  resize:none;
+}
+.modalActions{ padding:14px; display:flex; justify-content:flex-end; gap:10px; }
 
 /* Pomodoro */
-.pomoWrap{ max-width: 520px; }
-.pomoRing{
-  position:relative;
-  width: 280px;
-  height: 280px;
-  margin-top: 8px;
+.pomoWrap{ display:flex; flex-direction:column; gap:14px; align-items:flex-start; }
+.pomoRing{ position:relative; width:280px; height:280px; }
+.pomoSvg{ width:100%; height:100%; }
+.pomoTrack{
+  fill:none;
+  stroke: rgba(255,255,255,.12);
+  stroke-width: 18;
 }
-.pomoSvg{ width:100%; height:100%; transform: rotate(-90deg); }
-.pomoTrack{ fill:none; stroke: rgba(255,255,255,.08); stroke-width: 16; }
 .pomoProg{
   fill:none;
-  stroke: rgba(0,209,255,.85);
-  stroke-width: 16;
+  stroke: rgba(0,209,255,.88);
+  stroke-width: 18;
   stroke-linecap: round;
-  filter: url(#pomoGlow);
-  stroke-dasharray: 578;
-  stroke-dashoffset: 0;
-  transition: stroke 180ms ease;
+  filter:url(#pomoGlow);
+  transform: rotate(-90deg);
+  transform-origin: 120px 120px; /* start vid toppen */
 }
 .pomoCenter{
   position:absolute;
   inset:0;
   display:flex;
-  align-items:center;
-  justify-content:center;
   flex-direction:column;
-  transform:none;
-}
-.pomoTime{ font-size: 42px; font-weight: 900; letter-spacing: -.5px; }
-.pomoSub{ margin-top: 6px; font-size: 12px; color: var(--muted); font-weight: 900; }
-.pomoBtns{ display:flex; gap:8px; flex-wrap:wrap; margin-top: 12px; }
-
-/* Dial (used in mobile bottom right) */
-.dial{
-  position:relative;
-  width: 150px;
-  height: 150px;
-  display:grid;
-  place-items:center;
-  user-select:none;
-  touch-action:none;
-}
-.dialRing{
-  width:100%;
-  height:100%;
-  object-fit:contain;
-  filter: drop-shadow(0 0 16px rgba(0,209,255,.22));
-  transition: transform 80ms linear;
-}
-.dialIcon{
-  position:absolute;
-  width:46px;
-  height:46px;
-  object-fit:contain;
-  filter: drop-shadow(0 0 12px rgba(0,209,255,.22));
-}
-
-/* Modal */
-.modalOverlay{
-  position: fixed;
-  inset: 0;
-  display:none;
   align-items:center;
   justify-content:center;
-  z-index: 999;
-  background: rgba(0,0,0,.45);
 }
-.modalOverlay.show{ display:flex; }
-.modal{
-  width: min(420px, 92vw);
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.18);
-  background: rgba(255,255,255,.06);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 30px 70px rgba(0,0,0,.55);
-  padding: 12px;
-}
-.modalHead{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.modalTitle{ font-weight:900; font-size:14px; }
-.modalClose{
-  border:1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.04);
-  color: var(--text);
-  border-radius: 10px;
-  padding: 6px 10px;
-  cursor:pointer;
-  font-weight:900;
-}
-.modalEdit{
-  width:100%;
-  margin-top: 10px;
-  height: 56vh;
-  resize: none;
-  border-radius: 12px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.18);
-  color: rgba(255,255,255,.92);
-  padding: 10px;
-  font-size: 13px;
-  line-height: 1.5;
-  outline: none;
-}
-.modalEdit:focus{
-  border-color: rgba(0,209,255,.35);
-  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
-}
-.modalActions{ margin-top: 10px; display:flex; justify-content:flex-end; gap:10px; }
+.pomoTime{ font-size:52px; font-weight:1100; letter-spacing:.6px; }
+.pomoSub{ color: var(--muted); font-weight:900; margin-top:6px; }
+.pomoBtns{ display:flex; gap:10px; flex-wrap:wrap; }
 
-/* Settings */
-.settingsForm{ margin-top:10px; }
-.settingsLabel{
-  display:block;
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(255,255,255,.86);
-  margin: 6px 0 6px;
-}
-.settingsInput{
-  width:100%;
-  background: rgba(0,0,0,.18);
-  border:1px solid rgba(255,255,255,.10);
-  border-radius: 12px;
-  padding: 10px;
-  color: rgba(255,255,255,.92);
-  font-size: 13px;
-  outline: none;
-}
-.settingsInput:focus{
-  border-color: rgba(0,209,255,.35);
-  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
-}
-.settingsHint{
-  margin-top: 10px;
-  font-size: 11px;
-  color: var(--muted);
-}
-.settingsActions{
-  margin-top: 12px;
-  display:flex;
-  gap:10px;
-  justify-content:flex-end;
-  flex-wrap:wrap;
-}
-
-/* Desktop: hide mobile bottom */
-.mobileBottom{ display:none; }
-
-/* iPhone portrait layout */
-@media (max-width: 860px){
-  html,body{ height:100%; overflow:hidden; }
-
-  .shell{ padding: 10px; max-width: 100%; }
-
+/* iPad-ish responsiv: lite tightare */
+@media (max-width: 1200px){
   .layout{
-    grid-template-columns: 1fr;
-    grid-template-rows: 25% 55% auto;
-    gap:10px;
+    grid-template-columns: 300px 1fr 340px;
   }
-
-  .prioPanel{ display:none; } /* desktop prio hidden */
-
-  /* calendar bigger text */
-  .calScale{ width:120%; height:120%; transform: scale(.83); }
-
-  /* bottom zone */
-  .mobileBottom{
-    display:flex;
-    align-items:stretch;
-    justify-content:space-between;
-    gap:10px;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  .mobileBottomLeft{
-    flex:1 1 auto;
-    border:1px solid rgba(255,255,255,.10);
-    background: rgba(255,255,255,.03);
-    border-radius: 16px;
-    padding: 12px 12px;
-    font-weight: 900;
-    font-size: 12px;
-    color: rgba(255,255,255,.86);
-    display:flex;
-    align-items:center;
-  }
-
-  .mobileBottomRight{
-    flex:0 0 auto;
-    border:1px solid rgba(255,255,255,.10);
-    background: rgba(255,255,255,.03);
-    border-radius: 16px;
-    padding: 6px;
-    display:flex;
-    align-items:center;
-    justify-content:flex-end;
-  }
-
-  .underNav{ gap:6px; padding:10px; }
-  .navBtn{ padding:7px 9px; font-size:11px; }
 }
-/* iOS Safari: stoppa auto-zoom vid fokus (kräver >= 16px) */
-@media (max-width: 860px) {
-  input, textarea, select {
-    font-size: 16px !important;
-  }
-
-  /* dina specifika också, för säkerhets skull */
-  .miniInput,
-  .settingsInput,
-  .modalEdit {
-    font-size: 16px !important;
-  }
-/* =========================
-   iPhone portrait layout
-   - fixed page (no body scroll)
-   - 3 rows: Calendar / Main / Bottom (prio + dial)
-   ========================= */
-
-@media (max-width: 560px) and (orientation: portrait) {
-
-  html, body {
-    height: 100%;
-    overflow: hidden;           /* stoppa hela sid-scroll */
-    overscroll-behavior: none;
-    touch-action: manipulation;
-  }
-
-  /* använd dynamisk höjd (iOS adressrad) */
-  .app {
-    height: 100dvh;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  /* gör allt kant-till-kant och tightare */
-  .topbar {
-    padding: 10px 12px;
-  }
-
-  /* huvudgrid blir en kolumn */
-  .layout {
-    display: grid;
-    grid-template-columns: 1fr;
-    grid-template-rows: 25dvh 55dvh 20dvh; /* dina procent */
-    gap: 10px;
-    height: calc(100dvh - 56px); /* ungefär topbar-höjd */
-    padding: 10px;
-    box-sizing: border-box;
-  }
-
-  /* Kalender: fyll sin rad */
-  .calendarPanel {
-    height: 100%;
-    min-height: 0;
-    border-radius: 18px;
-    overflow: hidden; /* så embed inte sticker ut */
-  }
-  .calendarPanel iframe,
-  .calendarPanel .calendarEmbed {
-    width: 100% !important;
-    height: 100% !important;
-  }
-
-  /* Main: fyll sin rad, intern scroll */
-  .mainPanel {
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .mainPanel .panelBody {
-    height: 100%;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* själva pages-delen ska scrolla – inte hela sidan */
-  #viewTrackWrap, /* om du har wrapper */
-  #viewTrack,
-  .viewTrackWrap {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .viewPage {
-    height: 100%;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* nav-knappar: 2 rader om det behövs */
-  #underNav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding-top: 10px;
-  }
-  #underNav .navBtn {
-    padding: 10px 12px;
-    font-size: 14px;
-    border-radius: 14px;
-  }
-
-  /* Bottom: prio vänster + större dial höger */
-  .bottomBar {
-    height: 100%;
-    min-height: 0;
-    display: grid;
-    grid-template-columns: 1fr 170px; /* tom/prio + dial */
-    gap: 10px;
-    align-items: center;
-    border-radius: 18px;
-    overflow: hidden;
-  }
-
-  .bottomLeft {
-    height: 100%;
-    border-radius: 18px;
-    display: flex;
-    align-items: center;
-    padding: 14px;
-    font-weight: 900;
-    font-size: 18px;
-  }
-
-  /* dial större */
-  #dial {
-    width: 170px;
-    height: 170px;
-    margin: 0 auto;
-  }
-  #dialRing {
-    width: 170px;
-    height: 170px;
-  }
-  #dialIcon {
-    width: 56px;
-    height: 56px;
-  }
-/* =========================
-   iPhone: lås sidan + "fixed" dial nere till höger
-   ========================= */
-@media (max-width: 560px) {
-  html, body { height: 100%; overflow: hidden; }
-  .app { height: 100dvh; }
-
-  /* Main ska kunna scrolla INUTI, inte hela sidan */
-  .mainPanel, .calendarPanel { min-height: 0; }
-  .mainPanel .panelBody { height: 100%; min-height: 0; overflow: hidden; }
-
-  /* Carousellen måste ha riktig flex-layout så sidorna inte blir 0px höga */
-  #viewTrack {
-    display: flex;
-    height: 100%;
-    width: calc(100% * 6); /* 6 views: weather/news/todo/ideas/done/pomodoro */
-    transform: translateX(0);
-  }
-  .viewPage {
-    flex: 0 0 100%;
-    height: 100%;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* NAV-knapparna ska inte "äta upp" höjden */
-  #underNav {
-    flex: 0 0 auto;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding-top: 10px;
-  }
-
-  /* --- RATTPANELEN: gör den flytande och alltid synlig --- */
-  .dialPanel {
-    position: fixed !important;
-    right: 12px;
-    bottom: calc(env(safe-area-inset-bottom) + 12px);
-    width: 150px;
-    height: 150px;
-    z-index: 9999;
-    background: transparent !important; /* ta bort rutan bakom */
-    border: 0 !important;
-    box-shadow: none !important;
-    overflow: visible !important;
-  }
-
-  #dial, #dialRing { width: 150px; height: 150px; }
-  #dialIcon { width: 54px; height: 54px; }
-
-  /* Aktiva prios-text nere till vänster (om du har den rutan) */
-  .prioMini {
-    position: fixed;
-    left: 12px;
-    bottom: calc(env(safe-area-inset-bottom) + 24px);
-    z-index: 9999;
-    padding: 10px 12px;
-    border-radius: 16px;
-    background: rgba(0,0,0,.28);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    font-weight: 900;
-  }
-/* =========================
-   iPhone PORTRAIT: se till att Main-carousellen får höjd
-   (fixar "tom main" där vädret inte syns)
-   ========================= *//* ==============================
-   iPhone portrait layout fix
-   ============================== */
-@media (max-width: 600px) and (orientation: portrait) {
-
-  html, body {
-    height: 100%;
-    overflow: hidden;
-  }
-
-  .app {
-    height: 100dvh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Kalender överst (ca 25%) */
-  .calendarPanel {
-    flex: 0 0 25%;
-    min-height: 0;
-  }
-
-  /* Main i mitten (ca 55%) */
-  .mainPanel {
-    flex: 0 0 55%;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Viktigaste delen – låt innehållet få höjd */
-  .mainPanel .panelBody {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  #viewTrack {
-    flex: 1;
-    display: flex;
-    height: 100%;
-  }
-
-  .viewPage {
-    flex: 0 0 100%;
-    height: 100%;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* Scrollhjulet längst ner (20%) */
-  .dialPanel {
-    flex: 0 0 20%;
-  }

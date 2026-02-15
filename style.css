@@ -736,3 +736,58 @@ body{
     -webkit-backdrop-filter: blur(10px);
     font-weight: 900;
   }
+/* =========================
+   iPhone PORTRAIT: se till att Main-carousellen får höjd
+   (fixar "tom main" där vädret inte syns)
+   ========================= */
+@media (max-width: 560px) and (orientation: portrait) {
+  html, body { height: 100%; overflow: hidden; }
+  .app { height: 100dvh; }
+
+  /* Din huvudyta måste ha en riktig höjd */
+  .layout {
+    height: calc(100dvh - 70px); /* topbar-ish */
+    min-height: 0;
+  }
+
+  /* Panels får inte kollapsa */
+  .mainPanel, .calendarPanel, .prioPanel {
+    min-height: 0;
+  }
+
+  /* Main: panelBody måste vara flex så innehållet kan få höjd */
+  .mainPanel .panelBody {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Wrappern runt track måste få ta resten av höjden */
+  #viewTrackWrap,
+  .viewTrackWrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Track + pages */
+  #viewTrack {
+    height: 100%;
+    display: flex;
+    width: calc(100% * 6); /* weather/news/todo/ideas/done/pomodoro */
+  }
+
+  .viewPage {
+    flex: 0 0 100%;
+    height: 100%;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Nav-knappar får inte trycka bort allt */
+  #underNav {
+    flex: 0 0 auto;
+    margin-top: 10px;
+  }

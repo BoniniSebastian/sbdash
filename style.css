@@ -739,55 +739,58 @@ body{
 /* =========================
    iPhone PORTRAIT: se till att Main-carousellen får höjd
    (fixar "tom main" där vädret inte syns)
-   ========================= */
-@media (max-width: 560px) and (orientation: portrait) {
-  html, body { height: 100%; overflow: hidden; }
-  .app { height: 100dvh; }
+   ========================= *//* ==============================
+   iPhone portrait layout fix
+   ============================== */
+@media (max-width: 600px) and (orientation: portrait) {
 
-  /* Din huvudyta måste ha en riktig höjd */
-  .layout {
-    height: calc(100dvh - 70px); /* topbar-ish */
-    min-height: 0;
-  }
-
-  /* Panels får inte kollapsa */
-  .mainPanel, .calendarPanel, .prioPanel {
-    min-height: 0;
-  }
-
-  /* Main: panelBody måste vara flex så innehållet kan få höjd */
-  .mainPanel .panelBody {
+  html, body {
     height: 100%;
+    overflow: hidden;
+  }
+
+  .app {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Kalender överst (ca 25%) */
+  .calendarPanel {
+    flex: 0 0 25%;
+    min-height: 0;
+  }
+
+  /* Main i mitten (ca 55%) */
+  .mainPanel {
+    flex: 0 0 55%;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
   }
 
-  /* Wrappern runt track måste få ta resten av höjden */
-  #viewTrackWrap,
-  .viewTrackWrap {
-    flex: 1 1 auto;
+  /* Viktigaste delen – låt innehållet få höjd */
+  .mainPanel .panelBody {
+    flex: 1;
     min-height: 0;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
-  /* Track + pages */
   #viewTrack {
-    height: 100%;
+    flex: 1;
     display: flex;
-    width: calc(100% * 6); /* weather/news/todo/ideas/done/pomodoro */
+    height: 100%;
   }
 
   .viewPage {
     flex: 0 0 100%;
     height: 100%;
-    overflow: auto;
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Nav-knappar får inte trycka bort allt */
-  #underNav {
-    flex: 0 0 auto;
-    margin-top: 10px;
+  /* Scrollhjulet längst ner (20%) */
+  .dialPanel {
+    flex: 0 0 20%;
   }

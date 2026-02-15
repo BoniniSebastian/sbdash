@@ -672,3 +672,67 @@ body{
     width: 56px;
     height: 56px;
   }
+/* =========================
+   iPhone: lås sidan + "fixed" dial nere till höger
+   ========================= */
+@media (max-width: 560px) {
+  html, body { height: 100%; overflow: hidden; }
+  .app { height: 100dvh; }
+
+  /* Main ska kunna scrolla INUTI, inte hela sidan */
+  .mainPanel, .calendarPanel { min-height: 0; }
+  .mainPanel .panelBody { height: 100%; min-height: 0; overflow: hidden; }
+
+  /* Carousellen måste ha riktig flex-layout så sidorna inte blir 0px höga */
+  #viewTrack {
+    display: flex;
+    height: 100%;
+    width: calc(100% * 6); /* 6 views: weather/news/todo/ideas/done/pomodoro */
+    transform: translateX(0);
+  }
+  .viewPage {
+    flex: 0 0 100%;
+    height: 100%;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* NAV-knapparna ska inte "äta upp" höjden */
+  #underNav {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 10px;
+  }
+
+  /* --- RATTPANELEN: gör den flytande och alltid synlig --- */
+  .dialPanel {
+    position: fixed !important;
+    right: 12px;
+    bottom: calc(env(safe-area-inset-bottom) + 12px);
+    width: 150px;
+    height: 150px;
+    z-index: 9999;
+    background: transparent !important; /* ta bort rutan bakom */
+    border: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  #dial, #dialRing { width: 150px; height: 150px; }
+  #dialIcon { width: 54px; height: 54px; }
+
+  /* Aktiva prios-text nere till vänster (om du har den rutan) */
+  .prioMini {
+    position: fixed;
+    left: 12px;
+    bottom: calc(env(safe-area-inset-bottom) + 24px);
+    z-index: 9999;
+    padding: 10px 12px;
+    border-radius: 16px;
+    background: rgba(0,0,0,.28);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    font-weight: 900;
+  }

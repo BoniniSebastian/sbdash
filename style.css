@@ -5,8 +5,13 @@
   --line:rgba(255,255,255,.10);
   --radius:24px;
 }
+
 *{box-sizing:border-box}
-html,body{height:100%; overflow:hidden}
+
+html,body{
+  height:100%;
+  overflow:hidden; /* lås sida */
+}
 
 body{
   margin:0;
@@ -20,7 +25,9 @@ body{
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
 }
 
-/* TOPBAR */
+/* =========================
+   TOPBAR
+   ========================= */
 .topbar{
   position:sticky;
   top:0;
@@ -34,6 +41,7 @@ body{
   background: rgba(7,10,15,.78);
   backdrop-filter: blur(12px);
 }
+
 .brand{display:flex; align-items:center; gap:10px}
 .brandDot{
   width:10px; height:10px; border-radius:999px;
@@ -42,6 +50,7 @@ body{
 }
 .brandTitle{font-weight:900; letter-spacing:.2px; font-size:14px}
 .brandSub{font-size:11px; color:var(--muted); margin-top:2px}
+
 .topDate{
   justify-self:center;
   color: rgba(255,255,255,.80);
@@ -49,3 +58,39 @@ body{
   font-weight:900;
   letter-spacing: .2px;
 }
+.topRight{justify-self:end; opacity:.5}
+
+/* =========================
+   SHELL (MÅSTE vara relative)
+   ========================= */
+.shell{
+  flex:1;
+  position:relative;  /* <- VIKTIG */
+  min-height:0;
+  overflow:hidden;
+}
+
+/* =========================
+   SHEET WRAP (overlay, click-through)
+   ========================= */
+.sheetWrap{
+  position:absolute;  /* <- VIKTIG */
+  inset:0;
+  display:none;
+  z-index:40;
+  pointer-events:none; /* gör att hjulet funkar bakom */
+}
+.sheetWrap.open{ display:block; }
+
+/* =========================
+   SHEET (själva rutan tar events)
+   ========================= */
+.sheet{
+  pointer-events:auto;
+  position:absolute;
+  left:50%;
+  transform: translateX(-50%);
+  bottom: 140px;               /* luft för hjulet */
+  width:min(680px, 92vw);
+
+  height: calc(100vh - 

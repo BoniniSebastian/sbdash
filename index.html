@@ -38,10 +38,22 @@
       </aside>
 
       <!-- MITTEN: Main -->
-      <section class="panel mainPanel">
-        <div class="panelHead">
-          <h2>Main</h2>
-        </div>
+    <section class="panel mainPanel">
+  <div class="panelHead">
+    <h2>Main</h2>
+
+    <!-- Timer bar (hidden until running) -->
+    <div class="timerBar" id="timerBar" aria-hidden="true">
+      <div class="timerBarTop">
+        <span class="timerBarTime" id="timerBarTime">00:00</span>
+        <span class="timerBarLabel" id="timerBarLabel">Timer</span>
+      </div>
+      <div class="timerBarTrack">
+        <div class="timerBarFill" id="timerBarFill"></div>
+      </div>
+    </div>
+  </div>
+
 
         <div class="panelBody mainBody">
           <div class="viewTrack" id="viewTrack">

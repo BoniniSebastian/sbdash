@@ -2,134 +2,73 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
   <title>SB Dash</title>
-  <link rel="stylesheet" href="style.css?v=8" />
+  <link rel="stylesheet" href="style.css?v=900" />
 </head>
+
 <body>
-
-<header class="topbar">
-  <div class="brand">
-    <div class="brandDot"></div>
-    <div>
-      <div class="brandTitle">SB Dash</div>
-      <div class="brandSub">Control dashboard</div>
+  <!-- ================= TOPBAR ================= -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brandDot"></div>
+      <div>
+        <div class="brandTitle">SB Dash</div>
+        <div class="brandSub">Control dashboard</div>
+      </div>
     </div>
-  </div>
 
-  <div class="topDate" id="todayText">—</div>
-  <div class="topRight">—</div>
-</header>
+    <div class="topDate" id="topDate"></div>
 
-<main class="shell">
+    <div class="topRight">—</div>
+  </header>
 
-  <!-- SHEET (RUTAN) – stängd från start -->
-  <div class="sheetWrap" id="sheetWrap" aria-hidden="true">
-    <div class="sheet" id="sheet" role="dialog" aria-modal="false" aria-label="Main sheet">
+  <!-- ================= APP SHELL ================= -->
+  <div class="shell">
 
-      <!-- Drag-handle (dra ned för att stänga) -->
-      <div class="sheetHandle" id="sheetHandle" aria-label="Dra för att stänga">
-        <div class="sheetHandleBar"></div>
-      </div>
+    <!-- ===== SHEET WRAP (overlay) ===== -->
+    <div class="sheetWrap" id="sheetWrap">
 
-      <div class="sheetHead">
-        <div class="sheetTitle">Main</div>
-        <div class="sheetSub" id="sheetSub">—</div>
-      </div>
+      <!-- ===== SHEET ===== -->
+      <div class="sheet" id="sheet">
 
-      <div class="sheetBody">
-        <div class="viewTrack" id="viewTrack">
-
-          <!-- 1) KALENDER -->
-          <div class="viewPage" data-view="calendar">
-            <div class="viewTitle">Kalender</div>
-
-            <div class="calCard">
-              <div class="calScale">
-                <iframe
-                  class="calFrame"
-                  src="https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0"
-                  frameborder="0"
-                  scrolling="no">
-                </iframe>
-              </div>
-            </div>
-
-            <div class="miniHint" style="margin-top:10px;">
-              (iPhone Safari kan kräva cookies för Google iframe.)
-            </div>
-          </div>
-
-          <!-- 2) VÄDER -->
-          <div class="viewPage" data-view="weather">
-            <div class="viewTitle">Väder</div>
-            <div class="miniHint">(kopplas in sen)</div>
-          </div>
-
-          <!-- 3) NYHETER -->
-          <div class="viewPage" data-view="news">
-            <div class="viewTitle">Nyheter</div>
-            <div class="miniHint">(kopplas in sen)</div>
-          </div>
-
-          <!-- 4) TODO -->
-          <div class="viewPage" data-view="todo">
-            <div class="viewTitle">Todo</div>
-            <div class="miniHint">(kopplas in sen)</div>
-          </div>
-
-          <!-- 5) IDEAS -->
-          <div class="viewPage" data-view="ideas">
-            <div class="viewTitle">Idéer</div>
-            <div class="miniHint">(kopplas in sen)</div>
-          </div>
-
-          <!-- 6) DONE -->
-          <div class="viewPage" data-view="done">
-            <div class="viewTitle">Done</div>
-            <div class="miniHint">(kopplas in sen)</div>
-          </div>
-
-          <!-- 7) TIMER -->
-          <div class="viewPage" data-view="pomodoro">
-            <div class="viewTitle">Timer</div>
-            <div class="miniHint">(kopplas in sen)</div>
-          </div>
-
-          <!-- 8) AKTIV PRIO -->
-          <div class="viewPage" data-view="prio">
-            <div class="viewTitle">Aktiv prio</div>
-
-            <div class="miniForm">
-              <input id="prioInput" class="miniInput" type="text" placeholder="Lägg till superprio…" maxlength="160">
-              <button id="prioAddBtn" class="miniBtn">+ Lägg</button>
-            </div>
-
-            <ul class="miniList" id="prioList"></ul>
-            <div class="miniHint">Swipe höger→vänster = slutför • Tryck = redigera</div>
-          </div>
-
+        <div class="sheetHeader">
+          <div class="sheetTitle" id="sheetTitle">Preview</div>
         </div>
+
+        <div class="sheetContent" id="sheetContent">
+          <!-- JS renderar content här -->
+        </div>
+
+        <!-- Drag handle -->
+        <div class="sheetHandle"></div>
+
+      </div>
+    </div>
+
+    <!-- ===== WHEEL ===== -->
+    <div class="wheelWrap">
+
+      <div class="wheel" id="wheel">
+
+        <!-- Ring -->
+        <img src="assets/ui/knob-ring.svg"
+             class="wheelRing"
+             alt="ring" />
+
+        <!-- Icon -->
+        <img id="wheelIcon"
+             class="wheelIcon"
+             src="assets/ui/icon-calendar.svg"
+             alt="icon" />
+
       </div>
 
     </div>
+
   </div>
 
-</main>
-
-<!-- HJUL (alltid synligt) -->
-<div class="dialFixed" aria-label="Ratt">
-  <div class="dial" id="dial">
-    <div class="dialGlass" aria-hidden="true"></div>
-
-    <img class="dialRing" id="dialRing" src="assets/ui/knob-ring.svg" alt="Knob ring">
-    <img class="dialIcon" id="dialIcon" src="assets/ui/icon-calendar.svg" alt="Dial icon">
-
-    <!-- Fallback om SVG inte laddar -->
-    <div class="dialEmoji" id="dialEmoji" aria-hidden="true">📅</div>
-  </div>
-</div>
-
-<script src="app.js?v=8"></script>
+  <script src="app.js?v=900"></script>
 </body>
 </html>

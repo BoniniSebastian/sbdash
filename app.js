@@ -1,128 +1,77 @@
-/* =========================
-   SB Dash v7 (single panel)
-   - Calendar + Prio inside Main
-   - Body locked (app feel)
-   - Dial switches views (live icon while rotating + wheel scroll)
-   - Timer: start beside ring, reset under
-   - Timer progress as neon border around Main panel
-   ========================= */
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>SB Dash</title>
+  <link rel="stylesheet" href="style.css?v=1" />
+</head>
+<body>
 
-(() => {
-  const $ = (id) => document.getElementById(id);
+<header class="topbar">
+  <div class="brand">
+    <div class="brandDot"></div>
+    <div>
+      <div class="brandTitle">SB Dash</div>
+      <div class="brandSub">Control dashboard</div>
+    </div>
+  </div>
+  <div class="topDate" id="todayText">—</div>
+</header>
 
-  // ---------- Date ----------
-  const todayText = $("todayText");
-  if (todayText) {
-    const now = new Date();
-    const weekday = now.toLocaleDateString("sv-SE", { weekday: "long" });
-    const date = now.toLocaleDateString("sv-SE", { day: "2-digit", month: "long", year: "numeric" });
-    todayText.textContent = `${weekday} ${date}`;
-  }
+<main class="shell">
+  <section class="layout">
 
-  // ---------- Haptics ----------
-  const canVibrate = !!navigator.vibrate;
-  const tick = (ms = 8) => { if (canVibrate) navigator.vibrate(ms); };
+    <section class="panel mainPanel">
 
-  // ---------- Views ----------
-  const VIEWS = ["calendar", "weather", "news", "todo", "ideas", "done", "prio", "pomodoro"];
-  let currentIndex = 0;
+      <!-- TIMER BORDER SVG -->
+      <svg class="mainBorderSvg" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <rect x="1" y="1" width="98" height="98" rx="6" ry="6"
+          class="mainBorderTrack" />
+        <rect x="1" y="1" width="98" height="98" rx="6" ry="6"
+          class="mainBorderProg" id="mainBorderProg"/>
+      </svg>
 
-  const track = $("viewTrack");
-  const nav = $("underNav");
+      <div class="panelHead">
+        <h2>Main</h2>
+      </div>
 
-  const dialEl = $("dial");
-  const dialRing = $("dialRing");
-  const dialIcon = $("dialIcon");
+      <div class="panelBody mainBody">
+        <div class="viewTrack" id="viewTrack">
 
-  const ICONS = {
-    calendar: "assets/ui/icon-news.svg",      // byt om du vill
-    weather: "assets/ui/icon-weather.svg",
-    news: "assets/ui/icon-news.svg",
-    todo: "assets/ui/icon-todo.svg",
-    ideas: "assets/ui/icon-ideas.svg",
-    done: "assets/ui/icon-done.svg",
-    prio: "assets/ui/icon-todo.svg",          // byt om du vill
-    pomodoro: "assets/ui/icon-pomodoro.svg",
-  };
+          <div class="viewPage">
+            <div class="viewTitle">Kalender</div>
 
-  function setViewByIndex(idx, { silent = false } = {}) {
-    currentIndex = (idx + VIEWS.length) % VIEWS.length;
-    const view = VIEWS[currentIndex];
+            <div class="calCard">
+              <div class="calScale">
+                <iframe
+                  class="calFrame"
+                  src="https://calendar.google.com/calendar/embed?mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0"
+                  frameborder="0"
+                  scrolling="no">
+                </iframe>
+              </div>
+            </div>
 
-    if (track) track.style.transform = `translateX(-${currentIndex * 100}%)`;
+          </div>
 
-    if (nav) {
-      [...nav.querySelectorAll(".navBtn")].forEach((b) =>
-        b.classList.toggle("active", b.dataset.view === view)
-      );
-    }
+        </div>
+      </div>
 
-    if (dialIcon && ICONS[view]) dialIcon.src = ICONS[view];
+    </section>
 
-    if (!silent) syncRotationToIndex();
-  }
+  </section>
+</main>
 
-  function setViewByName(view) {
-    const i = VIEWS.indexOf(view);
-    if (i !== -1) setViewByIndex(i);
-  }
+<!-- DIAL -->
+<div class="dialFixed">
+  <div class="dial" id="dial">
+    <div class="dialGlass"></div>
+    <img class="dialRing" id="dialRing" src="assets/ui/knob-ring.svg" />
+    <img class="dialIcon" id="dialIcon" src="assets/ui/icon-weather.svg" />
+  </div>
+</div>
 
-  if (nav) {
-    nav.addEventListener("click", (e) => {
-      const btn = e.target.closest(".navBtn");
-      if (!btn) return;
-      setViewByName(btn.dataset.view);
-    });
-  }
-
-  // ---------- Dial ----------
-  let isDragging = false;
-  let startAngle = 0;
-  let currentRotation = 0;
-  const STEP = 360 / VIEWS.length;
-  let lastSector = 0;
-
-  const angle = (cx, cy, mx, my) => Math.atan2(my - cy, mx - cx) * (180 / Math.PI);
-
-  function setRotation(deg) {
-    currentRotation = deg;
-    if (dialRing) dialRing.style.transform = `rotate(${deg}deg)`;
-  }
-
-  function sectorFromRotation(deg) {
-    const raw = Math.round(deg / STEP);
-    return ((raw % VIEWS.length) + VIEWS.length) % VIEWS.length;
-  }
-
-  function syncRotationToIndex() {
-    setRotation(currentIndex * STEP);
-    lastSector = currentIndex;
-  }
-
-  function onDown(e) {
-    if (!dialEl) return;
-    isDragging = true;
-    dialEl.setPointerCapture?.(e.pointerId);
-    e.preventDefault();
-
-    const r = dialEl.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    startAngle = angle(cx, cy, e.clientX, e.clientY) - currentRotation;
-  }
-
-  function onMove(e) {
-    if (!isDragging) return;
-    e.preventDefault();
-
-    const r = dialEl.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-
-    setRotation(angle(cx, cy, e.clientX, e.clientY) - startAngle);
-
-    const s = sectorFromRotation(currentRotation);
-    if (s !== lastSector) {
-      lastSector = s;
-      const view = VIEWS[s];
-      if (dialIcon && ICONS[view]) dialIcon.src =
+<script src="app.js?v=1"></script>
+</body>
+</html>

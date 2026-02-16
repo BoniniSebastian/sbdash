@@ -258,6 +258,8 @@ body{
 
 /* ================= MAIN TIMER BORDER ================= */
 
+/* ===== Main Timer Border (subtle neon) ===== */
+
 .mainBorderSvg{
   position:absolute;
   inset:0;
@@ -266,19 +268,28 @@ body{
 
 .mainBorderTrack{
   fill:none;
-  stroke:rgba(255,255,255,.06);
+  stroke:rgba(255,255,255,.05);
   stroke-width:2;
 }
 
 .mainBorderProg{
   fill:none;
-  stroke:rgba(0,209,255,.7);
+  stroke:rgba(0,209,255,.65);
   stroke-width:2;
-  stroke-dasharray:400;
-  stroke-dashoffset:400; /* HELT dold från start */
-  transition: stroke 180ms ease, stroke-dashoffset 200ms linear;
-}
 
+  stroke-linecap:round;
+
+  /* subtle neon glow */
+  filter: drop-shadow(0 0 4px rgba(0,209,255,.45))
+          drop-shadow(0 0 8px rgba(0,209,255,.25));
+
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000; /* hidden by default */
+
+  transition: stroke-dashoffset 180ms linear,
+              stroke 200ms ease,
+              filter 200ms ease;
+}
 /* ================= FORMS ================= */
 
 input{

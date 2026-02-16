@@ -511,8 +511,8 @@ body{
 }
 .dialIcon{
   position:absolute;
-  width:66px;
-  height:66px;
+  width:88px;
+  height:88px;
   object-fit:contain;
   filter: drop-shadow(0 0 12px rgba(0,209,255,.22));
 }

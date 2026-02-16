@@ -73,9 +73,9 @@ body{
   position:fixed;
   left:50%;
   transform: translateX(-50%);
-  bottom: max(6px, env(safe-area-inset-bottom)); /* längre ner */
-  z-index:20;                  /* bakom sheet (sheet z-index är högre) */
-  pointer-events:none;
+  bottom: max(6px, env(safe-area-inset-bottom));
+  z-index:20;
+  pointer-events:auto; /* ✅ måste vara auto */
 }
 
 .wheel{

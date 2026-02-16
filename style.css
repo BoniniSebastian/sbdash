@@ -85,8 +85,8 @@ body{
   min-height:0;
 }
 .calScale{
-  width:112%;
-  height:112%;
+  width:115%;
+  height:115%;
   transform: scale(.89);
   transform-origin: top left;
 }
@@ -106,8 +106,8 @@ body{
 }
 /* Calendar: compact + expand (glass handle under) */
 .calendarWrap{
-  height: 190px;          /* compact läge ≈ ~3 events */
-  max-height: 190px;
+  height: 150px;          /* compact läge ≈ ~3 events */
+  max-height: 150px;
   transition: height 220ms ease, max-height 220ms ease;
 }
 
@@ -119,7 +119,7 @@ body{
 
 /* Handle under calendar (glass) */
 .calHandle{
-  border-radius: 14px;
+  border-radius: 12px;
   border:1px solid rgba(255,255,255,.06);
   background: rgba(255,255,255,.04);
   backdrop-filter: blur(14px);

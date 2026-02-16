@@ -120,25 +120,48 @@ body{
 /* Handle under calendar (glass) */
 .calHandle{
   border-radius: 14px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.04);
   backdrop-filter: blur(14px);
-  box-shadow: 0 14px 30px rgba(0,0,0,.35);
   padding: 6px 10px;
   cursor: pointer;
   user-select: none;
   display:flex;
   flex-direction:column;
+  align-items:center;
   gap:6px;
+  opacity:.65;
+  transition: opacity 180ms ease, background 180ms ease;
+}
+
+.calHandle:hover{
+  opacity:1;
+  background: rgba(255,255,255,.08);
 }
 
 .calGrip{
   width: 36px;
   height: 3px;
   border-radius: 999px;
-  background: rgba(255,255,255,.18);
-  margin: 0 auto;
+  background: rgba(255,255,255,.25);
 }
+
+.calHandleRow{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.calHandleChevron{
+  font-size: 14px;
+  color: rgba(255,255,255,.60);
+  transition: transform 180ms ease;
+}
+
+.calHandle[aria-expanded="true"] .calHandleChevron{
+  transform: rotate(180deg);
+}
+
 
 .calHandleRow{
   display:flex;

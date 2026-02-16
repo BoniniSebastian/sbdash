@@ -20,6 +20,45 @@
     todayText.textContent = `${weekday} ${date}`;
   }
 
+   // ---------- Calendar expand/collapse ----------
+const calWrap = document.querySelector(".calendarWrap");
+const calHandle = document.getElementById("calHandle");
+const calHandleText = document.getElementById("calHandleText");
+
+const CAL_KEY = "sbdash_cal_expanded";
+
+function setCalendarExpanded(on) {
+  if (!calWrap || !calHandle) return;
+
+  calWrap.classList.toggle("calExpanded", !!on);
+  calHandle.setAttribute("aria-expanded", on ? "true" : "false");
+  if (calHandleText) calHandleText.textContent = on ? "Visa färre" : "Visa fler";
+
+  try { localStorage.setItem(CAL_KEY, on ? "1" : "0"); } catch {}
+}
+
+function toggleCalendarExpanded() {
+  const isOn = calWrap?.classList.contains("calExpanded");
+  setCalendarExpanded(!isOn);
+}
+
+// restore
+try {
+  const saved = localStorage.getItem(CAL_KEY);
+  if (saved === "1") setCalendarExpanded(true);
+} catch {}
+
+if (calHandle) {
+  calHandle.addEventListener("click", toggleCalendarExpanded);
+  calHandle.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      toggleCalendarExpanded();
+    }
+  });
+}
+
+
   // ---------- Haptics ----------
   const canVibrate = !!navigator.vibrate;
   const tick = (ms = 8) => { if (canVibrate) navigator.vibrate(ms); };

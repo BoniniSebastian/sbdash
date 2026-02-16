@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>SB Dash</title>
-  <link rel="stylesheet" href="style.css?v=3" />
+  <link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body>
 
@@ -17,21 +17,24 @@
     </div>
   </div>
   <div class="topDate" id="todayText">—</div>
-  <div class="topRight" aria-hidden="true"></div>
+  <div class="topRight"></div>
 </header>
 
 <main class="shell">
-  <section class="layout">
 
-    <section class="panel mainPanel" id="mainPanel">
-      <div class="panelHead">
-        <h2>Main</h2>
+  <!-- SHEET (RUTAN) – STÄNGD FRÅN START -->
+  <div class="sheetWrap" id="sheetWrap" aria-hidden="true">
+    <div class="sheet" id="sheet" role="dialog" aria-modal="false" aria-label="Main sheet">
+
+      <div class="sheetHead">
+        <div class="sheetTitle">Main</div>
+        <div class="sheetSub" id="sheetSub">—</div>
       </div>
 
-      <div class="panelBody mainBody">
+      <div class="sheetBody">
         <div class="viewTrack" id="viewTrack">
 
-          <!-- 1) KALENDER (egen sida) -->
+          <!-- KALENDER -->
           <div class="viewPage" data-view="calendar">
             <div class="viewTitle">Kalender</div>
 
@@ -47,11 +50,11 @@
             </div>
 
             <div class="miniHint" style="margin-top:10px;">
-              (Obs: iPhone Safari kan kräva cookies för Google iframe.)
+              (iPhone Safari kan kräva cookies för Google iframe.)
             </div>
           </div>
 
-          <!-- 2) AKTIV PRIO (egen sida) -->
+          <!-- AKTIV PRIO -->
           <div class="viewPage" data-view="prio">
             <div class="viewTitle">Aktiv prio</div>
 
@@ -61,10 +64,10 @@
             </div>
 
             <ul class="miniList" id="prioList"></ul>
-            <div class="miniHint">Tryck = öppna • Swipe = slutför</div>
+            <div class="miniHint">Swipe höger→vänster = slutför • Tryck = redigera</div>
           </div>
 
-          <!-- (placeholder) fler sidor kommer sen -->
+          <!-- VÄDER (placeholder tills vi kopplar in) -->
           <div class="viewPage" data-view="weather">
             <div class="viewTitle">Väder</div>
             <div class="miniHint">(kopplas in sen)</div>
@@ -72,21 +75,27 @@
 
         </div>
       </div>
-    </section>
 
-  </section>
+      <!-- Close-knapp nedtill centrerat -->
+      <button class="sheetClose" id="sheetCloseBtn" aria-label="Stäng">✕</button>
+    </div>
+  </div>
+
 </main>
 
-<!-- HJUL: delvis bakom panelen (vi fixar lager i CSS nästa steg) -->
+<!-- HJUL – alltid synligt -->
 <div class="dialFixed" aria-label="Ratt">
   <div class="dial" id="dial">
     <div class="dialGlass" aria-hidden="true"></div>
+
     <img class="dialRing" id="dialRing" src="assets/ui/knob-ring.svg" alt="Knob ring">
-    <!-- Starta med en ikon du vet finns -->
+
+    <!-- Om SVG saknas -> vi visar emoji fallback -->
     <img class="dialIcon" id="dialIcon" src="assets/ui/icon-weather.svg" alt="Dial icon">
+    <div class="dialEmoji" id="dialEmoji" aria-hidden="true">☀️</div>
   </div>
 </div>
 
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

@@ -486,16 +486,17 @@ body{
 /* Dial */
 .dialFixed{
   position:fixed;
-  right:14px;
+  left:14px;
   bottom:14px;
   z-index:100;
   pointer-events:auto;
   background:transparent;
 }
+
 .dial{
   position:relative;
-  width: 182px;
-  height: 182px;
+  width: 206px;
+  height: 206px;
   display:grid;
   place-items:center;
   user-select:none;
@@ -510,8 +511,8 @@ body{
 }
 .dialIcon{
   position:absolute;
-  width:52px;
-  height:52px;
+  width:66px;
+  height:66px;
   object-fit:contain;
   filter: drop-shadow(0 0 12px rgba(0,209,255,.22));
 }

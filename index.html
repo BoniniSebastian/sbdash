@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>SB Dash</title>
-  <link rel="stylesheet" href="style.css?v=2" />
+  <link rel="stylesheet" href="style.css?v=3" />
 </head>
 <body>
 
@@ -17,56 +17,76 @@
     </div>
   </div>
   <div class="topDate" id="todayText">—</div>
+  <div class="topRight" aria-hidden="true"></div>
 </header>
 
 <main class="shell">
+  <section class="layout">
 
-  <section class="panel mainPanel">
+    <section class="panel mainPanel" id="mainPanel">
+      <div class="panelHead">
+        <h2>Main</h2>
+      </div>
 
-    <div class="panelHead">
-      <h2>Main</h2>
-    </div>
+      <div class="panelBody mainBody">
+        <div class="viewTrack" id="viewTrack">
 
-    <div class="panelBody" id="mainScroll">
+          <!-- 1) KALENDER (egen sida) -->
+          <div class="viewPage" data-view="calendar">
+            <div class="viewTitle">Kalender</div>
 
-      <div class="sectionBlock">
-        <div class="sectionTitle">Kalender</div>
+            <div class="calCard">
+              <div class="calScale">
+                <iframe
+                  class="calFrame"
+                  src="https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0"
+                  frameborder="0"
+                  scrolling="no">
+                </iframe>
+              </div>
+            </div>
 
-        <div class="calCard">
-          <div class="calScale">
-            <iframe
-              class="calFrame"
-              src="https://calendar.google.com/calendar/embed?mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0"
-              frameborder="0"
-              scrolling="no">
-            </iframe>
+            <div class="miniHint" style="margin-top:10px;">
+              (Obs: iPhone Safari kan kräva cookies för Google iframe.)
+            </div>
           </div>
+
+          <!-- 2) AKTIV PRIO (egen sida) -->
+          <div class="viewPage" data-view="prio">
+            <div class="viewTitle">Aktiv prio</div>
+
+            <div class="miniForm">
+              <input id="prioInput" class="miniInput" type="text" placeholder="Lägg till superprio…" maxlength="160">
+              <button id="prioAddBtn" class="miniBtn">+ Lägg</button>
+            </div>
+
+            <ul class="miniList" id="prioList"></ul>
+            <div class="miniHint">Tryck = öppna • Swipe = slutför</div>
+          </div>
+
+          <!-- (placeholder) fler sidor kommer sen -->
+          <div class="viewPage" data-view="weather">
+            <div class="viewTitle">Väder</div>
+            <div class="miniHint">(kopplas in sen)</div>
+          </div>
+
         </div>
       </div>
+    </section>
 
-      <div class="sectionBlock">
-        <div class="sectionTitle">Aktiv prio</div>
-        <div id="prioList">
-          <!-- fylls via JS -->
-        </div>
-      </div>
-
-      <div style="height: 200px;"></div>
-
-    </div>
   </section>
-
 </main>
 
-<!-- HJUL (delvis bakom panelen) -->
-<div class="dialFixed">
+<!-- HJUL: delvis bakom panelen (vi fixar lager i CSS nästa steg) -->
+<div class="dialFixed" aria-label="Ratt">
   <div class="dial" id="dial">
-    <div class="dialGlass"></div>
-    <img class="dialRing" id="dialRing" src="assets/ui/knob-ring.svg" />
-    <img class="dialIcon" id="dialIcon" src="assets/ui/icon-calendar.svg" />
+    <div class="dialGlass" aria-hidden="true"></div>
+    <img class="dialRing" id="dialRing" src="assets/ui/knob-ring.svg" alt="Knob ring">
+    <!-- Starta med en ikon du vet finns -->
+    <img class="dialIcon" id="dialIcon" src="assets/ui/icon-weather.svg" alt="Dial icon">
   </div>
 </div>
 
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

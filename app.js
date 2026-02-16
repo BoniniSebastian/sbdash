@@ -12,9 +12,8 @@
 
   // ---------- Elements ----------
   const sheetWrap = $("sheetWrap");
-  const sheetCloseBtn = $("sheetCloseBtn");
+  const sheet = $("sheet");
   const sheetSub = $("sheetSub");
-
   const track = $("viewTrack");
 
   const dial = $("dial");
@@ -22,33 +21,36 @@
   const dialIcon = $("dialIcon");
   const dialEmoji = $("dialEmoji");
 
-  // ---------- Views ----------
+  // Handle (måste finnas i HTML: id="sheetHandle")
+  const sheetHandle = $("sheetHandle");
+
+  // ---------- Views (ALLA) ----------
   const VIEWS = [
-    { id: "calendar", label: "Kalender", icon: "assets/ui/icon-calendar.svg", emoji: "📅" },
-    { id: "prio",     label: "Aktiv prio", icon: "assets/ui/icon-prio.svg", emoji: "🔥" },
-    { id: "weather",  label: "Väder", icon: "assets/ui/icon-weather.svg", emoji: "☀️" },
+    { id: "calendar",  label: "Kalender", icon: "assets/ui/icon-calendar.svg", emoji: "📅" },
+    { id: "weather",   label: "Väder",    icon: "assets/ui/icon-weather.svg", emoji: "☀️" },
+    { id: "news",      label: "Nyheter",  icon: "assets/ui/icon-news.svg", emoji: "📰" },
+    { id: "todo",      label: "Todo",     icon: "assets/ui/icon-todo.svg", emoji: "✅" },
+    { id: "ideas",     label: "Idéer",    icon: "assets/ui/icon-ideas.svg", emoji: "💡" },
+    { id: "done",      label: "Done",     icon: "assets/ui/icon-done.svg", emoji: "🏁" },
+    { id: "pomodoro",  label: "Timer",    icon: "assets/ui/icon-pomodoro.svg", emoji: "⏱️" },
+    { id: "prio",      label: "Aktiv prio", icon: "assets/ui/icon-prio.svg", emoji: "🔥" },
   ];
 
-  // Start: stängd ruta, men vi har en aktiv “preview”
   const STEP = 360 / VIEWS.length;
   let activeIndex = 0;
 
-  // ---------- Helpers ----------
   const canVibrate = !!navigator.vibrate;
   const tick = (ms = 8) => { if (canVibrate) navigator.vibrate(ms); };
 
   function isSheetOpen() {
     return sheetWrap?.classList.contains("open");
   }
-
   function openSheet() {
     if (!sheetWrap) return;
     sheetWrap.classList.add("open");
     sheetWrap.setAttribute("aria-hidden", "false");
-    // när sheet öppnas: rendera den aktiva viewn direkt
     applyView(activeIndex, { moveTrack: true });
   }
-
   function closeSheet() {
     if (!sheetWrap) return;
     sheetWrap.classList.remove("open");
@@ -64,58 +66,40 @@
     const v = VIEWS[index];
     if (!v) return;
 
-    // prova ladda svg – om den failar visar vi emoji
-    if (dialIcon) {
-      dialIcon.style.display = "block";
-      dialIcon.src = v.icon;
+    if (!dialIcon) return;
 
-      dialIcon.onerror = () => {
-        dialIcon.style.display = "none";
-        if (dialEmoji) {
-          dialEmoji.textContent = v.emoji || "●";
-          dialEmoji.style.display = "block";
-        }
-      };
+    dialIcon.style.display = "block";
+    dialIcon.src = v.icon;
 
-      // om den lyckas: göm emoji
-      dialIcon.onload = () => {
-        if (dialEmoji) dialEmoji.style.display = "none";
-        dialIcon.style.display = "block";
-      };
-    } else {
+    dialIcon.onerror = () => {
+      dialIcon.style.display = "none";
       if (dialEmoji) {
         dialEmoji.textContent = v.emoji || "●";
         dialEmoji.style.display = "block";
       }
-    }
+    };
+    dialIcon.onload = () => {
+      if (dialEmoji) dialEmoji.style.display = "none";
+      dialIcon.style.display = "block";
+    };
   }
 
   function applyView(index, { moveTrack = false } = {}) {
     activeIndex = ((index % VIEWS.length) + VIEWS.length) % VIEWS.length;
     const v = VIEWS[activeIndex];
 
-    // header/sub
     if (sheetSub) sheetSub.textContent = `Preview: ${v.label}`;
-
-    // dial icon
     setDialIcon(activeIndex);
 
-    // om sheet är öppet (eller om moveTrack tvingas): byt sida i tracken
-    if (moveTrack || isSheetOpen()) {
-      setTrackTo(activeIndex);
-    }
+    if (moveTrack || isSheetOpen()) setTrackTo(activeIndex);
   }
 
-  // init preview
-  applyView(activeIndex);
-
-  // ---------- Dial rotation / smooth drag ----------
+  // ---------- Rotation (smooth) ----------
   let isDragging = false;
   let startPointerAngle = 0;
   let startRotation = 0;
   let rotation = 0;
 
-  // inertia
   let lastT = 0;
   let lastRot = 0;
   let vel = 0;
@@ -126,41 +110,20 @@
     raf = 0;
   }
 
-  function startInertia() {
-    stopInertia();
-    const friction = 0.92;
-
-    const step = () => {
-      vel *= friction;
-      if (Math.abs(vel) < 0.12) {
-        // snap till närmsta view
-        const idx = nearestIndexFromRotation(rotation);
-        snapToIndex(idx);
-        return;
-      }
-      rotation += vel;
-      renderRotation(rotation);
-      raf = requestAnimationFrame(step);
-    };
-
-    raf = requestAnimationFrame(step);
+  function nearestIndexFromRotation(deg) {
+    const raw = Math.round(deg / STEP);
+    return ((raw % VIEWS.length) + VIEWS.length) % VIEWS.length;
   }
 
   function renderRotation(deg) {
     rotation = deg;
     if (dialRing) dialRing.style.transform = `rotate(${deg}deg)`;
 
-    // live preview by rotation
     const idx = nearestIndexFromRotation(rotation);
     if (idx !== activeIndex) {
       applyView(idx);
       tick(6);
     }
-  }
-
-  function nearestIndexFromRotation(deg) {
-    const raw = Math.round(deg / STEP);
-    return ((raw % VIEWS.length) + VIEWS.length) % VIEWS.length;
   }
 
   function snapToIndex(idx) {
@@ -171,6 +134,24 @@
     tick(10);
   }
 
+  function startInertia() {
+    stopInertia();
+    const friction = 0.92;
+
+    const step = () => {
+      vel *= friction;
+      if (Math.abs(vel) < 0.12) {
+        snapToIndex(nearestIndexFromRotation(rotation));
+        return;
+      }
+      rotation += vel;
+      renderRotation(rotation);
+      raf = requestAnimationFrame(step);
+    };
+
+    raf = requestAnimationFrame(step);
+  }
+
   function getAngleFromPointer(e) {
     const r = dial.getBoundingClientRect();
     const cx = r.left + r.width / 2;
@@ -178,7 +159,6 @@
     return Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI);
   }
 
-  // CLICK vs DRAG (så vi kan trycka för att öppna)
   let downX = 0, downY = 0, moved = false;
 
   function onPointerDown(e) {
@@ -216,12 +196,8 @@
     if (delta > 180) delta -= 360;
     if (delta < -180) delta += 360;
 
-    // KÄNSLA: samma som SB Dash (drag på höger sida nedåt => medurs)
-    const next = startRotation + delta;
+    renderRotation(startRotation + delta);
 
-    renderRotation(next);
-
-    // inertia velocity
     const t = performance.now();
     const dt = Math.max(8, t - lastT);
     vel = ((rotation - lastRot) / dt) * 16;
@@ -237,29 +213,18 @@
     isDragging = false;
     e.preventDefault();
 
-    // om det var ett "tryck" (ingen drag): öppna sheet
     if (!moved) {
-      if (!isSheetOpen()) {
-        openSheet();
-      } else {
-        // sheet redan öppen -> inget extra, du scrollar bara för att byta view
-      }
+      if (!isSheetOpen()) openSheet();
       return;
     }
 
-    // annars inertia + snap
     startInertia();
   }
 
-  // Desktop wheel on dial
   function onWheel(e) {
-    // wheel ska bara påverka hjulet när man scrollar på hjulet
     e.preventDefault();
     e.stopPropagation();
-
-    // scroll ned => medurs (känsla)
-    const delta = e.deltaY * 0.25;
-    renderRotation(rotation + delta);
+    renderRotation(rotation + e.deltaY * 0.25);
   }
 
   if (dial) {
@@ -271,9 +236,53 @@
     dial.addEventListener("wheel", onWheel, { passive: false });
   }
 
-  // ---------- Close button ----------
-  if (sheetCloseBtn) sheetCloseBtn.addEventListener("click", closeSheet);
+  // ---------- Slide-to-close (drag handle) ----------
+  if (sheetHandle && sheet) {
+    let startY = 0;
+    let startBottom = 0;
+    let dragging = false;
 
-  // ---------- Start closed ----------
+    const getBottom = () => {
+      const b = parseFloat(getComputedStyle(sheet).bottom);
+      return Number.isFinite(b) ? b : 90;
+    };
+
+    sheetHandle.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      startY = e.clientY;
+      startBottom = getBottom();
+      sheetHandle.setPointerCapture?.(e.pointerId);
+      e.preventDefault();
+    }, { passive: false });
+
+    sheetHandle.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const dy = e.clientY - startY;
+
+      // dra ned = öka bottom mindre? vi flyttar sheet ned genom translateY
+      const t = Math.max(0, dy);
+      sheet.style.transform = `translateX(-50%) translateY(${t}px)`;
+      e.preventDefault();
+    }, { passive: false });
+
+    sheetHandle.addEventListener("pointerup", (e) => {
+      if (!dragging) return;
+      dragging = false;
+
+      const dy = e.clientY - startY;
+      if (dy > 120) {
+        // close
+        sheet.style.transform = `translateX(-50%) translateY(0px)`;
+        closeSheet();
+      } else {
+        // snap back
+        sheet.style.transform = `translateX(-50%) translateY(0px)`;
+      }
+      e.preventDefault();
+    }, { passive: false });
+  }
+
+  // ---------- Init ----------
+  applyView(0, { moveTrack: true });
   closeSheet();
 })();

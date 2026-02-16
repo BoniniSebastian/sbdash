@@ -621,4 +621,20 @@ body{
 .pomoTime{ font-size: 42px; font-weight: 900; letter-spacing: -.5px; }
 .pomoSub{ margin-top: 6px; font-size: 12px; color: var(--muted); font-weight: 900; }
 .pomoBtns{ display:flex; gap:8px; flex-wrap:wrap; margin-top: 12px; }
+@media (max-width: 1200px){
+  html,body{ overflow:auto; }
+  body{ overflow:auto; }
+
+  .layout{
+    grid-template-columns: 1fr;
+    grid-auto-rows: min-content;
+  }
+
+  .calendarWrap{ order: 1; }
+  .calHandle{ order: 2; }
+  .mainPanel{ order: 3; }
+  .prioPanel{ order: 4; }
+
+  .prioPanel{ min-height: 320px; }
+}
 

@@ -1,14 +1,12 @@
 :root{
   --bg:#05080c;
-  --panel1: rgba(10,35,45,.65);
-  --panel2: rgba(10,35,45,.35);
+  --panel1: rgba(10,35,45,.66);
+  --panel2: rgba(10,35,45,.34);
   --glass: rgba(255,255,255,.06);
   --stroke: rgba(255,255,255,.10);
-  --stroke2: rgba(0,209,255,.25);
   --text: rgba(255,255,255,.92);
   --muted: rgba(255,255,255,.65);
   --shadow: 0 18px 60px rgba(0,0,0,.55);
-  --r: 18px;
 }
 
 *{ box-sizing:border-box; }
@@ -16,11 +14,12 @@ html,body{ height:100%; }
 body{
   margin:0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  background: radial-gradient(1200px 600px at 30% 20%, rgba(0,209,255,.08), transparent 60%),
-              radial-gradient(1200px 600px at 70% 80%, rgba(0,209,255,.06), transparent 60%),
-              var(--bg);
+  background:
+    radial-gradient(1200px 600px at 30% 20%, rgba(0,209,255,.08), transparent 60%),
+    radial-gradient(1200px 600px at 70% 80%, rgba(0,209,255,.06), transparent 60%),
+    var(--bg);
   color: var(--text);
-  overflow:hidden; /* viktig: sidan ska inte bli “lång” */
+  overflow:hidden; /* viktigt: sidan får inte bli “lång” */
 }
 
 .topbar{
@@ -40,10 +39,19 @@ body{
 .brandTitle{ font-weight:900; letter-spacing:.2px; }
 .brandSub{ font-size:12px; color: var(--muted); margin-top:2px; }
 
+.gearTop{
+  width:34px; height:34px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.18);
+  color: var(--text);
+  font-size:16px;
+  font-weight:900;
+}
+
 .topDate{
-  font-weight:800;
+  font-weight:900;
   color: var(--muted);
-  letter-spacing:.2px;
 }
 
 .shell{
@@ -90,7 +98,6 @@ body{
   margin:0;
   font-size:15px;
   font-weight:900;
-  letter-spacing:.2px;
 }
 
 .tag{
@@ -104,7 +111,7 @@ body{
 
 .panelBody{ padding: 14px; height: calc(100% - 56px); min-height:0; }
 
-/* Kalender */
+/* Calendar */
 .calendarBody{ display:flex; flex-direction:column; gap:10px; }
 .calWrap{
   position:relative;
@@ -114,11 +121,7 @@ body{
   border:1px solid rgba(255,255,255,.10);
   background: rgba(0,0,0,.25);
 }
-.calFrame{
-  width:100%;
-  height:100%;
-  border:0;
-}
+.calFrame{ width:100%; height:100%; border:0; }
 .calOverlay{
   pointer-events:none;
   position:absolute; inset:0;
@@ -167,12 +170,7 @@ body{
 }
 
 /* Mini UI */
-.miniForm{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  margin: 10px 0 12px;
-}
+.miniForm{ display:flex; gap:10px; align-items:center; margin: 10px 0 12px; }
 .miniInput{
   flex:1;
   padding:12px 14px;
@@ -197,10 +195,11 @@ body{
 
 .miniList{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px; }
 .miniHint{ color: var(--muted); font-size:13px; margin-top:10px; }
+.miniActions{ margin-top:12px; display:flex; gap:10px; justify-content:flex-end; }
 
 .countPill{
   width:28px; height:28px;
-  border-radius: 999px;
+  border-radius:999px;
   display:grid; place-items:center;
   border:1px solid rgba(255,255,255,.12);
   background: rgba(0,0,0,.18);
@@ -210,10 +209,7 @@ body{
 
 /* Swipe item */
 .swipeItem{ position:relative; border-radius: 16px; overflow:hidden; }
-.swipeUnder{
-  position:absolute; inset:0;
-  background: rgba(0,209,255,.12);
-}
+.swipeUnder{ position:absolute; inset:0; background: rgba(0,209,255,.12); }
 .swipeContent{
   position:relative;
   display:flex;
@@ -232,7 +228,7 @@ body{
 }
 .miniMeta{ color: var(--muted); font-size:12px; font-weight:800; white-space:nowrap; }
 
-/* DONE rows */
+/* Done rows */
 .miniRow{
   display:flex;
   justify-content:space-between;
@@ -286,27 +282,19 @@ body{
 .tomText{ font-weight:1000; }
 
 /* News */
-.pullHint{
-  font-size:12px;
-  color: var(--muted);
-  font-weight:900;
-  opacity:.9;
-}
+.pullHint{ font-size:12px; color: var(--muted); font-weight:900; opacity:.9; }
 
 /* Dial */
 .dialBody{ display:flex; align-items:center; justify-content:flex-end; height:100%; }
 .dialWrap{ width:100%; display:flex; justify-content:flex-end; align-items:center; }
 .dial{
-  width:190px; height:190px;
+  width:200px; height:200px;
   position:relative;
   user-select:none;
   -webkit-user-select:none;
   touch-action:none;
 }
-.dialRing{
-  position:absolute; inset:0;
-  width:100%; height:100%;
-}
+.dialRing{ position:absolute; inset:0; width:100%; height:100%; }
 .dialIcon{
   position:absolute;
   width:58px; height:58px;
@@ -326,7 +314,7 @@ body{
 }
 .modalOverlay.show{ display:flex; }
 .modal{
-  width:min(520px, 92vw);
+  width:min(560px, 92vw);
   border-radius: 20px;
   border:1px solid rgba(255,255,255,.12);
   background: rgba(10,20,25,.72);
@@ -352,27 +340,41 @@ body{
 }
 .modalEdit{
   width:100%;
-  min-height: 220px;
+  min-height: 240px;
   border:0;
   background: transparent;
   color: var(--text);
   padding:14px;
   outline:none;
   font-weight:900;
-  font-size:16px; /* iOS zoom-fix */
+  font-size:16px;
   resize:none;
 }
 .modalActions{ padding:14px; display:flex; justify-content:flex-end; gap:10px; }
+
+/* Settings */
+.settingsForm{ padding:14px; }
+.settingsLabel{ display:block; font-weight:900; color: var(--muted); font-size:12px; }
+.settingsInput{
+  width:100%;
+  margin-top:6px;
+  padding:12px 14px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.18);
+  color: var(--text);
+  outline:none;
+  font-weight:900;
+  font-size:16px;
+}
+.settingsHint{ margin-top:10px; color: var(--muted); font-size:12px; font-weight:900; }
+.settingsActions{ margin-top:12px; display:flex; gap:10px; justify-content:flex-end; }
 
 /* Pomodoro */
 .pomoWrap{ display:flex; flex-direction:column; gap:14px; align-items:flex-start; }
 .pomoRing{ position:relative; width:280px; height:280px; }
 .pomoSvg{ width:100%; height:100%; }
-.pomoTrack{
-  fill:none;
-  stroke: rgba(255,255,255,.12);
-  stroke-width: 18;
-}
+.pomoTrack{ fill:none; stroke: rgba(255,255,255,.12); stroke-width: 18; }
 .pomoProg{
   fill:none;
   stroke: rgba(0,209,255,.88);
@@ -380,7 +382,7 @@ body{
   stroke-linecap: round;
   filter:url(#pomoGlow);
   transform: rotate(-90deg);
-  transform-origin: 120px 120px; /* start vid toppen */
+  transform-origin: 120px 120px;
 }
 .pomoCenter{
   position:absolute;
@@ -394,9 +396,6 @@ body{
 .pomoSub{ color: var(--muted); font-weight:900; margin-top:6px; }
 .pomoBtns{ display:flex; gap:10px; flex-wrap:wrap; }
 
-/* iPad-ish responsiv: lite tightare */
 @media (max-width: 1200px){
-  .layout{
-    grid-template-columns: 300px 1fr 340px;
-  }
+  .layout{ grid-template-columns: 300px 1fr 340px; }
 }

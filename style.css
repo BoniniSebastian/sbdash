@@ -85,9 +85,9 @@ body{
   min-height:0;
 }
 .calScale{
-  width:115%;
-  height:115%;
-  transform: scale(.89);
+  width:130%;
+  height:130%;
+  transform: scale(.65);
   transform-origin: top left;
 }
 .calFrame{
@@ -106,8 +106,8 @@ body{
 }
 /* Calendar: compact + expand (glass handle under) */
 .calendarWrap{
-  height: 150px;          /* compact läge ≈ ~3 events */
-  max-height: 150px;
+  height: 80px;          /* compact läge ≈ ~3 events */
+  max-height: 80px;
   transition: height 220ms ease, max-height 220ms ease;
 }
 

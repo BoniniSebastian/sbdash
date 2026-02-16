@@ -1,1125 +1,773 @@
-/* SB Dash — app.js (stable iPad/desktop)
-   - Views: weather, news, todo, ideas, done, pomodoro
-   - Dial: live icon while rotating + tick vibration (if supported)
-   - Swipe right->left completes (prio/todo/ideas)
-   - Done: restore returns to origin list
-   - Settings modal: city + calendar-id (email) saved locally
-   - Calendar: Google embed refresh every 3 minutes
-   - News: RSS via proxy fallback + pull-to-refresh
-   - Weather: city -> geocode OR geolocation fallback, with sanity clamp
-*/
+/* =========================
+   SB Dash (Stable iPad/Desktop)
+   - Left: Google Calendar embed (agenda)
+   - Center: Panels (weather/news/todo/ideas/done/pomodoro)
+   - Right: Active prio
+   - Bottom-right: Dial to switch view + live icon
+   - Pomodoro: SVG ring drains correctly
+   - Storage: localStorage
+   ========================= */
 
-(() => {
-  const $ = (id) => document.getElementById(id);
+/** ====== CONFIG ====== **/
+const CALENDAR_EMBED_SRC = ""; 
+// 1) Gå till Google Kalender -> Inställningar -> din kalender -> Integrera kalender
+// 2) Kopiera iframe src (agenda/standard)
+// 3) Klistra här som sträng, ex:
+// const CALENDAR_EMBED_SRC = "https://calendar.google.com/calendar/embed?mode=AGENDA&...";
 
-  // ---------- Date ----------
-  const todayText = $("todayText");
-  if (todayText) {
-    const now = new Date();
-    const weekday = now.toLocaleDateString("sv-SE", { weekday: "long" });
-    const date = now.toLocaleDateString("sv-SE", { day: "2-digit", month: "long", year: "numeric" });
-    todayText.textContent = `${weekday} ${date}`;
-  }
+const NEWS_RSS_URL = "https://www.svt.se/nyheter/rss.xml"; // kan bytas
+const WEATHER_LAT = 59.3293; // Stockholm
+const WEATHER_LON = 18.0686;
 
-  // ---------- Haptics ----------
-  const canVibrate = typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
-  const tick = (ms = 8) => { if (canVibrate) navigator.vibrate(ms); };
+/** ====== VIEWS ====== **/
+const VIEWS = [
+  { key: "weather",  title: "Väder",    sub: "Stockholm (Open-Meteo)", icon: "☀️" },
+  { key: "news",     title: "Nyheter",  sub: "RSS (fallback om CORS)",  icon: "📰" },
+  { key: "todo",     title: "Todo",     sub: "Att göra",               icon: "✅" },
+  { key: "ideas",    title: "Ideas",    sub: "Tankar & idéer",         icon: "💡" },
+  { key: "done",     title: "Done",     sub: "Avklarat",               icon: "🏁" },
+  { key: "pomodoro", title: "Pomodoro", sub: "Fokusblock",             icon: "⏱️" },
+];
 
-  // ---------- Settings storage ----------
-  const SETTINGS_KEY = "sbdash_settings_v2";
-  let settings = { city: "", calId: "" };
+let currentIndex = 0;
+
+/** ====== STORAGE ====== **/
+const LS = {
+  todo: "sbdash.todo.v1",
+  ideas: "sbdash.ideas.v1",
+  done: "sbdash.done.v1",
+  prio: "sbdash.prio.v1",
+  pomo: "sbdash.pomo.v1",
+};
+
+function loadList(key, fallback = []) {
   try {
-    const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
-    settings.city = typeof raw.city === "string" ? raw.city : "";
-    settings.calId = typeof raw.calId === "string" ? raw.calId : "";
-  } catch {}
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function saveList(key, list) {
+  localStorage.setItem(key, JSON.stringify(list));
+}
 
-  function saveSettings() {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+let todo  = loadList(LS.todo);
+let ideas = loadList(LS.ideas);
+let done  = loadList(LS.done);
+let prio  = loadList(LS.prio);
+
+/** ====== DOM ====== **/
+const $ = (id) => document.getElementById(id);
+
+const todayText = $("todayText");
+const viewTitle = $("viewTitle");
+const viewSubtitle = $("viewSubtitle");
+
+const panels = Array.from(document.querySelectorAll(".panel"));
+const dial = $("dial");
+const dialIcon = $("dialIcon");
+const dialViewLabel = $("dialViewLabel");
+
+const gcalFrame = $("gcalFrame");
+const calendarPlaceholder = $("calendarPlaceholder");
+
+/** ====== DATE ====== **/
+function setDates() {
+  const now = new Date();
+  const weekday = now.toLocaleDateString("sv-SE", { weekday: "long" });
+  const date = now.toLocaleDateString("sv-SE", { day: "2-digit", month: "long", year: "numeric" });
+  todayText.textContent = `${weekday} ${date}`;
+}
+setDates();
+
+/** ====== CALENDAR ====== **/
+function initCalendar() {
+  if (CALENDAR_EMBED_SRC && CALENDAR_EMBED_SRC.trim().length > 0) {
+    gcalFrame.src = CALENDAR_EMBED_SRC.trim();
+    gcalFrame.style.opacity = "1";
+    calendarPlaceholder.style.display = "none";
+  } else {
+    gcalFrame.removeAttribute("src");
+    gcalFrame.style.opacity = "0";
+    calendarPlaceholder.style.display = "flex";
+  }
+}
+initCalendar();
+
+/** ====== VIEW SWITCHING ====== **/
+function setActiveView(index) {
+  const safeIndex = (index + VIEWS.length) % VIEWS.length;
+  currentIndex = safeIndex;
+
+  const v = VIEWS[currentIndex];
+
+  // panel show/hide (no transform = no “hopps”)
+  panels.forEach(p => p.classList.toggle("active", p.dataset.view === v.key));
+
+  // header
+  viewTitle.textContent = v.title;
+  viewSubtitle.textContent = v.sub;
+
+  // dial
+  dialIcon.textContent = v.icon;
+  dialViewLabel.textContent = v.title;
+  dial.setAttribute("aria-valuenow", String(currentIndex));
+
+  // rotate dial pointer by setting CSS transform on face
+  // We rotate the entire face while pointer stays at top.
+  const face = dial.querySelector(".dialFace");
+  const angle = indexToAngle(currentIndex);
+  face.style.transform = `rotate(${angle}deg)`;
+
+  // lazy refresh per view
+  if (v.key === "weather") loadWeather();
+  if (v.key === "news") loadNews();
+  if (v.key === "todo") renderTodo();
+  if (v.key === "ideas") renderIdeas();
+  if (v.key === "done") renderDone();
+  if (v.key === "pomodoro") renderPomodoroNoteState();
+}
+
+function indexToAngle(i) {
+  // 6 views -> 60° steps, centered
+  const step = 360 / VIEWS.length;
+  return i * step;
+}
+
+setActiveView(0);
+
+/** ====== DIAL INTERACTION (drag + wheel + keyboard) ====== **/
+let dragging = false;
+
+function pointerToAngle(e) {
+  const rect = dial.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+
+  const x = (e.clientX ?? (e.touches && e.touches[0].clientX)) - cx;
+  const y = (e.clientY ?? (e.touches && e.touches[0].clientY)) - cy;
+
+  // angle where 0 is up
+  const rad = Math.atan2(y, x);
+  let deg = (rad * 180) / Math.PI;
+  deg = deg + 90; // rotate so “up” is 0
+  if (deg < 0) deg += 360;
+  return deg;
+}
+
+function angleToIndex(deg) {
+  const step = 360 / VIEWS.length;
+  const i = Math.round(deg / step) % VIEWS.length;
+  return i;
+}
+
+function onDialPointerDown(e) {
+  dragging = true;
+  dial.setPointerCapture?.(e.pointerId);
+  e.preventDefault();
+}
+function onDialPointerMove(e) {
+  if (!dragging) return;
+  const deg = pointerToAngle(e);
+  const idx = angleToIndex(deg);
+  if (idx !== currentIndex) setActiveView(idx);
+}
+function onDialPointerUp(e) {
+  dragging = false;
+  try { dial.releasePointerCapture?.(e.pointerId); } catch {}
+}
+
+dial.addEventListener("pointerdown", onDialPointerDown);
+dial.addEventListener("pointermove", onDialPointerMove);
+dial.addEventListener("pointerup", onDialPointerUp);
+dial.addEventListener("pointercancel", onDialPointerUp);
+
+dial.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const dir = Math.sign(e.deltaY);
+  setActiveView(currentIndex + (dir > 0 ? 1 : -1));
+}, { passive: false });
+
+dial.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowRight" || e.key === "ArrowDown") setActiveView(currentIndex + 1);
+  if (e.key === "ArrowLeft" || e.key === "ArrowUp") setActiveView(currentIndex - 1);
+});
+
+/** ====== ACTIVE PRIO ====== **/
+const prioInput = $("prioInput");
+const addPrioBtn = $("addPrio");
+const activePrioList = $("activePrioList");
+
+function renderPrio() {
+  if (!prio.length) {
+    activePrioList.innerHTML = `<div class="muted">Inget i Aktiv prio ännu.</div>`;
+    return;
   }
 
-  // ---------- Views ----------
-  const VIEWS = ["weather", "news", "todo", "ideas", "done", "pomodoro"];
-  let currentIndex = 0;
+  activePrioList.innerHTML = "";
+  prio.forEach((text, idx) => {
+    const el = document.createElement("div");
+    el.className = "rowItem";
+    el.innerHTML = `
+      <div class="rowLeft">
+        <div class="rowText">${escapeHtml(text)}</div>
+      </div>
+      <div class="rowActions">
+        <button class="ghostBtn" data-act="up" data-i="${idx}">↑</button>
+        <button class="ghostBtn" data-act="down" data-i="${idx}">↓</button>
+        <button class="dangerBtn" data-act="del" data-i="${idx}">X</button>
+      </div>
+    `;
+    activePrioList.appendChild(el);
+  });
+}
+renderPrio();
 
-  const track = $("viewTrack");
-  const nav = $("underNav");
+addPrioBtn.addEventListener("click", () => {
+  const val = (prioInput.value || "").trim();
+  if (!val) return;
+  prio.unshift(val);
+  prioInput.value = "";
+  saveList(LS.prio, prio);
+  renderPrio();
+});
 
-  const dialEl = $("dial");
-  const dialRing = $("dialRing");
-  const dialIcon = $("dialIcon");
+activePrioList.addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  const i = Number(btn.dataset.i);
+  const act = btn.dataset.act;
 
-  const ICONS = {
-    weather: "assets/ui/icon-weather.svg",
-    news: "assets/ui/icon-news.svg",
-    todo: "assets/ui/icon-todo.svg",
-    ideas: "assets/ui/icon-ideas.svg",
-    done: "assets/ui/icon-done.svg",
-    pomodoro: "assets/ui/icon-pomodoro.svg",
-  };
+  if (act === "del") prio.splice(i, 1);
+  if (act === "up" && i > 0) [prio[i-1], prio[i]] = [prio[i], prio[i-1]];
+  if (act === "down" && i < prio.length - 1) [prio[i+1], prio[i]] = [prio[i], prio[i+1]];
 
-  function setViewByIndex(idx, { silent = false } = {}) {
-    currentIndex = (idx + VIEWS.length) % VIEWS.length;
-    const view = VIEWS[currentIndex];
+  saveList(LS.prio, prio);
+  renderPrio();
+});
 
-    if (track) track.style.transform = `translateX(-${currentIndex * 100}%)`;
+/** ====== TODO / IDEAS / DONE ====== **/
+const todoInput = $("todoInput");
+const addTodo = $("addTodo");
+const todoList = $("todoList");
 
-    if (nav) {
-      [...nav.querySelectorAll(".navBtn")].forEach((b) =>
-        b.classList.toggle("active", b.dataset.view === view)
-      );
-    }
+const ideaInput = $("ideaInput");
+const addIdea = $("addIdea");
+const ideasList = $("ideasList");
 
-    if (dialIcon && ICONS[view]) dialIcon.src = ICONS[view];
+const doneList = $("doneList");
+const clearDone = $("clearDone");
 
-    if (!silent) syncRotationToIndex();
+addTodo.addEventListener("click", () => {
+  const t = (todoInput.value || "").trim();
+  if (!t) return;
+  todo.unshift(t);
+  todoInput.value = "";
+  saveList(LS.todo, todo);
+  renderTodo();
+});
+
+addIdea.addEventListener("click", () => {
+  const t = (ideaInput.value || "").trim();
+  if (!t) return;
+  ideas.unshift(t);
+  ideaInput.value = "";
+  saveList(LS.ideas, ideas);
+  renderIdeas();
+});
+
+clearDone.addEventListener("click", () => {
+  done = [];
+  saveList(LS.done, done);
+  renderDone();
+});
+
+function renderTodo() {
+  if (!todo.length) {
+    todoList.innerHTML = `<div class="muted">Tomt.</div>`;
+    return;
+  }
+  todoList.innerHTML = "";
+  todo.forEach((text, idx) => {
+    const el = document.createElement("div");
+    el.className = "rowItem";
+    el.innerHTML = `
+      <div class="rowLeft">
+        <div class="rowText">${escapeHtml(text)}</div>
+      </div>
+      <div class="rowActions">
+        <button class="ghostBtn" data-act="prio" data-i="${idx}">Prio</button>
+        <button class="primaryBtn" data-act="done" data-i="${idx}">Klar</button>
+        <button class="dangerBtn" data-act="del" data-i="${idx}">X</button>
+      </div>
+    `;
+    todoList.appendChild(el);
+  });
+}
+
+function renderIdeas() {
+  if (!ideas.length) {
+    ideasList.innerHTML = `<div class="muted">Tomt.</div>`;
+    return;
+  }
+  ideasList.innerHTML = "";
+  ideas.forEach((text, idx) => {
+    const el = document.createElement("div");
+    el.className = "rowItem";
+    el.innerHTML = `
+      <div class="rowLeft">
+        <div class="rowText">${escapeHtml(text)}</div>
+      </div>
+      <div class="rowActions">
+        <button class="ghostBtn" data-act="todo" data-i="${idx}">Till Todo</button>
+        <button class="dangerBtn" data-act="del" data-i="${idx}">X</button>
+      </div>
+    `;
+    ideasList.appendChild(el);
+  });
+}
+
+function renderDone() {
+  if (!done.length) {
+    doneList.innerHTML = `<div class="muted">Inget klart ännu.</div>`;
+    return;
+  }
+  doneList.innerHTML = "";
+  done.forEach((text, idx) => {
+    const el = document.createElement("div");
+    el.className = "rowItem";
+    el.innerHTML = `
+      <div class="rowLeft">
+        <div class="rowText">${escapeHtml(text)}</div>
+      </div>
+      <div class="rowActions">
+        <button class="ghostBtn" data-act="back" data-i="${idx}">Till Todo</button>
+        <button class="dangerBtn" data-act="del" data-i="${idx}">X</button>
+      </div>
+    `;
+    doneList.appendChild(el);
+  });
+}
+
+todoList.addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  const i = Number(btn.dataset.i);
+  const act = btn.dataset.act;
+
+  if (act === "del") {
+    todo.splice(i, 1);
+  } else if (act === "done") {
+    const item = todo.splice(i, 1)[0];
+    done.unshift(item);
+    saveList(LS.done, done);
+  } else if (act === "prio") {
+    const item = todo[i];
+    if (item) prio.unshift(item);
+    saveList(LS.prio, prio);
+    renderPrio();
   }
 
-  function setViewByName(view) {
-    const i = VIEWS.indexOf(view);
-    if (i !== -1) setViewByIndex(i);
-  }
+  saveList(LS.todo, todo);
+  renderTodo();
+});
 
-  if (nav) {
-    nav.addEventListener("click", (e) => {
-      const btn = e.target.closest(".navBtn");
-      if (!btn) return;
-      setViewByName(btn.dataset.view);
-      tick(8);
-    });
-  }
+ideasList.addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  const i = Number(btn.dataset.i);
+  const act = btn.dataset.act;
 
-  // Desktop wheel (avoid touch devices)
-  const mainPanel = document.querySelector(".mainPanel");
-  const isCoarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches;
-  let wheelCooldown = false;
-  if (mainPanel && !isCoarsePointer) {
-    mainPanel.addEventListener(
-      "wheel",
-      (e) => {
-        e.preventDefault();
-        if (wheelCooldown) return;
-        wheelCooldown = true;
-        setViewByIndex(currentIndex + (e.deltaY > 0 ? 1 : -1));
-        setTimeout(() => (wheelCooldown = false), 220);
-      },
-      { passive: false }
-    );
-  }
-
-  // ---------- Dial rotation ----------
-  let isDragging = false;
-  let startAngle = 0;
-  let currentRotation = 0;
-  const STEP = 360 / VIEWS.length;
-  let lastSector = 0;
-
-  const angle = (cx, cy, mx, my) => Math.atan2(my - cy, mx - cx) * (180 / Math.PI);
-
-  function setRotation(deg) {
-    currentRotation = deg;
-    if (dialRing) dialRing.style.transform = `rotate(${deg}deg)`;
-  }
-
-  function sectorFromRotation(deg) {
-    const raw = Math.round(deg / STEP);
-    return ((raw % VIEWS.length) + VIEWS.length) % VIEWS.length;
-  }
-
-  function syncRotationToIndex() {
-    setRotation(currentIndex * STEP);
-    lastSector = currentIndex;
-  }
-
-  function onDown(e) {
-    if (!dialEl) return;
-    isDragging = true;
-    dialEl.setPointerCapture?.(e.pointerId);
-    e.preventDefault();
-
-    const r = dialEl.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    startAngle = angle(cx, cy, e.clientX, e.clientY) - currentRotation;
-  }
-
-  function onMove(e) {
-    if (!isDragging) return;
-    e.preventDefault();
-
-    const r = dialEl.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-
-    setRotation(angle(cx, cy, e.clientX, e.clientY) - startAngle);
-
-    const s = sectorFromRotation(currentRotation);
-    if (s !== lastSector) {
-      lastSector = s;
-      const view = VIEWS[s];
-      if (dialIcon && ICONS[view]) dialIcon.src = ICONS[view];
-      tick(8);
-    }
-  }
-
-  function onUp(e) {
-    if (!isDragging) return;
-    isDragging = false;
-    e.preventDefault();
-
-    const finalIndex = sectorFromRotation(currentRotation);
-    setViewByIndex(finalIndex, { silent: true });
-    syncRotationToIndex();
-    tick(10);
-  }
-
-  if (dialEl) {
-    dialEl.addEventListener("pointerdown", onDown, { passive: false });
-    window.addEventListener("pointermove", onMove, { passive: false });
-    window.addEventListener("pointerup", onUp, { passive: false });
-    window.addEventListener("pointercancel", onUp, { passive: false });
-  }
-
-  // ---------- Lists storage ----------
-  const LS_KEY = "sbdash_lists_v2";
-  function loadLists() {
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      const p = raw ? JSON.parse(raw) : {};
-      return {
-        todo: Array.isArray(p.todo) ? p.todo : [],
-        ideas: Array.isArray(p.ideas) ? p.ideas : [],
-        super: Array.isArray(p.super) ? p.super : [],
-        done: Array.isArray(p.done) ? p.done : [],
-      };
-    } catch {
-      return { todo: [], ideas: [], super: [], done: [] };
-    }
-  }
-  const store = loadLists();
-  const save = () => localStorage.setItem(LS_KEY, JSON.stringify(store));
-  const uid = () => (crypto?.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random()}`);
-  const fmt = (ts) =>
-    new Date(ts).toLocaleString("sv-SE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-
-  function toDone(origin, item) {
-    const clean = { id: item.id, text: item.text, createdAt: item.createdAt || Date.now() };
-    store.done.unshift({ ...clean, doneAt: Date.now(), origin });
-  }
-
-  function restoreFromDone(id) {
-    const i = store.done.findIndex((x) => x.id === id);
-    if (i === -1) return;
-    const item = store.done.splice(i, 1)[0];
-    const { doneAt, origin, ...rest } = item;
-
-    const o = origin || "todo";
-    if (o === "super") store.super.unshift(rest);
-    else if (o === "ideas") store.ideas.unshift(rest);
-    else store.todo.unshift(rest);
-
-    save();
-    renderAll();
-  }
-
-  // ---------- Swipe helper ----------
-  function attachSwipe(el, onComplete) {
-    const content = el.querySelector(".swipeContent");
-    if (!content) return;
-
-    let dragging = false;
-    let pointerId = null;
-    let startX = 0, startY = 0;
-    let curX = 0;
-    let locked = false;
-    const threshold = 0.55;
-
-    const setX = (x, animate) => {
-      curX = x;
-      content.style.transition = animate ? "transform 180ms ease" : "none";
-      content.style.transform = `translateX(${x}px)`;
-    };
-
-    el.addEventListener("pointerdown", (e) => {
-      dragging = true;
-      locked = false;
-      pointerId = e.pointerId;
-      startX = e.clientX;
-      startY = e.clientY;
-      setX(0, true);
-      content.setPointerCapture?.(pointerId);
-    }, { passive: true });
-
-    el.addEventListener("pointermove", (e) => {
-      if (!dragging || e.pointerId !== pointerId) return;
-
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-
-      if (!locked) {
-        if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-          locked = true;
-          if (Math.abs(dy) > Math.abs(dx)) {
-            dragging = false;
-            pointerId = null;
-            setX(0, true);
-            return;
-          }
-        } else return;
-      }
-
-      if (dx > 0) return; // only right->left
-      e.preventDefault();
-
-      const max = -Math.min(220, el.clientWidth * 0.9);
-      setX(Math.max(dx, max), false);
-    }, { passive: false });
-
-    const finish = (e) => {
-      if (!dragging || e.pointerId !== pointerId) return;
-      dragging = false;
-
-      const abs = Math.abs(curX);
-      const need = el.clientWidth * threshold;
-
-      if (abs >= need) {
-        setX(-el.clientWidth, true);
-        setTimeout(() => onComplete?.(), 140);
-      } else {
-        setX(0, true);
-      }
-
-      pointerId = null;
-    };
-
-    el.addEventListener("pointerup", finish, { passive: true });
-    el.addEventListener("pointercancel", finish, { passive: true });
-  }
-
-  function mkSwipeItem({ text, meta }, onComplete, onClick) {
-    const li = document.createElement("li");
-    li.className = "swipeItem";
-
-    const under = document.createElement("div");
-    under.className = "swipeUnder";
-
-    const content = document.createElement("div");
-    content.className = "swipeContent";
-
-    const left = document.createElement("div");
-    const t = document.createElement("div");
-    t.className = "swipeText";
-    t.textContent = text;
-    left.appendChild(t);
-
-    const right = document.createElement("div");
-    const m = document.createElement("div");
-    m.className = "miniMeta";
-    m.textContent = meta || "";
-    right.appendChild(m);
-
-    content.appendChild(left);
-    content.appendChild(right);
-
-    li.appendChild(under);
-    li.appendChild(content);
-
-    attachSwipe(li, onComplete);
-
-    if (onClick) {
-      content.style.cursor = "pointer";
-      content.addEventListener("click", () => onClick());
-    }
-    return li;
-  }
-
-  // ---------- TODO ----------
-  const todoInput = $("todoInput");
-  const todoAddBtn = $("todoAddBtn");
-  const todoList = $("todoList");
-
-  function addTodo(text) {
-    const t = (text || "").trim();
-    if (!t) return;
-    store.todo.unshift({ id: uid(), text: t, createdAt: Date.now() });
-    save();
+  if (act === "del") {
+    ideas.splice(i, 1);
+  } else if (act === "todo") {
+    const item = ideas.splice(i, 1)[0];
+    todo.unshift(item);
+    saveList(LS.todo, todo);
     renderTodo();
   }
 
-  function completeTodoById(id) {
-    const i = store.todo.findIndex((x) => x.id === id);
-    if (i === -1) return;
-    const item = store.todo.splice(i, 1)[0];
-    toDone("todo", item);
-    save();
+  saveList(LS.ideas, ideas);
+  renderIdeas();
+});
+
+doneList.addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  const i = Number(btn.dataset.i);
+  const act = btn.dataset.act;
+
+  if (act === "del") {
+    done.splice(i, 1);
+  } else if (act === "back") {
+    const item = done.splice(i, 1)[0];
+    todo.unshift(item);
+    saveList(LS.todo, todo);
     renderTodo();
-    renderDone();
   }
 
-  function renderTodo() {
-    if (!todoList) return;
-    todoList.innerHTML = "";
-    if (!store.todo.length) {
-      todoList.innerHTML = `<li class="miniHint">Inga uppgifter just nu.</li>`;
-      return;
-    }
-    for (const item of store.todo) {
-      todoList.appendChild(
-        mkSwipeItem({ text: item.text, meta: fmt(item.createdAt) }, () => completeTodoById(item.id), null)
-      );
-    }
-  }
-
-  if (todoAddBtn && todoInput) {
-    todoAddBtn.addEventListener("click", () => {
-      addTodo(todoInput.value);
-      todoInput.value = "";
-      todoInput.focus();
-    });
-    todoInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") { addTodo(todoInput.value); todoInput.value = ""; }
-    });
-  }
-
-  // ---------- IDEAS ----------
-  const ideaInput = $("ideaInput");
-  const ideaAddBtn = $("ideaAddBtn");
-  const ideasList = $("ideasList");
-
-  function addIdea(text) {
-    const t = (text || "").trim();
-    if (!t) return;
-    store.ideas.unshift({ id: uid(), text: t, createdAt: Date.now() });
-    save();
-    renderIdeas();
-  }
-
-  function archiveIdeaById(id) {
-    const i = store.ideas.findIndex((x) => x.id === id);
-    if (i === -1) return;
-    const item = store.ideas.splice(i, 1)[0];
-    toDone("ideas", item);
-    save();
-    renderIdeas();
-    renderDone();
-  }
-
-  function renderIdeas() {
-    if (!ideasList) return;
-    ideasList.innerHTML = "";
-    if (!store.ideas.length) {
-      ideasList.innerHTML = `<li class="miniHint">Inga idéer sparade ännu.</li>`;
-      return;
-    }
-    for (const item of store.ideas) {
-      ideasList.appendChild(
-        mkSwipeItem({ text: item.text, meta: fmt(item.createdAt) }, () => archiveIdeaById(item.id), null)
-      );
-    }
-  }
-
-  if (ideaAddBtn && ideaInput) {
-    ideaAddBtn.addEventListener("click", () => {
-      addIdea(ideaInput.value);
-      ideaInput.value = "";
-      ideaInput.focus();
-    });
-    ideaInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") { addIdea(ideaInput.value); ideaInput.value = ""; }
-    });
-  }
-
-  // ---------- PRIO + MODAL ----------
-  const prioInput = $("prioInput");
-  const prioAddBtn = $("prioAddBtn");
-  const prioList = $("prioList");
-  const prioCount = $("prioCount");
-
-  const prioModalOverlay = $("prioModalOverlay");
-  const prioModalCloseBtn = $("prioModalCloseBtn");
-  const prioModalEdit = $("prioModalEdit");
-  const prioModalDoneBtn = $("prioModalDoneBtn");
-
-  let modalActiveId = null;
-  let editTimer = null;
-
-  function openModalForPrio(item) {
-    modalActiveId = item.id;
-    if (prioModalEdit) prioModalEdit.value = item.text || "";
-    if (prioModalOverlay) prioModalOverlay.classList.add("show");
-    setTimeout(() => prioModalEdit?.focus(), 60);
-  }
-  function closeModal() {
-    modalActiveId = null;
-    if (prioModalOverlay) prioModalOverlay.classList.remove("show");
-  }
-
-  if (prioModalOverlay) prioModalOverlay.addEventListener("click", (e) => { if (e.target === prioModalOverlay) closeModal(); });
-  if (prioModalCloseBtn) prioModalCloseBtn.addEventListener("click", closeModal);
-
-  function saveModalEdit() {
-    if (!modalActiveId) return;
-    const i = store.super.findIndex((x) => x.id === modalActiveId);
-    if (i === -1) return;
-    store.super[i].text = (prioModalEdit?.value || "").trim();
-    save();
-    renderPrio();
-  }
-
-  if (prioModalEdit) {
-    prioModalEdit.addEventListener("input", () => {
-      clearTimeout(editTimer);
-      editTimer = setTimeout(saveModalEdit, 220);
-    });
-  }
-
-  function addPrio(text) {
-    const t = (text || "").trim();
-    if (!t) return;
-    store.super.unshift({ id: uid(), text: t, createdAt: Date.now() });
-    save();
-    renderPrio();
-  }
-
-  function completePrioById(id) {
-    const i = store.super.findIndex((x) => x.id === id);
-    if (i === -1) return;
-    const item = store.super.splice(i, 1)[0];
-    toDone("super", item);
-    save();
-    renderPrio();
-    renderDone();
-  }
-
-  if (prioModalDoneBtn) prioModalDoneBtn.addEventListener("click", () => {
-    if (!modalActiveId) return closeModal();
-    completePrioById(modalActiveId);
-    closeModal();
-  });
-
-  function renderPrio() {
-    if (prioCount) prioCount.textContent = String(store.super.length);
-    if (!prioList) return;
-
-    prioList.innerHTML = "";
-    if (!store.super.length) {
-      prioList.innerHTML = `<li class="miniHint">Inget i Aktiv prio just nu.</li>`;
-      return;
-    }
-
-    for (const item of store.super) {
-      prioList.appendChild(
-        mkSwipeItem(
-          { text: item.text, meta: fmt(item.createdAt) },
-          () => completePrioById(item.id),
-          () => openModalForPrio(item)
-        )
-      );
-    }
-  }
-
-  if (prioAddBtn && prioInput) {
-    prioAddBtn.addEventListener("click", () => {
-      addPrio(prioInput.value);
-      prioInput.value = "";
-      prioInput.focus();
-    });
-    prioInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") { addPrio(prioInput.value); prioInput.value = ""; }
-    });
-  }
-
-  // ---------- DONE ----------
-  const doneList = $("doneList");
-  const doneClearBtn = $("doneClearBtn");
-
-  function renderDone() {
-    if (!doneList) return;
-    doneList.innerHTML = "";
-
-    if (!store.done.length) {
-      doneList.innerHTML = `<li class="miniHint">Inget slutfört ännu.</li>`;
-      return;
-    }
-
-    for (const item of store.done) {
-      const li = document.createElement("li");
-      li.className = "miniRow";
-
-      const left = document.createElement("div");
-      left.className = "miniRowLeft";
-
-      const back = document.createElement("button");
-      back.className = "miniBtn ghost";
-      back.textContent = "↩︎";
-      back.style.padding = "6px 10px";
-      back.style.fontSize = "12px";
-      back.addEventListener("click", () => restoreFromDone(item.id));
-
-      const txt = document.createElement("div");
-      txt.className = "miniText";
-      txt.textContent = item.text;
-
-      left.appendChild(back);
-      left.appendChild(txt);
-
-      const right = document.createElement("div");
-      right.className = "miniMeta";
-      right.textContent = fmt(item.doneAt);
-
-      li.appendChild(left);
-      li.appendChild(right);
-      doneList.appendChild(li);
-    }
-  }
-
-  if (doneClearBtn) doneClearBtn.addEventListener("click", () => {
-    store.done = [];
-    save();
-    renderDone();
-  });
-
-  // ---------- News (RSS) + pull-to-refresh ----------
-  const RSS_NEWS = "https://news.google.com/rss?hl=sv&gl=SE&ceid=SE:sv";
-  const newsListEl = $("newsList");
-  const newsMetaEl = $("newsMeta");
-  const newsPullHint = $("newsPullHint");
-  const newsPage = $("newsPage");
-  const NEWS_CACHE_KEY = "sbdash_news_cache_v2";
-
-  const PROXIES = [
-    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-    (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//, "")}`,
-    (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
-  ];
-
-  async function fetchTextFallback(url) {
-    let last;
-    for (const p of PROXIES) {
-      try {
-        const u = p(url);
-        const r = await fetch(u, { cache: "no-store" });
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const t = await r.text();
-        if (u.includes("/get?url=")) {
-          const obj = JSON.parse(t);
-          if (obj?.contents) return obj.contents;
-          throw new Error("No contents");
-        }
-        return t;
-      } catch (e) { last = e; }
-    }
-    throw last || new Error("All proxies failed");
-  }
-
-  function saveCache(key, items) {
-    try { localStorage.setItem(key, JSON.stringify({ updatedAt: Date.now(), items })); } catch {}
-  }
-  function loadCache(key) {
-    try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; }
-  }
-
-  function parseRss(xml, max = 10) {
-    const doc = new DOMParser().parseFromString(xml, "text/xml");
-    return Array.from(doc.querySelectorAll("item"))
-      .slice(0, max)
-      .map((it) => ({
-        title: it.querySelector("title")?.textContent?.trim() || "Nyhet",
-        link: it.querySelector("link")?.textContent?.trim() || "#",
-        pubDate: it.querySelector("pubDate")?.textContent?.trim() || "",
-      }));
-  }
-
-  function renderNews(items, metaText) {
-    if (!newsListEl || !newsMetaEl) return;
-    newsMetaEl.textContent = metaText || "";
-    newsListEl.innerHTML = "";
-
-    if (!items?.length) {
-      newsListEl.innerHTML = `<li class="miniHint">Inget att visa just nu.</li>`;
-      return;
-    }
-
-    for (const it of items) {
-      const pubDate = it.pubDate ? new Date(it.pubDate) : null;
-
-      const li = document.createElement("li");
-      li.className = "miniRow";
-
-      const left = document.createElement("div");
-      left.className = "miniRowLeft";
-
-      const a = document.createElement("a");
-      a.href = it.link;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.textContent = it.title;
-      a.style.color = "var(--text)";
-      a.style.textDecoration = "none";
-      a.style.fontWeight = "900";
-      a.style.fontSize = "12px";
-      a.style.overflow = "hidden";
-      a.style.textOverflow = "ellipsis";
-      a.style.whiteSpace = "nowrap";
-      left.appendChild(a);
-
-      const right = document.createElement("div");
-      right.className = "miniMeta";
-      right.textContent =
-        pubDate && !isNaN(pubDate.getTime())
-          ? pubDate.toLocaleString("sv-SE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
-          : "";
-
-      li.appendChild(left);
-      li.appendChild(right);
-      newsListEl.appendChild(li);
-    }
-  }
-
-  let newsLoading = false;
-  async function loadNews() {
-    if (newsLoading) return;
-    newsLoading = true;
-    if (newsMetaEl) newsMetaEl.textContent = "Laddar…";
-
-    try {
-      const xml = await fetchTextFallback(RSS_NEWS);
-      const items = parseRss(xml, 10);
-      renderNews(items, `Uppdaterad: ${new Date().toLocaleString("sv-SE")}`);
-      saveCache(NEWS_CACHE_KEY, items);
-    } catch {
-      const c = loadCache(NEWS_CACHE_KEY);
-      if (c?.items?.length) {
-        renderNews(c.items, `Visar cache (senast: ${new Date(c.updatedAt).toLocaleString("sv-SE")})`);
-      } else {
-        renderNews([], "Nyheter kunde inte laddas just nu.");
-      }
-    } finally {
-      newsLoading = false;
-      if (newsPullHint) newsPullHint.textContent = "Dra ned för att uppdatera";
-    }
-  }
-
-  function attachPullToRefresh(pageEl, hintEl, onRefresh) {
-    if (!pageEl) return;
-    let startY = 0;
-    let pulling = false;
-
-    pageEl.addEventListener("touchstart", (e) => {
-      if (pageEl.scrollTop > 0) return;
-      startY = e.touches[0].clientY;
-      pulling = true;
-    }, { passive: true });
-
-    pageEl.addEventListener("touchmove", (e) => {
-      if (!pulling) return;
-      if (pageEl.scrollTop > 0) return;
-
-      const dy = e.touches[0].clientY - startY;
-      if (dy <= 0) return;
-
-      if (dy > 10) e.preventDefault();
-      if (hintEl) hintEl.textContent = dy > 70 ? "Släpp för att uppdatera" : "Dra ned för att uppdatera";
-    }, { passive: false });
-
-    pageEl.addEventListener("touchend", (e) => {
-      if (!pulling) return;
-      pulling = false;
-
-      const endY = e.changedTouches?.[0]?.clientY ?? startY;
-      const dy = endY - startY;
-
-      if (pageEl.scrollTop === 0 && dy > 70) {
-        if (hintEl) hintEl.textContent = "Uppdaterar…";
-        onRefresh();
-      } else {
-        if (hintEl) hintEl.textContent = "Dra ned för att uppdatera";
-      }
-    }, { passive: true });
-  }
-
-  attachPullToRefresh(newsPage, newsPullHint, loadNews);
-
-  // ---------- Weather ----------
-  const weatherIconEl = $("weatherIcon");
-  const weatherTempEl = $("weatherTemp");
-  const weatherDescEl = $("weatherDesc");
-  const weatherWindEl = $("weatherWind");
-  const weatherPlaceEl = $("weatherPlace");
-  const weatherUpdatedEl = $("weatherUpdated");
-  const weatherRefreshBtn = $("weatherRefreshBtn");
-  const tomIconEl = $("tomIcon");
-  const tomTextEl = $("tomText");
-
-  const WEATHER_CACHE_KEY = "sbdash_weather_cache_v2";
-
-  function iconForCode(code) {
-    if (code === 0) return "☀️";
-    if (code === 1 || code === 2) return "🌤️";
-    if (code === 3) return "☁️";
-    if (code === 45 || code === 48) return "🌫️";
-    if ([51,53,55,61,63,65,80,81,82].includes(code)) return "🌧️";
-    if ([71,73,75].includes(code)) return "🌨️";
-    if ([95,96,99].includes(code)) return "⛈️";
-    return "⛅️";
-  }
-  function textForCode(code) {
-    const m = {
-      0:"Klart",1:"Mestadels klart",2:"Delvis molnigt",3:"Mulet",
-      45:"Dimma",48:"Isdimma",
-      51:"Duggregn (lätt)",53:"Duggregn",55:"Duggregn (kraftigt)",
-      61:"Regn (lätt)",63:"Regn",65:"Regn (kraftigt)",
-      71:"Snö (lätt)",73:"Snö",75:"Snö (kraftigt)",
-      80:"Skurar (lätta)",81:"Skurar",82:"Skurar (kraftiga)",
-      95:"Åska",96:"Åska + hagel",99:"Åska + hagel",
-    };
-    return m[code] || `Väderkod ${code}`;
-  }
-  function clampReasonableTempC(t) {
-    if (typeof t !== "number" || Number.isNaN(t)) return null;
-    if (t > 35 || t < -40) return null;
-    return t;
-  }
-
-  function saveWeatherCache(payload) {
-    try { localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify(payload)); } catch {}
-  }
-  function loadWeatherCache() {
-    try { return JSON.parse(localStorage.getItem(WEATHER_CACHE_KEY) || "null"); } catch { return null; }
-  }
-
-  function setWeatherUI({ t, w, code, placeLabel, updatedTs, tomCode, tomMin, tomMax }) {
-    if (weatherIconEl) weatherIconEl.textContent = iconForCode(code);
-    if (weatherTempEl) weatherTempEl.textContent = `${t}°`;
-    if (weatherDescEl) weatherDescEl.textContent = textForCode(code);
-    if (weatherWindEl) weatherWindEl.textContent = `${w} m/s`;
-    if (weatherPlaceEl) weatherPlaceEl.textContent = placeLabel || "—";
-
-    if (weatherUpdatedEl) {
-      weatherUpdatedEl.textContent = new Date(updatedTs).toLocaleString("sv-SE", {
-        hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit",
-      });
-    }
-
-    if (tomIconEl) tomIconEl.textContent = iconForCode(tomCode ?? 3);
-    if (tomTextEl) tomTextEl.textContent = `${textForCode(tomCode ?? 3)} • ${tomMin}°–${tomMax}°`;
-  }
-
-  async function geocodeCity(name) {
-    const q = (name || "").trim();
-    if (!q) return null;
-    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=sv&format=json`;
-    const r = await fetch(url, { cache: "no-store" });
-    if (!r.ok) return null;
-    const data = await r.json();
-    const hit = data?.results?.[0];
-    if (!hit) return null;
-    return { lat: hit.latitude, lon: hit.longitude, label: hit.name + (hit.admin1 ? `, ${hit.admin1}` : "") };
-  }
-
-  async function fetchWeather(lat, lon) {
+  saveList(LS.done, done);
+  renderDone();
+});
+
+/** ====== WEATHER (Open-Meteo) ====== **/
+const weatherCard = $("weatherCard");
+const weatherHours = $("weatherHours");
+const wWind = $("wWind");
+const wRain = $("wRain");
+$("refreshWeather").addEventListener("click", loadWeather);
+
+let weatherLoading = false;
+
+async function loadWeather() {
+  if (weatherLoading) return;
+  weatherLoading = true;
+
+  try {
     const url =
       `https://api.open-meteo.com/v1/forecast` +
-      `?latitude=${encodeURIComponent(lat)}` +
-      `&longitude=${encodeURIComponent(lon)}` +
-      `&current=temperature_2m,wind_speed_10m,weather_code` +
-      `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
-      `&forecast_days=2` +
-      `&timezone=Europe%2FStockholm`;
+      `?latitude=${WEATHER_LAT}&longitude=${WEATHER_LON}` +
+      `&hourly=temperature_2m,precipitation,weathercode,windspeed_10m` +
+      `&current_weather=true&timezone=Europe%2FStockholm`;
 
-    const r = await fetch(url, { cache: "no-store" });
-    if (!r.ok) throw new Error("Weather fetch failed");
-    return r.json();
-  }
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error("Weather fetch failed");
+    const data = await res.json();
 
-  function tryGeo() {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) return reject(new Error("no geo"));
-      navigator.geolocation.getCurrentPosition(resolve, reject, {
-        enableHighAccuracy: false,
-        timeout: 7000,
-        maximumAge: 30 * 60 * 1000,
+    const cw = data.current_weather;
+    const temp = cw?.temperature;
+    const wind = cw?.windspeed;
+
+    weatherCard.querySelector(".big").textContent =
+      (typeof temp === "number") ? `${Math.round(temp)}°` : "—";
+
+    weatherCard.querySelector(".muted").textContent =
+      (cw?.time) ? `Senast: ${formatTime(cw.time)}` : "—";
+
+    wWind.textContent = (typeof wind === "number") ? `${Math.round(wind)} m/s` : "—";
+
+    // show next 8 hours
+    const hours = data.hourly?.time || [];
+    const temps = data.hourly?.temperature_2m || [];
+    const rains = data.hourly?.precipitation || [];
+    const winds = data.hourly?.windspeed_10m || [];
+
+    const nowIso = cw?.time;
+    let startIndex = 0;
+    if (nowIso && hours.length) {
+      const idx = hours.indexOf(nowIso);
+      startIndex = idx >= 0 ? idx : 0;
+    }
+
+    const items = [];
+    let totalRain = 0;
+
+    for (let i = startIndex; i < Math.min(startIndex + 8, hours.length); i++) {
+      totalRain += Number(rains[i] || 0);
+      items.push({
+        t: formatHour(hours[i]),
+        temp: Math.round(temps[i]),
+        rain: Number(rains[i] || 0),
+        wind: Math.round(winds[i] || 0)
       });
-    });
+    }
+
+    wRain.textContent = `${totalRain.toFixed(1)} mm/8h`;
+
+    weatherHours.innerHTML = items.map(it => `
+      <div class="rowItem">
+        <div class="rowLeft">
+          <div class="rowText"><b>${it.t}</b> · ${it.temp}° · ${it.rain.toFixed(1)}mm · ${it.wind}m/s</div>
+        </div>
+      </div>
+    `).join("") || `<div class="muted">Ingen data.</div>`;
+  } catch (err) {
+    weatherCard.querySelector(".big").textContent = "—";
+    weatherCard.querySelector(".muted").textContent = "Kunde inte hämta väder.";
+    weatherHours.innerHTML = `<div class="muted">Kontrollera nätverk.</div>`;
+    wWind.textContent = "—";
+    wRain.textContent = "—";
+  } finally {
+    weatherLoading = false;
   }
+}
 
-  async function loadWeather() {
-    if (weatherDescEl) weatherDescEl.textContent = "Laddar…";
-    const nowTs = Date.now();
+/** ====== NEWS (RSS with safe fallback) ====== **/
+const newsList = $("newsList");
+$("refreshNews").addEventListener("click", loadNews);
 
-    try {
-      let lat = 59.3293, lon = 18.0686;
-      let placeLabel = "Stockholm";
+let newsLoading = false;
 
-      const city = (settings.city || "").trim();
-      if (city) {
-        const g = await geocodeCity(city);
-        if (g) { lat = g.lat; lon = g.lon; placeLabel = g.label || city; }
-        else { placeLabel = city; }
-      } else {
-        try {
-          const pos = await tryGeo();
-          lat = pos.coords.latitude;
-          lon = pos.coords.longitude;
-          placeLabel = "Din plats";
-        } catch {
-          placeLabel = "Stockholm (fallback)";
-        }
-      }
+async function loadNews() {
+  if (newsLoading) return;
+  newsLoading = true;
 
-      const data = await fetchWeather(lat, lon);
-      const cur = data.current || {};
-      const daily = data.daily || {};
+  // Always keep UI stable
+  newsList.innerHTML = `<div class="muted">Laddar…</div>`;
 
-      const rawT = Math.round(cur.temperature_2m);
-      const safeT = clampReasonableTempC(rawT);
-      if (safeT === null) throw new Error("Unreasonable temp");
+  try {
+    // Many RSS endpoints block CORS. We try a light proxy via r.jina.ai which often works for text.
+    // If it fails, we show a stable fallback list (so UI never breaks).
+    const proxied = `https://r.jina.ai/http://${NEWS_RSS_URL.replace(/^https?:\/\//, "")}`;
+    const res = await fetch(proxied, { cache: "no-store" });
+    if (!res.ok) throw new Error("RSS blocked");
+    const text = await res.text();
 
-      const rawW = Math.round(cur.wind_speed_10m);
-      const code = Number(cur.weather_code);
+    // Very small/robust parse: pick first ~10 <title> excluding channel title
+    const titles = extractRssTitles(text).slice(0, 10);
+    if (!titles.length) throw new Error("No titles");
 
-      const tomCode = Number(daily.weather_code?.[1] ?? code);
-      const tomMax = Math.round(daily.temperature_2m_max?.[1] ?? safeT);
-      const tomMin = Math.round(daily.temperature_2m_min?.[1] ?? safeT);
+    newsList.innerHTML = titles.map(t => `
+      <div class="rowItem">
+        <div class="rowLeft">
+          <div class="rowText">${escapeHtml(t)}</div>
+        </div>
+      </div>
+    `).join("");
+  } catch {
+    const fallback = [
+      "RSS kunde inte hämtas (CORS/proxy).",
+      "Byt NEWS_RSS_URL i app.js eller använd en CORS-vänlig källa.",
+      "UI hålls stabilt även när nyheter inte laddas."
+    ];
+    newsList.innerHTML = fallback.map(t => `
+      <div class="rowItem"><div class="rowLeft"><div class="rowText">${escapeHtml(t)}</div></div></div>
+    `).join("");
+  } finally {
+    newsLoading = false;
+  }
+}
 
-      const payload = {
-        t: safeT,
-        w: Number.isFinite(rawW) ? rawW : 0,
-        code: Number.isFinite(code) ? code : 3,
-        placeLabel,
-        updatedTs: nowTs,
-        tomCode: Number.isFinite(tomCode) ? tomCode : 3,
-        tomMin: Number.isFinite(tomMin) ? tomMin : safeT,
-        tomMax: Number.isFinite(tomMax) ? tomMax : safeT,
-      };
+/** ====== POMODORO ====== **/
+const ringProgress = $("ringProgress");
+const pomoTime = $("pomoTime");
+const pomoMode = $("pomoMode");
+const pomoHint = $("pomoHint");
 
-      setWeatherUI(payload);
-      saveWeatherCache(payload);
-    } catch {
-      const c = loadWeatherCache();
-      if (c?.t != null) setWeatherUI(c);
-      else if (weatherDescEl) weatherDescEl.textContent = "Kunde inte ladda väder.";
+const pomoStart = $("pomoStart");
+const pomoPause = $("pomoPause");
+const pomoReset = $("pomoReset");
+
+const pomoWork = $("pomoWork");
+const pomoShort = $("pomoShort");
+const pomoLong = $("pomoLong");
+
+const pomoNote = $("pomoNote");
+const savePomoNote = $("savePomoNote");
+const pomoNoteSaved = $("pomoNoteSaved");
+
+const RADIUS = 48;
+const CIRC = 2 * Math.PI * RADIUS;
+
+ringProgress.style.strokeDasharray = `${CIRC}`;
+ringProgress.style.strokeDashoffset = `0`;
+
+let pomo = loadPomodoroState();
+let pomoTimer = null;
+
+function loadPomodoroState() {
+  try {
+    const raw = localStorage.getItem(LS.pomo);
+    if (!raw) return defaultPomodoro();
+    const s = JSON.parse(raw);
+    // minimal validation
+    if (!s || typeof s !== "object") return defaultPomodoro();
+    return {
+      mode: s.mode ?? "Work",
+      totalMs: Number.isFinite(s.totalMs) ? s.totalMs : 25 * 60 * 1000,
+      leftMs: Number.isFinite(s.leftMs) ? s.leftMs : 25 * 60 * 1000,
+      running: !!s.running,
+      endsAt: Number.isFinite(s.endsAt) ? s.endsAt : null,
+      note: typeof s.note === "string" ? s.note : ""
+    };
+  } catch {
+    return defaultPomodoro();
+  }
+}
+function defaultPomodoro() {
+  return { mode: "Work", totalMs: 25 * 60 * 1000, leftMs: 25 * 60 * 1000, running: false, endsAt: null, note: "" };
+}
+function savePomodoroState() {
+  localStorage.setItem(LS.pomo, JSON.stringify(pomo));
+}
+
+function setPomodoroPreset(minutes, modeLabel) {
+  stopPomodoroTick();
+  pomo.mode = modeLabel;
+  pomo.totalMs = minutes * 60 * 1000;
+  pomo.leftMs = pomo.totalMs;
+  pomo.running = false;
+  pomo.endsAt = null;
+  savePomodoroState();
+  renderPomodoro();
+}
+
+pomoWork.addEventListener("click", () => setPomodoroPreset(25, "Work"));
+pomoShort.addEventListener("click", () => setPomodoroPreset(5, "Short break"));
+pomoLong.addEventListener("click", () => setPomodoroPreset(15, "Long break"));
+
+pomoStart.addEventListener("click", () => {
+  if (pomo.running) return;
+  pomo.running = true;
+  pomo.endsAt = Date.now() + pomo.leftMs;
+  savePomodoroState();
+  startPomodoroTick();
+  renderPomodoro();
+});
+
+pomoPause.addEventListener("click", () => {
+  if (!pomo.running) return;
+  // capture remaining precisely
+  pomo.leftMs = Math.max(0, pomo.endsAt - Date.now());
+  pomo.running = false;
+  pomo.endsAt = null;
+  savePomodoroState();
+  stopPomodoroTick();
+  renderPomodoro();
+});
+
+pomoReset.addEventListener("click", () => {
+  stopPomodoroTick();
+  pomo.leftMs = pomo.totalMs;
+  pomo.running = false;
+  pomo.endsAt = null;
+  savePomodoroState();
+  renderPomodoro();
+});
+
+savePomoNote.addEventListener("click", () => {
+  pomo.note = pomoNote.value || "";
+  savePomodoroState();
+  renderPomodoroNoteState(true);
+});
+
+function startPomodoroTick() {
+  stopPomodoroTick();
+  // tick fast but cheap; UI uses simple math
+  pomoTimer = setInterval(() => {
+    if (!pomo.running || !pomo.endsAt) return;
+    const left = pomo.endsAt - Date.now();
+    pomo.leftMs = Math.max(0, left);
+
+    if (pomo.leftMs <= 0) {
+      pomo.running = false;
+      pomo.endsAt = null;
+      savePomodoroState();
+      stopPomodoroTick();
+      pomoHint.textContent = "Klart! Reset eller välj ny preset.";
+    } else {
+      // keep hint stable
+      pomoHint.textContent = "SVG-ringen töms när tiden går.";
+    }
+
+    renderPomodoro(false);
+  }, 250);
+}
+
+function stopPomodoroTick() {
+  if (pomoTimer) clearInterval(pomoTimer);
+  pomoTimer = null;
+}
+
+function renderPomodoro(updateHint = true) {
+  const left = pomo.running && pomo.endsAt ? Math.max(0, pomo.endsAt - Date.now()) : pomo.leftMs;
+  const ratio = pomo.totalMs > 0 ? Math.max(0, Math.min(1, left / pomo.totalMs)) : 0;
+
+  // Ring drains: 100% -> 0% means dashoffset goes from 0 -> CIRC
+  const offset = CIRC * (1 - ratio);
+  ringProgress.style.strokeDashoffset = `${offset}`;
+
+  pomoTime.textContent = formatMMSS(left);
+  pomoMode.textContent = pomo.mode;
+
+  if (updateHint) {
+    if (pomo.running) {
+      pomoHint.textContent = "Kör…";
+    } else {
+      pomoHint.textContent = "Pausad / redo.";
     }
   }
+  renderPomodoroNoteState(false);
+}
 
-  if (weatherRefreshBtn) weatherRefreshBtn.addEventListener("click", loadWeather);
+function renderPomodoroNoteState(showSaved) {
+  pomoNote.value = pomo.note || "";
+  const when = new Date().toLocaleString("sv-SE");
+  pomoNoteSaved.textContent = showSaved ? `Sparat ${when}` : (pomo.note ? `Anteckning finns sparad.` : "—");
+}
 
-  // ---------- Pomodoro ----------
-  const pomoProg = $("pomoProg");
-  const pomoTime = $("pomoTime");
-  const pomoSub = $("pomoSub");
-  const pomoStartBtn = $("pomoStartBtn");
-  const pomoResetBtn = $("pomoResetBtn");
-  const pomoBtns = document.querySelectorAll("[data-pomo]");
-
-  const R = 92;
-  const C = 2 * Math.PI * R;
-
-  if (pomoProg) {
-    pomoProg.style.strokeDasharray = String(C);
-    pomoProg.style.strokeDashoffset = "0"; // full ring
-  }
-
-  let total = 5 * 60;
-  let left = total;
-  let running = false;
-  let t0 = 0;
-  let pausedLeft = left;
-  let raf = 0;
-
-  const pad2 = (n) => String(n).padStart(2, "0");
-
-  const setStroke = (pctLeft) => {
-    if (!pomoProg) return;
-    const p = Math.max(0, Math.min(1, pctLeft));
-    // 0 = full, C = empty (ring empties as time goes down)
-    pomoProg.style.strokeDashoffset = String(C * (1 - p));
-  };
-
-  const setColor = (pctLeft) => {
-    if (!pomoProg) return;
-    if (pctLeft > 0.40) pomoProg.style.stroke = "rgba(0,209,255,.88)";
-    else if (pctLeft > 0.15) pomoProg.style.stroke = "rgba(255,165,0,.88)";
-    else pomoProg.style.stroke = "rgba(255,70,70,.88)";
-  };
-
-  function renderPomo() {
-    const mm = Math.floor(left / 60);
-    const ss = left % 60;
-    if (pomoTime) pomoTime.textContent = `${pad2(mm)}:${pad2(ss)}`;
-
-    const pctLeft = total ? left / total : 0;
-    setStroke(pctLeft);
-    setColor(pctLeft);
-
-    if (pomoSub) {
-      if (!running && left === total) pomoSub.textContent = "Redo";
-      else if (running) pomoSub.textContent = "Fokus…";
-      else if (!running && left > 0) pomoSub.textContent = "Pausad";
-      else pomoSub.textContent = "KLAR";
-    }
-  }
-
-  function loop() {
-    if (!running) return;
-    const elapsed = (performance.now() - t0) / 1000;
-    left = Math.max(0, Math.round(pausedLeft - elapsed));
-    renderPomo();
-
-    if (left <= 0) {
-      running = false;
-      if (pomoStartBtn) pomoStartBtn.textContent = "Start";
-      if (canVibrate) navigator.vibrate([20, 40, 20]);
+function resumePomodoroIfRunning() {
+  if (pomo.running && pomo.endsAt) {
+    // If page was closed and time passed
+    const left = pomo.endsAt - Date.now();
+    pomo.leftMs = Math.max(0, left);
+    if (pomo.leftMs <= 0) {
+      pomo.running = false;
+      pomo.endsAt = null;
+      savePomodoroState();
+      renderPomodoro();
       return;
     }
-    raf = requestAnimationFrame(loop);
+    startPomodoroTick();
   }
+  renderPomodoro();
+}
+resumePomodoroIfRunning();
 
-  function startPause() {
-    if (running) {
-      running = false;
-      if (pomoStartBtn) pomoStartBtn.textContent = "Start";
-      pausedLeft = left;
-      renderPomo();
-      return;
-    }
+/** ====== INIT RENDERS ====== **/
+renderTodo();
+renderIdeas();
+renderDone();
+renderPrio();
 
-    if (left <= 0) { left = total; pausedLeft = left; }
-    running = true;
-    if (pomoStartBtn) pomoStartBtn.textContent = "Paus";
-    t0 = performance.now();
-    tick(10);
-    cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(loop);
+/** ====== HELPERS ====== **/
+function formatMMSS(ms) {
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+function formatTime(iso) {
+  // iso: "2026-02-16T12:30"
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+  } catch { return iso; }
+}
+function formatHour(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+  } catch { return iso; }
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#039;",
+  }[c]));
+}
+
+// Minimal RSS title extractor (robust enough for jina-proxy text)
+function extractRssTitles(xmlText) {
+  const titles = [];
+  const re = /<title><!\[CDATA\[(.*?)\]\]><\/title>|<title>(.*?)<\/title>/gi;
+  let m;
+  while ((m = re.exec(xmlText))) {
+    const t = (m[1] || m[2] || "").trim();
+    if (!t) continue;
+    titles.push(t);
   }
+  // usually first title is channel name -> drop it
+  return titles.slice(1);
+}
 
-  function setMinutes(min) {
-    running = false;
-    cancelAnimationFrame(raf);
-    if (pomoStartBtn) pomoStartBtn.textContent = "Start";
-    total = min * 60;
-    left = total;
-    pausedLeft = left;
-    renderPomo();
-    tick(8);
-  }
-
-  function resetPomo() {
-    running = false;
-    cancelAnimationFrame(raf);
-    if (pomoStartBtn) pomoStartBtn.textContent = "Start";
-    left = total;
-    pausedLeft = left;
-    renderPomo();
-    tick(8);
-  }
-
-  if (pomoStartBtn) pomoStartBtn.addEventListener("click", startPause);
-  if (pomoResetBtn) pomoResetBtn.addEventListener("click", resetPomo);
-  pomoBtns.forEach((btn) => btn.addEventListener("click", () => setMinutes(Number(btn.dataset.pomo))));
-
-  // ---------- Calendar ----------
-  const calFrame = $("calFrame");
-  let calTimer = 0;
-
-  function buildCalSrc(calId) {
-    const src = (calId || "").trim();
-    if (!src) return "";
-    return (
-      "https://calendar.google.com/calendar/embed" +
-      `?src=${encodeURIComponent(src)}` +
-      "&ctz=Europe%2FStockholm" +
-      "&mode=AGENDA" +
-      "&showTitle=0&showNav=0&showDate=0&showTabs=0&showCalendars=0&showTz=0" +
-      "&wkst=2&hl=sv"
-    );
-  }
-
-  function setCalendar(calId) {
-    if (!calFrame) return;
-    const base = buildCalSrc(calId);
-    if (!base) { calFrame.src = ""; return; }
-    calFrame.src = `${base}&_=${Date.now()}`;
-  }
-
-  function startCalendarAutoRefresh() {
-    if (calTimer) clearInterval(calTimer);
-    calTimer = setInterval(() => {
-      if (!settings.calId) return;
-      setCalendar(settings.calId);
-    }, 3 * 60 * 1000);
-  }
-
-  // ---------- Settings modal wiring ----------
-  const openSettingsBtn = $("openSettingsBtn");
-  const settingsOverlay = $("settingsOverlay");
-  const settingsCloseBtn = $("settingsCloseBtn");
-  const settingsCity = $("settingsCity");
-  const settingsCalId = $("settingsCalId");
-  const settingsSaveBtn = $("settingsSaveBtn");
-  const settingsResetBtn = $("settingsResetBtn");
-  const settingsHint = $("settingsHint");
-
-  function openSettings() {
-    if (settingsCity) settingsCity.value = settings.city || "";
-    if (settingsCalId) settingsCalId.value = settings.calId || "";
-    if (settingsHint) settingsHint.textContent = "Sparas lokalt på den här enheten.";
-    settingsOverlay?.classList.add("show");
-    setTimeout(() => settingsCity?.focus(), 60);
-  }
-  function closeSettings() {
-    settingsOverlay?.classList.remove("show");
-  }
-
-  if (openSettingsBtn) openSettingsBtn.addEventListener("click", openSettings);
-  if (settingsCloseBtn) settingsCloseBtn.addEventListener("click", closeSettings);
-  if (settingsOverlay) settingsOverlay.addEventListener("click", (e) => { if (e.target === settingsOverlay) closeSettings(); });
-
-  if (settingsSaveBtn) settingsSaveBtn.addEventListener("click", () => {
-    settings.city = (settingsCity?.value || "").trim();
-    settings.calId = (settingsCalId?.value || "").trim();
-    saveSettings();
-
-    setCalendar(settings.calId);
-    startCalendarAutoRefresh();
-    loadWeather();
-
-    if (settingsHint) settingsHint.textContent = "Sparat ✔︎";
-    tick(10);
-  });
-
-  if (settingsResetBtn) settingsResetBtn.addEventListener("click", () => {
-    settings = { city: "", calId: "" };
-    saveSettings();
-
-    if (settingsCity) settingsCity.value = "";
-    if (settingsCalId) settingsCalId.value = "";
-    setCalendar("");
-    loadWeather();
-
-    if (settingsHint) settingsHint.textContent = "Återställt.";
-    tick(10);
-  });
-
-  // ---------- Init ----------
-  function renderAll() {
-    renderPrio();
-    renderTodo();
-    renderIdeas();
-    renderDone();
-    renderPomo();
-  }
-
-  renderAll();
-  setViewByIndex(0);
-  syncRotationToIndex();
-
-  setCalendar(settings.calId);
-  startCalendarAutoRefresh();
-
-  loadWeather();
-  setInterval(loadWeather, 30 * 60 * 1000);
-
-  loadNews();
-  setInterval(loadNews, 10 * 60 * 1000);
-})();
+/** ====== STARTUP LAZY LOADS ====== **/
+loadWeather();
+loadNews();

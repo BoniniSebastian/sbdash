@@ -1,251 +1,513 @@
-<!DOCTYPE html>
-<html lang="sv">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>SB Dash</title>
-  <link rel="stylesheet" href="style.css?v=700" />
-</head>
-<body>
+:root{
+  --bg:#070a0f;
+  --text:#e9f0ff;
+  --muted:#aab6d1;
+  --line:rgba(255,255,255,.10);
+  --glow:rgba(0,209,255,.18);
+  --radius:22px;
+  --shadow: 0 20px 40px rgba(0,0,0,.45);
+}
 
-  <header class="topbar">
-    <div class="brand">
-      <div class="brandDot"></div>
-      <div>
-        <div class="brandTitle">SB Dash</div>
-        <div class="brandSub">Control dashboard</div>
-      </div>
-    </div>
+*{box-sizing:border-box}
+html,body{height:100%; overflow:hidden}
 
-    <div class="topDate" id="todayText">—</div>
-    <div class="topRight"></div>
-  </header>
+body{
+  margin:0;
+  display:flex;
+  flex-direction:column;
+  background:
+    radial-gradient(1200px 600px at 35% 0%, rgba(0,209,255,.08), transparent 60%),
+    radial-gradient(900px 500px at 80% 20%, rgba(0,209,255,.05), transparent 55%),
+    var(--bg);
+  color:var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+}
 
-  <main class="shell">
-    <section class="layout">
+/* Topbar */
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:30;
+  display:grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items:center;
+  gap:12px;
+  padding:12px 14px;
+  border-bottom:1px solid var(--line);
+  background: rgba(7,10,15,.78);
+  backdrop-filter: blur(12px);
+  flex:0 0 auto;
+}
+.brand{display:flex; align-items:center; gap:10px}
+.brandDot{
+  width:10px; height:10px; border-radius:999px;
+  background: linear-gradient(135deg, rgba(0,209,255,.95), rgba(0,209,255,.38));
+  box-shadow: 0 0 14px rgba(0,209,255,.28);
+}
+.brandTitle{font-weight:900; letter-spacing:.2px; font-size:14px}
+.brandSub{font-size:11px; color:var(--muted); margin-top:2px}
+.topDate{
+  justify-self:center;
+  color: rgba(255,255,255,.80);
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.2px;
+}
+.topRight{justify-self:end}
 
-      <!-- MAIN (single panel) -->
-      <section class="panel mainPanel" id="mainPanel">
+/* Shell */
+.shell{
+  flex:1;
+  width:100%;
+  max-width:720px;
+  margin: 0 auto;
+  padding: 14px 14px 18px;
+  min-height:0;
+}
+.layout{
+  height:100%;
+  min-height:0;
+  display:flex;
+  justify-content:center;
+}
 
-        <!-- Timer border overlay -->
-        <svg class="mainBorderSvg" id="mainBorderSvg" viewBox="0 0 100 100" aria-hidden="true">
-          <rect class="mainBorderTrack" x="3" y="3" width="94" height="94" rx="14" ry="14"></rect>
-          <rect class="mainBorderProg" id="mainBorderProg" x="3" y="3" width="94" height="94" rx="14" ry="14"></rect>
-        </svg>
+/* Panel */
+.panel{
+  width:100%;
+  position:relative;
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  border:1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  z-index:1;
+}
+.panel::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  border-radius: calc(var(--radius) + 2px);
+  background: radial-gradient(560px 220px at 40% 0%, var(--glow), transparent 60%);
+  opacity:.55;
+  pointer-events:none;
+}
 
-        <div class="panelHead">
-          <h2>Main</h2>
-        </div>
+.panelHead{
+  position:relative;
+  padding:14px 16px 10px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  flex:0 0 auto;
+}
+.panelHead h2{margin:0; font-size:14px; letter-spacing:.3px}
 
-        <div class="panelBody mainBody">
-          <div class="viewTrack" id="viewTrack">
+.panelBody{
+  position:relative;
+  flex:1 1 auto;
+  min-height:0;
+  overflow:hidden; /* app feel */
+}
 
-            <!-- CALENDAR -->
-            <div class="viewPage" data-view="calendar">
-              <div class="viewTitle">Kalender</div>
+/* Carousel */
+.mainBody{ padding:0; overflow:hidden; }
 
-              <div class="calCard">
-                <div class="calScale">
-                  <iframe
-                    class="calFrame"
-                    src="https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0"
-                    frameborder="0"
-                    scrolling="no">
-                  </iframe>
-                </div>
-                <div class="calOverlay" aria-hidden="true"></div>
-              </div>
+/* extra bottom padding so dial never covers underNav/inputs (feels “outside”) */
+.mainPanel{
+  padding-bottom: 96px;
+}
 
-              <div class="miniHint" style="margin-top:10px;">
-                (Google iframe: vi kan bara “glassa” runt den, inte ändra dess vita tema.)
-              </div>
-            </div>
+.viewTrack{
+  display:flex;
+  width:100%;
+  height:100%;
+  transition: transform 280ms ease;
+}
+.viewPage{
+  flex:0 0 100%;
+  padding:16px;
+  height:100%;
+  min-height:0;
+  overflow:auto;
+  background: radial-gradient(900px 300px at 20% 0%, rgba(0,209,255,.07), transparent 60%);
+  -webkit-overflow-scrolling: touch;
+}
+.viewTitle{
+  font-size:18px;
+  font-weight:900;
+  margin:0 0 10px;
+}
+.viewTitleRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
 
-            <!-- WEATHER -->
-            <div class="viewPage" data-view="weather">
-              <div class="viewTitle">Väder</div>
+/* Under-nav */
+.underNav{
+  display:flex;
+  gap:8px;
+  padding:12px 12px 14px;
+  border-top:1px solid rgba(255,255,255,.06);
+  flex-wrap:wrap;
+  flex:0 0 auto;
+  background: rgba(0,0,0,.10);
+}
+.navBtn{
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  color: var(--text);
+  padding:7px 10px;
+  border-radius: 12px;
+  cursor:pointer;
+  font-weight:900;
+  font-size:11px;
+}
+.navBtn.active{
+  border-color: rgba(0,209,255,.35);
+  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
+}
 
-              <div class="weatherCard">
-                <div class="weatherRow">
-                  <div class="weatherIcon" id="weatherIcon">⛅️</div>
-                  <div class="weatherBig">
-                    <div class="weatherTemp" id="weatherTemp">—°</div>
-                    <div class="weatherDesc" id="weatherDesc">Laddar…</div>
-                  </div>
-                </div>
+/* Pills */
+.countPill{
+  font-size:12px;
+  font-weight:900;
+  color: rgba(255,255,255,.80);
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  padding:5px 9px;
+  border-radius:999px;
+}
 
-                <div class="weatherGrid">
-                  <div class="wCell">
-                    <div class="wLabel">Vind</div>
-                    <div class="wValue" id="weatherWind">—</div>
-                  </div>
-                  <div class="wCell">
-                    <div class="wLabel">Plats</div>
-                    <div class="wValue" id="weatherPlace">—</div>
-                  </div>
-                  <div class="wCell">
-                    <div class="wLabel">Uppdaterad</div>
-                    <div class="wValue" id="weatherUpdated">—</div>
-                  </div>
-                </div>
+/* Forms/lists */
+.miniForm{ display:flex; gap:8px; margin: 8px 0 10px; flex-wrap:wrap; }
+.miniInput{
+  flex: 1 1 200px;
+  background: rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.10);
+  border-radius: 12px;
+  padding: 9px 10px;
+  color: var(--text);
+  outline:none;
+  font-size:12px;
+}
+.miniInput:focus{ border-color: rgba(0,209,255,.35); box-shadow: 0 0 0 3px rgba(0,209,255,.10); }
+.miniBtn{
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(0,209,255,.16);
+  color: var(--text);
+  padding: 9px 10px;
+  border-radius: 12px;
+  cursor:pointer;
+  font-weight:900;
+  font-size:12px;
+}
+.miniBtn.ghost{ background: rgba(255,255,255,.03); }
 
-                <div class="tomorrowBox">
-                  <div class="tomLabel">Imorgon</div>
-                  <div class="tomRow">
-                    <div class="tomIcon" id="tomIcon">🌥️</div>
-                    <div class="tomText" id="tomText">—</div>
-                  </div>
-                </div>
+.miniList{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+.miniHint{ color: var(--muted); font-size:11px; margin-top: 8px; }
+.miniMeta{ color: var(--muted); font-size:11px; }
+.miniActions{ display:flex; justify-content:flex-end; gap:10px; margin-top:10px; }
 
-                <div class="miniActions">
-                  <button id="weatherRefreshBtn" class="miniBtn ghost">Uppdatera</button>
-                </div>
-              </div>
-            </div>
+.miniRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 10px;
+  border:1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.02);
+  border-radius: 14px;
+}
+.miniRowLeft{ display:flex; align-items:center; gap:10px; min-width:0; }
+.miniText{
+  font-weight:900;
+  font-size:12px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
 
-            <!-- NEWS -->
-            <div class="viewPage" data-view="news" id="newsPage">
-              <div class="viewTitle">Nyheter</div>
-              <div class="pullHint" id="newsPullHint">Dra ned för att uppdatera</div>
-              <div id="newsMeta" class="miniHint" style="margin-top:6px;">Laddar…</div>
-              <ul id="newsList" class="miniList" style="margin-top:10px;"></ul>
-            </div>
+/* Swipe */
+.swipeItem{
+  position:relative;
+  border-radius: 14px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.02);
+  touch-action: pan-y;
+}
+.swipeUnder{ position:absolute; inset:0; background: rgba(0,0,0,.18); pointer-events:none; }
+.swipeContent{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 10px;
+  background: rgba(255,255,255,.02);
+  transform: translateX(0px);
+  will-change: transform;
+}
+.swipeLeft{ display:flex; align-items:center; gap:10px; min-width:0; }
+.swipeText{
+  font-weight:900;
+  font-size:12px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.swipeRight{ flex:0 0 auto; display:flex; align-items:center; gap:10px; }
 
-            <!-- TODO -->
-            <div class="viewPage" data-view="todo">
-              <div class="viewTitle">Att göra</div>
-              <div class="miniForm">
-                <input id="todoInput" class="miniInput" type="text" placeholder="Skriv en uppgift…" maxlength="120">
-                <button id="todoAddBtn" class="miniBtn">+ Lägg</button>
-              </div>
-              <ul id="todoList" class="miniList"></ul>
-              <div class="miniHint">Swipe höger→vänster = slutför</div>
-            </div>
+.pullHint{ margin-top: 6px; font-size: 11px; color: var(--muted); opacity: .75; }
 
-            <!-- IDEAS -->
-            <div class="viewPage" data-view="ideas">
-              <div class="viewTitle">Idéer</div>
-              <div class="miniForm">
-                <input id="ideaInput" class="miniInput" type="text" placeholder="Skriv en idé…" maxlength="160">
-                <button id="ideaAddBtn" class="miniBtn">+ Spara</button>
-              </div>
-              <ul id="ideasList" class="miniList"></ul>
-              <div class="miniHint">Swipe höger→vänster = arkivera (till Slutförda)</div>
-            </div>
+/* Weather */
+.weatherCard{
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  border-radius: 14px;
+  padding: 12px;
+  max-width: 620px;
+}
+.weatherRow{display:flex; align-items:center; gap:12px}
+.weatherIcon{ font-size: 32px; line-height: 1; filter: drop-shadow(0 0 14px rgba(0,209,255,.15)); }
+.weatherBig{display:flex; flex-direction:column}
+.weatherTemp{ font-size: 34px; font-weight: 900; letter-spacing: -.5px; }
+.weatherDesc{ color: var(--muted); font-weight: 900; font-size:12px; margin-top:2px; }
 
-            <!-- DONE -->
-            <div class="viewPage" data-view="done">
-              <div class="viewTitle">Slutförda</div>
-              <ul id="doneList" class="miniList"></ul>
-              <div class="miniActions">
-                <button id="doneClearBtn" class="miniBtn ghost">Rensa slutförda</button>
-              </div>
-              <div class="miniHint">↩︎ återställ till rätt lista (prio/todo/idéer)</div>
-            </div>
+.weatherGrid{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap:8px;
+  margin-top:10px;
+}
+.wCell{
+  border:1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.12);
+  border-radius:12px;
+  padding:10px;
+}
+.wLabel{ color: var(--muted); font-weight: 900; font-size:11px; }
+.wValue{ font-weight: 900; font-size:12px; margin-top:4px; }
 
-            <!-- PRIO (moved into Main) -->
-            <div class="viewPage" data-view="prio">
-              <div class="viewTitleRow">
-                <div class="viewTitle" style="margin:0;">Aktiv prio</div>
-                <span class="countPill" id="prioCount">0</span>
-              </div>
+.tomorrowBox{
+  margin-top:10px;
+  border:1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.12);
+  border-radius: 12px;
+  padding:10px;
+}
+.tomLabel{ font-weight:900; font-size:12px; margin-bottom:6px; color: rgba(255,255,255,.92); }
+.tomRow{ display:flex; align-items:center; gap:10px; }
+.tomIcon{ font-size: 18px; }
+.tomText{ font-weight:900; font-size:12px; color: var(--muted); }
 
-              <div class="miniForm" style="margin-top:10px;">
-                <input id="prioInput" class="miniInput" type="text" placeholder="Lägg till superprio…" maxlength="160">
-                <button id="prioAddBtn" class="miniBtn">+ Lägg</button>
-              </div>
+/* Calendar card (glass around iframe) */
+.calCard{
+  position:relative;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  border-radius: 16px;
+  overflow:hidden;
+}
+.calScale{
+  width:120%;
+  height: 220px;   /* compact */
+  transform: scale(.86);
+  transform-origin: top left;
+}
+.calFrame{
+  width:100%;
+  height:100%;
+  border:0;
+  background:#0b1118;
+}
+.calOverlay{
+  position:absolute;
+  inset:0;
+  background: rgba(0,0,0,.22);
+  pointer-events:none;
+  mix-blend-mode:multiply;
+}
 
-              <ul class="miniList" id="prioList"></ul>
-              <div class="miniHint">Tryck = öppna • Swipe = slutför</div>
-            </div>
+/* Timer layout */
+.pomoLayout{
+  display:grid;
+  grid-template-columns: 280px 1fr;
+  gap:14px;
+  align-items:start;
+  max-width: 720px;
+}
+.pomoRing{
+  position:relative;
+  width: 260px;
+  height: 260px;
+  margin-top: 6px;
+}
+.pomoSvg{ width:100%; height:100%; }
+.pomoTrack{ fill:none; stroke: rgba(255,255,255,.08); stroke-width: 16; }
+.pomoProg{
+  fill:none;
+  stroke: rgba(0,209,255,.88);
+  stroke-width: 16;
+  stroke-linecap: round;
+  filter: url(#pomoGlow);
+  stroke-dashoffset: 0;
+  transition: stroke 180ms ease;
+}
+.pomoCenter{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+}
+.pomoTime{ font-size: 42px; font-weight: 900; letter-spacing: -.5px; }
+.pomoSub{ margin-top: 6px; font-size: 12px; color: var(--muted); font-weight: 900; }
 
-            <!-- TIMER (view id kept as pomodoro in JS for icons) -->
-            <div class="viewPage" data-view="pomodoro">
-              <div class="viewTitle">Timer</div>
+.pomoSide{ padding-top: 8px; }
+.pomoQuick{ display:flex; gap:8px; flex-wrap:wrap; }
+.pomoActions{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:12px;
+  max-width: 160px;
+}
 
-              <div class="pomoLayout">
-                <div class="pomoRing">
-                  <svg class="pomoSvg" viewBox="0 0 240 240" aria-hidden="true">
-                    <defs>
-                      <filter id="pomoGlow" x="-50%" y="-50%" width="200%" height="200%">
-                        <feGaussianBlur stdDeviation="4" result="blur"/>
-                        <feMerge>
-                          <feMergeNode in="blur"/>
-                          <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
-                      </filter>
-                    </defs>
+/* ===== Main Timer Border (subtle neon) ===== */
+.mainBorderSvg{
+  position:absolute;
+  inset:10px;
+  width: calc(100% - 20px);
+  height: calc(100% - 20px);
+  pointer-events:none;
+  z-index:2;
+}
+.mainBorderTrack{
+  fill:none;
+  stroke:rgba(255,255,255,.05);
+  stroke-width:2;
+}
+.mainBorderProg{
+  fill:none;
+  stroke:rgba(0,209,255,.65);
+  stroke-width:2;
+  stroke-linecap:round;
 
-                    <circle class="pomoTrack" cx="120" cy="120" r="92" transform="rotate(-90 120 120)"></circle>
-                    <circle class="pomoProg" id="pomoProg" cx="120" cy="120" r="92" transform="rotate(-90 120 120)"></circle>
-                  </svg>
+  filter: drop-shadow(0 0 4px rgba(0,209,255,.45))
+          drop-shadow(0 0 8px rgba(0,209,255,.25));
 
-                  <div class="pomoCenter">
-                    <div class="pomoTime" id="pomoTime">05:00</div>
-                    <div class="pomoSub" id="pomoSub">Redo</div>
-                  </div>
-                </div>
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000; /* hidden by default */
+  opacity:0;
 
-                <div class="pomoSide">
-                  <div class="pomoQuick">
-                    <button class="miniBtn ghost" data-pomo="5">5</button>
-                    <button class="miniBtn ghost" data-pomo="10">10</button>
-                    <button class="miniBtn ghost" data-pomo="15">15</button>
-                  </div>
+  transition: stroke-dashoffset 180ms linear,
+              stroke 200ms ease,
+              filter 200ms ease,
+              opacity 180ms ease;
+}
 
-                  <div class="pomoActions">
-                    <button class="miniBtn" id="pomoStartBtn">Start</button>
-                    <button class="miniBtn ghost" id="pomoResetBtn">Reset</button>
-                  </div>
+/* ===== DIAL (wheel) – A+B+C ===== */
+.dialFixed{
+  position:fixed;
+  right:14px;
+  bottom:14px;
+  z-index:9999;         /* always on top */
+  pointer-events:auto;
+}
+.dialGlass{
+  position:absolute;
+  inset:-10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.10);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 18px 50px rgba(0,0,0,.55);
+}
+.dial{
+  position:relative;
+  width:220px;
+  height:220px;
+  display:grid;
+  place-items:center;
+  user-select:none;
+  touch-action:none;
+}
+.dialRing{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  filter: drop-shadow(0 0 16px rgba(0,209,255,.22));
+  transition: transform 80ms linear;
+}
+.dialIcon{
+  position:absolute;
+  width:64px;
+  height:64px;
+  object-fit:contain;
+  filter: drop-shadow(0 0 12px rgba(0,209,255,.22));
+}
 
-                  <div class="miniHint">Neon-kant runt Main visar progress när timer går.</div>
-                </div>
-              </div>
-            </div>
+/* Modal */
+.modalOverlay{
+  position: fixed;
+  inset: 0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index: 99999;
+  background: rgba(0,0,0,.45);
+}
+.modalOverlay.show{ display:flex; }
+.modal{
+  width: min(420px, 92vw);
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.06);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 30px 70px rgba(0,0,0,.55);
+  padding: 12px;
+}
+.modalHead{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.modalTitle{ font-weight:900; font-size:14px; }
+.modalClose{
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor:pointer;
+  font-weight:900;
+}
+.modalEdit{
+  width:100%;
+  margin-top: 10px;
+  height: 56vh;
+  resize: none;
+  border-radius: 12px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.18);
+  color: rgba(255,255,255,.92);
+  padding: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  outline: none;
+}
+.modalEdit:focus{
+  border-color: rgba(0,209,255,.35);
+  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
+}
+.modalActions{ margin-top: 10px; display:flex; justify-content:flex-end; gap:10px; }
 
-          </div>
-        </div>
-
-        <div class="underNav" id="underNav">
-          <button class="navBtn active" data-view="calendar">Kalender</button>
-          <button class="navBtn" data-view="weather">Väder</button>
-          <button class="navBtn" data-view="news">Nyheter</button>
-          <button class="navBtn" data-view="todo">Att göra</button>
-          <button class="navBtn" data-view="ideas">Idéer</button>
-          <button class="navBtn" data-view="done">Slutförda</button>
-          <button class="navBtn" data-view="prio">Prio</button>
-          <button class="navBtn" data-view="pomodoro">Timer</button>
-        </div>
-
-      </section>
-    </section>
-  </main>
-
-  <!-- FIXED DIAL -->
-  <div class="dialFixed" aria-label="Ratt">
-    <div class="dialGlass" aria-hidden="true"></div>
-    <div class="dial" id="dial">
-      <img class="dialRing" id="dialRing" src="assets/ui/knob-ring.svg" alt="Knob ring">
-      <img class="dialIcon" id="dialIcon" src="assets/ui/icon-weather.svg" alt="Dial icon">
-    </div>
-  </div>
-
-  <!-- Modal (prio edit) -->
-  <div class="modalOverlay" id="modalOverlay" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-label="Detaljvy">
-      <div class="modalHead">
-        <div class="modalTitle">Aktiv prio</div>
-        <button class="modalClose" id="modalCloseBtn">✕</button>
-      </div>
-
-      <textarea class="modalEdit" id="modalEdit" placeholder="Skriv här…"></textarea>
-
-      <div class="modalActions">
-        <button class="miniBtn" id="modalDoneBtn">Slutför</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="app.js?v=700"></script>
-</body>
-</html>
+/* Responsive */
+@media (max-width: 860px){
+  .pomoLayout{ grid-template-columns: 1fr; }
+  .dial{ width: 200px; height: 200px; }
+  .dialIcon{ width: 58px; height: 58px; }
+  .weatherGrid{ grid-template-columns: 1fr; }
+}

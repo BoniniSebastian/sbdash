@@ -3,20 +3,21 @@
   --text:#e9f0ff;
   --muted:#aab6d1;
   --line:rgba(255,255,255,.10);
+  --glass: rgba(255,255,255,.06);
+  --glass2: rgba(255,255,255,.04);
   --radius:24px;
 }
 
-*{box-sizing:border-box}
+*{ box-sizing:border-box; }
 
 html,body{
   height:100%;
-  overflow:hidden; /* lås sida */
+  overflow:hidden;           /* app-känsla */
+  overscroll-behavior: none; /* stop bounce */
 }
 
 body{
   margin:0;
-  display:flex;
-  flex-direction:column;
   background:
     radial-gradient(1200px 600px at 35% 0%, rgba(0,209,255,.08), transparent 60%),
     radial-gradient(900px 500px at 80% 20%, rgba(0,209,255,.05), transparent 55%),
@@ -25,9 +26,7 @@ body{
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
 }
 
-/* =========================
-   TOPBAR
-   ========================= */
+/* ================= TOPBAR ================= */
 .topbar{
   position:sticky;
   top:0;
@@ -56,123 +55,218 @@ body{
   color: rgba(255,255,255,.80);
   font-size:12px;
   font-weight:900;
-  letter-spacing: .2px;
+  letter-spacing:.2px;
 }
-.topRight{justify-self:end; opacity:.5}
+.topRight{justify-self:end; opacity:.6}
 
-/* =========================
-   SHELL (MÅSTE vara relative)
-   ========================= */
+/* ================= SHELL ================= */
 .shell{
-  flex:1;
-  position:relative;  /* <- VIKTIG */
-  min-height:0;
+  position:relative;
+  height: calc(100vh - 54px);
   overflow:hidden;
 }
 
-/* =========================
-   SHEET WRAP (overlay, click-through)
-   ========================= */
-.sheetWrap{
-  position:absolute;  /* <- VIKTIG */
-  inset:0;
-  display:none;
-  z-index:40;
-  pointer-events:none; /* gör att hjulet funkar bakom */
+/* ================= WHEEL =================
+   Större + längre ner + bakom rutan
+*/
+.wheelWrap{
+  position:fixed;
+  left:50%;
+  transform: translateX(-50%);
+  bottom: max(6px, env(safe-area-inset-bottom)); /* längre ner */
+  z-index:20;                  /* bakom sheet (sheet z-index är högre) */
+  pointer-events:none;
 }
-.sheetWrap.open{ display:block; }
 
-/* =========================
-   SHEET (själva rutan tar events)
-   ========================= */
+.wheel{
+  pointer-events:auto;
+  position:relative;
+  width: min(92vw, 360px);      /* större */
+  aspect-ratio: 1/1;
+  display:grid;
+  place-items:center;
+  user-select:none;
+  touch-action:none;
+}
+
+.wheel::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:999px;
+  background: var(--glass);
+  border:1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(24px);
+  box-shadow: 0 20px 60px rgba(0,0,0,.55);
+}
+
+.wheelRing{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  filter: drop-shadow(0 0 18px rgba(0,209,255,.25));
+  transition: transform 70ms linear;
+  position:relative;
+  z-index:2;
+}
+
+.wheelIcon{
+  position:absolute;
+  width: 28%;
+  height: 28%;
+  object-fit:contain;
+  filter: drop-shadow(0 0 14px rgba(0,209,255,.25));
+  z-index:3;
+}
+
+/* ================= SHEET OVERLAY ================= */
+.sheetWrap{
+  position:absolute;
+  inset:0;
+  z-index:40;
+  pointer-events:none; /* låter hjulet funka bakom */
+}
+
+/* Sheet */
 .sheet{
   pointer-events:auto;
   position:absolute;
   left:50%;
   transform: translateX(-50%);
-  bottom: 140px;               /* luft för hjulet */
-  width:min(680px, 92vw);
+  width: min(720px, 94vw);
 
-  height: calc(100vh - 220px); /* längre ruta */
-  max-height: 760px;
+  /* Rutan går mindre högt upp (mer plats överst) */
+  top: 84px;
+  bottom: 140px; /* lämna “fönster” där hjulet syns bakom */
 
   border-radius: 26px;
-  border:1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.06);
+  background: var(--glass);
+  border: 1px solid rgba(255,255,255,.12);
   backdrop-filter: blur(18px);
   box-shadow: 0 30px 80px rgba(0,0,0,.60);
   overflow:hidden;
-  display:flex;
-  flex-direction:column;
+
+  /* Slide animation */
+  transition: transform 260ms ease, opacity 260ms ease;
+  opacity: 0;
+  transform: translateX(-50%) translateY(18px);
 }
 
-/* Drag handle */
-.sheetHandle{
-  height: 30px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex:0 0 auto;
-}
-.sheetHandleBar{
-  width: 56px;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.22);
+/* Öppen */
+.sheetWrap.open .sheet{
+  opacity: 1;
+  transform: translateX(-50%) translateY(0px);
 }
 
-/* Head */
-.sheetHead{
-  padding:8px 16px 10px;
+/* Header */
+.sheetHeader{
+  padding: 14px 16px 10px;
   border-bottom:1px solid rgba(255,255,255,.08);
 }
 .sheetTitle{
   font-size:16px;
   font-weight:900;
 }
-.sheetSub{
-  margin-top:4px;
-  color: rgba(255,255,255,.55);
-  font-weight:900;
-  font-size:11px;
-}
 
-/* Body */
-.sheetBody{
-  flex:1;
-  min-height:0;
-  overflow:hidden;
-}
-
-/* Carousel */
-.viewTrack{
+/* Content */
+.sheetContent{
   height:100%;
-  display:flex;
-  transition: transform 280ms ease;
-}
-.viewPage{
-  flex: 0 0 100%;
-  height:100%;
+  padding: 14px 16px 24px;
   overflow:auto;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
-  padding: 16px;
-}
-.viewTitle{
-  font-size:18px;
-  font-weight:900;
-  margin:0 0 10px;
 }
 
-/* =========================
-   Calendar
-   ========================= */
-.calCard{
-  border-radius:20px;
-  overflow:hidden;
+/* Drag handle (visuell) */
+.sheetHandle{
+  position:absolute;
+  left:50%;
+  transform: translateX(-50%);
+  bottom: 10px;
+  width: 62px;
+  height: 6px;
+  border-radius:999px;
+  background: rgba(255,255,255,.22);
+}
+
+/* ================= UI ELEMENTS ================= */
+.blockTitle{
+  font-size:18px;
+  font-weight:900;
+  margin: 0 0 10px;
+}
+
+.card{
+  border-radius: 18px;
   border:1px solid rgba(255,255,255,.12);
   background: rgba(0,0,0,.12);
+  overflow:hidden;
 }
+
+.miniForm{
+  display:flex;
+  gap:8px;
+  margin: 8px 0 12px;
+  flex-wrap:wrap;
+}
+
+.miniInput{
+  flex: 1 1 180px;
+  background: rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius: 12px;
+  padding: 11px 12px;
+  color: var(--text);
+  outline:none;
+  font-size: 16px; /* iOS: hindrar zoom */
+}
+
+.miniBtn{
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(0,209,255,.16);
+  color: var(--text);
+  padding: 11px 12px;
+  border-radius: 12px;
+  cursor:pointer;
+  font-weight:900;
+  font-size:14px;
+}
+
+.miniList{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.itemRow{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+}
+
+.itemText{
+  font-weight:900;
+  font-size:14px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.itemMeta{
+  color: rgba(255,255,255,.55);
+  font-weight:900;
+  font-size:12px;
+  flex:0 0 auto;
+}
+
+/* Calendar iframe scale */
 .calScale{
   width:118%;
   height: 220px;
@@ -186,94 +280,13 @@ body{
   background:#0b1118;
 }
 
-/* =========================
-   Inputs / list
-   ========================= */
-.miniForm{ display:flex; gap:8px; margin: 8px 0 10px; flex-wrap:wrap; }
-.miniInput{
-  flex: 1 1 200px;
-  background: rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.12);
-  border-radius: 12px;
-  padding: 10px 10px;
-  color: var(--text);
-  outline:none;
-  font-size:12px;
-}
-.miniInput:focus{
-  border-color: rgba(0,209,255,.35);
-  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
-}
-.miniBtn{
-  border:1px solid rgba(255,255,255,.12);
-  background: rgba(0,209,255,.16);
-  color: var(--text);
-  padding: 10px 10px;
-  border-radius: 12px;
-  cursor:pointer;
-  font-weight:900;
-  font-size:12px;
-}
-.miniList{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
-.miniHint{ color: var(--muted); font-size:11px; margin-top: 8px; }
-
-/* =========================
-   DIAL (hjul)
-   ========================= */
-.dialFixed{
-  position:fixed;
-  left:50%;
-  bottom: 90px;                 /* upp över Safari toolbar */
-  transform: translateX(-50%);
-  z-index:60;
-  pointer-events:none;
-}
-.dial{
-  position:relative;
-  width: 280px;
-  height: 280px;
-  display:grid;
-  place-items:center;
-  user-select:none;
-  touch-action:none;
-  pointer-events:auto;
-}
-.dialGlass{
-  position:absolute;
-  inset:0;
-  border-radius:999px;
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.12);
-  backdrop-filter: blur(22px);
-  pointer-events:none;
-}
-.dialRing{
-  width:100%;
-  height:100%;
-  object-fit:contain;
-  filter: drop-shadow(0 0 18px rgba(0,209,255,.25));
-  transition: transform 80ms linear;
-}
-.dialIcon{
-  position:absolute;
-  width:84px;
-  height:84px;
-  object-fit:contain;
-  filter: drop-shadow(0 0 14px rgba(0,209,255,.25));
-}
-
-/* FAILSAFE: visa alltid emoji om svg inte syns */
-.dialEmoji{
-  position:absolute;
-  font-size: 44px;
-  display:block;
-  filter: drop-shadow(0 0 12px rgba(0,209,255,.18));
-}
-
 /* Small phones */
-@media (max-width: 380px){
-  .dial{ width: 250px; height: 250px; }
-  .dialIcon{ width:76px; height:76px; }
-  .calScale{ height: 200px; }
-  .sheet{ bottom: 120px; height: calc(100vh - 200px); }
+@media (max-width: 390px){
+  .sheet{
+    top: 74px;
+    bottom: 130px;
+  }
+  .wheel{
+    width: min(92vw, 330px);
+  }
 }

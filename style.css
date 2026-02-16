@@ -1,401 +1,439 @@
 :root{
-  --bg:#05080c;
-  --panel1: rgba(10,35,45,.66);
-  --panel2: rgba(10,35,45,.34);
-  --glass: rgba(255,255,255,.06);
-  --stroke: rgba(255,255,255,.10);
-  --text: rgba(255,255,255,.92);
-  --muted: rgba(255,255,255,.65);
-  --shadow: 0 18px 60px rgba(0,0,0,.55);
+  --bg: #0b0f17;
+  --panel: #11182a;
+  --panel2: #0f1626;
+  --card: rgba(255,255,255,0.06);
+  --card2: rgba(255,255,255,0.09);
+  --text: rgba(255,255,255,0.92);
+  --muted: rgba(255,255,255,0.65);
+  --muted2: rgba(255,255,255,0.5);
+  --line: rgba(255,255,255,0.10);
+  --shadow: 0 10px 30px rgba(0,0,0,0.35);
+  --radius: 16px;
+  --radius2: 12px;
+  --pad: 14px;
 }
 
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
+*{ box-sizing: border-box; }
+html, body { height: 100%; }
 body{
   margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  background:
-    radial-gradient(1200px 600px at 30% 20%, rgba(0,209,255,.08), transparent 60%),
-    radial-gradient(1200px 600px at 70% 80%, rgba(0,209,255,.06), transparent 60%),
-    var(--bg);
+  background: radial-gradient(1200px 700px at 30% 20%, rgba(118, 193, 255, 0.12), transparent 55%),
+              radial-gradient(900px 600px at 80% 20%, rgba(255, 115, 205, 0.10), transparent 55%),
+              var(--bg);
   color: var(--text);
-  overflow:hidden; /* viktigt: sidan får inte bli “lång” */
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  overflow: hidden; /* superviktigt för “inga överhopp” */
 }
 
-.topbar{
-  height:76px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:16px 18px;
+/* --- App grid --- */
+.app{
+  height: 100%;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 360px minmax(520px, 1fr) 360px;
+  gap: 14px;
+  padding: 14px;
 }
 
-.brand{ display:flex; gap:12px; align-items:center; }
-.brandDot{
-  width:12px; height:12px; border-radius:50%;
-  background: rgba(0,209,255,.75);
-  box-shadow: 0 0 18px rgba(0,209,255,.55);
-}
-.brandTitle{ font-weight:900; letter-spacing:.2px; }
-.brandSub{ font-size:12px; color: var(--muted); margin-top:2px; }
-
-.gearTop{
-  width:34px; height:34px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.18);
-  color: var(--text);
-  font-size:16px;
-  font-weight:900;
-}
-
-.topDate{
-  font-weight:900;
-  color: var(--muted);
-}
-
-.shell{
-  height: calc(100% - 76px);
-  padding: 14px 14px 18px;
-}
-
-.layout{
-  height:100%;
-  display:grid;
-  gap:14px;
-  grid-template-columns: 320px 1fr 360px;
-  grid-template-rows: 1fr 240px;
-  grid-template-areas:
-    "cal main prio"
-    "cal main dial";
-}
-
-.calendarPanel{ grid-area: cal; }
-.mainPanel{ grid-area: main; }
-.prioPanel{ grid-area: prio; }
-.dialPanel{ grid-area: dial; }
-
-.panel{
-  background: linear-gradient(180deg, var(--panel1), var(--panel2));
-  border: 1px solid var(--stroke);
-  border-radius: 22px;
+.col{
+  min-height: 0; /* kritiskt för att interna scrolls ska fungera */
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   box-shadow: var(--shadow);
-  overflow:hidden;
-  min-height:0;
+  overflow: hidden;
+  position: relative;
 }
 
-.panelHead{
-  height:56px;
-  padding: 14px 16px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
+.left, .right{
+  display: flex;
+  flex-direction: column;
 }
 
-.panelHead h2{
-  margin:0;
-  font-size:15px;
-  font-weight:900;
+.center{
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
 }
 
-.tag{
-  font-size:12px;
-  padding:6px 10px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.18);
-  color: var(--muted);
+.colHeader, .centerHeader{
+  padding: 14px 14px 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(0,0,0,0.12);
 }
 
-.panelBody{ padding: 14px; height: calc(100% - 56px); min-height:0; }
+.colHeader h2{
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0.2px;
+}
+.sub{ font-size: 12px; color: var(--muted); margin-top: 3px; }
 
-/* Calendar */
-.calendarBody{ display:flex; flex-direction:column; gap:10px; }
-.calWrap{
-  position:relative;
-  flex:1;
-  border-radius: 18px;
-  overflow:hidden;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.25);
+.centerHeader{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: center;
 }
-.calFrame{ width:100%; height:100%; border:0; }
-.calOverlay{
-  pointer-events:none;
-  position:absolute; inset:0;
-  background: rgba(0,0,0,.35);
+.todayText{
+  font-size: 16px;
+  font-weight: 600;
 }
+.hint{ font-size: 12px; color: var(--muted2); margin-top: 4px; }
 
-/* Main carousel */
-.mainBody{ padding: 0; height: calc(100% - 56px); }
-.viewTrack{
-  height:100%;
-  width:600%;
-  display:flex;
-  transition: transform 260ms ease;
-}
-.viewPage{
-  width:100%;
-  padding:16px;
-  overflow:auto;
-  -webkit-overflow-scrolling: touch;
-}
 .viewTitle{
-  font-size:26px;
-  font-weight:1000;
-  margin:6px 0 14px;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: right;
 }
-
-.underNav{
-  padding: 10px 12px;
-  border-top: 1px solid rgba(255,255,255,.08);
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-.navBtn{
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.18);
-  color: var(--text);
-  padding:10px 14px;
-  border-radius: 14px;
-  font-weight:900;
-  font-size:13px;
-}
-.navBtn.active{
-  border-color: rgba(0,209,255,.45);
-  box-shadow: 0 0 0 2px rgba(0,209,255,.10) inset;
-}
-
-/* Mini UI */
-.miniForm{ display:flex; gap:10px; align-items:center; margin: 10px 0 12px; }
-.miniInput{
-  flex:1;
-  padding:12px 14px;
-  border-radius: 14px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.18);
-  color: var(--text);
-  outline:none;
-  font-weight:800;
-  font-size:16px; /* iOS zoom-fix */
-}
-.miniBtn{
-  padding:12px 14px;
-  border-radius: 14px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(0,209,255,.16);
-  color: var(--text);
-  font-weight:900;
-  font-size:14px;
-}
-.miniBtn.ghost{ background: rgba(0,0,0,.18); }
-
-.miniList{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px; }
-.miniHint{ color: var(--muted); font-size:13px; margin-top:10px; }
-.miniActions{ margin-top:12px; display:flex; gap:10px; justify-content:flex-end; }
-
-.countPill{
-  width:28px; height:28px;
-  border-radius:999px;
-  display:grid; place-items:center;
-  border:1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.18);
-  font-weight:1000;
+.viewSubtitle{
+  font-size: 12px;
   color: var(--muted);
+  text-align: right;
+  margin-top: 4px;
 }
 
-/* Swipe item */
-.swipeItem{ position:relative; border-radius: 16px; overflow:hidden; }
-.swipeUnder{ position:absolute; inset:0; background: rgba(0,209,255,.12); }
-.swipeContent{
-  position:relative;
+/* --- Calendar --- */
+.calendarWrap{
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: rgba(0,0,0,0.10);
+}
+.calendarFrame{
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #fff;
+  opacity: 0; /* blir 1 när src satts */
+  transition: opacity 160ms ease;
+}
+.calendarPlaceholder{
+  position: absolute;
+  inset: 0;
   display:flex;
-  justify-content:space-between;
-  gap:10px;
-  padding:14px;
-  border-radius: 16px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.18);
-}
-.swipeText{
-  font-weight:1000;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.miniMeta{ color: var(--muted); font-size:12px; font-weight:800; white-space:nowrap; }
-
-/* Done rows */
-.miniRow{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-  padding:12px 14px;
-  border-radius: 16px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.18);
-}
-.miniRowLeft{ display:flex; align-items:center; gap:10px; min-width:0; }
-.miniText{ font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-
-/* Weather */
-.weatherCard{
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.16);
-  border-radius: 18px;
-  padding:16px;
-}
-.weatherRow{ display:flex; gap:14px; align-items:center; }
-.weatherIcon{ font-size:44px; }
-.weatherTemp{ font-size:56px; font-weight:1100; line-height:1; }
-.weatherDesc{ color: var(--muted); font-weight:900; margin-top:6px; }
-
-.weatherGrid{
-  margin-top:14px;
-  display:grid;
-  gap:10px;
-  grid-template-columns: repeat(3, 1fr);
-}
-.wCell{
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.16);
-  border-radius: 16px;
-  padding:12px;
-}
-.wLabel{ color: var(--muted); font-weight:900; font-size:12px; }
-.wValue{ font-weight:1000; margin-top:6px; }
-
-.tomorrowBox{
-  margin-top:10px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.16);
-  border-radius: 16px;
-  padding:12px;
-}
-.tomLabel{ color: var(--muted); font-weight:900; font-size:12px; }
-.tomRow{ display:flex; gap:10px; align-items:center; margin-top:8px; }
-.tomIcon{ font-size:20px; }
-.tomText{ font-weight:1000; }
-
-/* News */
-.pullHint{ font-size:12px; color: var(--muted); font-weight:900; opacity:.9; }
-
-/* Dial */
-.dialBody{ display:flex; align-items:center; justify-content:flex-end; height:100%; }
-.dialWrap{ width:100%; display:flex; justify-content:flex-end; align-items:center; }
-.dial{
-  width:200px; height:200px;
-  position:relative;
-  user-select:none;
-  -webkit-user-select:none;
-  touch-action:none;
-}
-.dialRing{ position:absolute; inset:0; width:100%; height:100%; }
-.dialIcon{
-  position:absolute;
-  width:58px; height:58px;
-  left:50%; top:50%;
-  transform: translate(-50%,-50%);
-  filter: drop-shadow(0 0 12px rgba(0,209,255,.25));
-}
-
-/* Modal */
-.modalOverlay{
-  position:fixed; inset:0;
-  background: rgba(0,0,0,.55);
-  display:none;
   align-items:center;
   justify-content:center;
-  padding:14px;
+  text-align:center;
+  padding: 22px;
+  color: rgba(255,255,255,0.88);
 }
-.modalOverlay.show{ display:flex; }
-.modal{
-  width:min(560px, 92vw);
-  border-radius: 20px;
-  border:1px solid rgba(255,255,255,.12);
-  background: rgba(10,20,25,.72);
-  backdrop-filter: blur(14px);
-  box-shadow: var(--shadow);
-  overflow:hidden;
+.phTitle{ font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+.phText{ font-size: 13px; color: var(--muted); line-height: 1.35; }
+
+/* --- Center carousel --- */
+.carousel{
+  position: relative;
+  min-height: 0;
+  overflow: hidden; /* inga layout-hopp */
+  background: rgba(0,0,0,0.10);
 }
-.modalHead{
-  padding:14px 14px;
+.panel{
+  position: absolute;
+  inset: 0;
+  padding: 14px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  display: none;
+}
+.panel.active{
+  display: block;
+}
+.panelInner{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100%;
+}
+
+.panelTop{
   display:flex;
-  justify-content:space-between;
   align-items:center;
-  border-bottom:1px solid rgba(255,255,255,.10);
+  justify-content: space-between;
+  gap: 12px;
 }
-.modalTitle{ font-weight:1000; }
-.modalClose{
-  border:1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.18);
+.panelTop h3{
+  margin: 0;
+  font-size: 18px;
+}
+.panelTopRight{
+  display:flex;
+  gap: 8px;
+  align-items:center;
+}
+
+/* --- Cards & rows --- */
+.card{
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius2);
+  padding: 12px;
+}
+.cardTitle{
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 10px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.rows{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rowItem{
+  display:flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 10px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.rowLeft{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  min-width: 0;
+}
+.rowText{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rowActions{
+  display:flex;
+  gap: 8px;
+  align-items:center;
+  flex-shrink: 0;
+}
+.small{ font-size: 12px; }
+.muted{ color: var(--muted); }
+.big{ font-size: 34px; font-weight: 800; letter-spacing: -0.4px; }
+
+/* Weather mini */
+.grid2{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.miniCard{
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 10px;
+}
+.miniLabel{ font-size: 12px; color: var(--muted); }
+.miniValue{ font-size: 16px; font-weight: 700; margin-top: 4px; }
+
+/* Inputs & buttons */
+.textInput{
+  width: 260px;
+  max-width: 38vw;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.18);
+  color: var(--text);
+  padding: 0 12px;
+  outline: none;
+}
+.textInput:focus{ border-color: rgba(118,193,255,0.45); }
+
+.textArea{
+  width: 100%;
+  height: 160px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.18);
+  color: var(--text);
+  padding: 10px 12px;
+  outline: none;
+  resize: none;
+}
+
+button{
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.08);
   color: var(--text);
   border-radius: 12px;
-  padding:8px 10px;
-  font-weight:1000;
+  padding: 9px 12px;
+  cursor: pointer;
+  transition: transform 80ms ease, background 120ms ease, border-color 120ms ease;
+  user-select: none;
 }
-.modalEdit{
-  width:100%;
-  min-height: 240px;
-  border:0;
-  background: transparent;
-  color: var(--text);
-  padding:14px;
-  outline:none;
-  font-weight:900;
-  font-size:16px;
-  resize:none;
+button:active{ transform: translateY(1px); }
+.primaryBtn{
+  background: rgba(118,193,255,0.22);
+  border-color: rgba(118,193,255,0.40);
 }
-.modalActions{ padding:14px; display:flex; justify-content:flex-end; gap:10px; }
+.dangerBtn{
+  background: rgba(255,120,120,0.18);
+  border-color: rgba(255,120,120,0.35);
+}
+.ghostBtn{
+  background: rgba(255,255,255,0.06);
+}
+.chipBtn{
+  padding: 8px 10px;
+  border-radius: 999px;
+}
+.wideTop{ width: 100%; margin-top: 10px; }
 
-/* Settings */
-.settingsForm{ padding:14px; }
-.settingsLabel{ display:block; font-weight:900; color: var(--muted); font-size:12px; }
-.settingsInput{
-  width:100%;
-  margin-top:6px;
-  padding:12px 14px;
-  border-radius: 14px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.18);
-  color: var(--text);
-  outline:none;
-  font-weight:900;
-  font-size:16px;
-}
-.settingsHint{ margin-top:10px; color: var(--muted); font-size:12px; font-weight:900; }
-.settingsActions{ margin-top:12px; display:flex; gap:10px; justify-content:flex-end; }
-
-/* Pomodoro */
-.pomoWrap{ display:flex; flex-direction:column; gap:14px; align-items:flex-start; }
-.pomoRing{ position:relative; width:280px; height:280px; }
-.pomoSvg{ width:100%; height:100%; }
-.pomoTrack{ fill:none; stroke: rgba(255,255,255,.12); stroke-width: 18; }
-.pomoProg{
-  fill:none;
-  stroke: rgba(0,209,255,.88);
-  stroke-width: 18;
-  stroke-linecap: round;
-  filter:url(#pomoGlow);
-  transform: rotate(-90deg);
-  transform-origin: 120px 120px;
-}
-.pomoCenter{
-  position:absolute;
-  inset:0;
+/* Right column */
+.rightInner{
+  flex: 1;
+  min-height: 0;
+  padding: 14px;
   display:flex;
-  flex-direction:column;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Dial dock (bottom-right) */
+.dialDock{
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: 240px;
+  pointer-events: none; /* card får pointer events */
+}
+.dialCard{
+  pointer-events: auto;
+  background: rgba(0,0,0,0.22);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 18px;
+  padding: 12px;
+  box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+  display:flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dialMeta{
+  display:flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.dialMetaTitle{
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.dialMetaValue{
+  font-size: 13px;
+  font-weight: 700;
+}
+.dialHelp{
+  font-size: 12px;
+  color: var(--muted2);
+  text-align: center;
+}
+
+.dial{
+  width: 150px;
+  height: 150px;
+  margin: 0 auto;
+  touch-action: none;
+  outline: none;
+}
+.dialFace{
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.16), rgba(255,255,255,0.06) 55%, rgba(0,0,0,0.15));
+  border: 1px solid rgba(255,255,255,0.12);
+  position: relative;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.24);
+}
+.dialIcon{
+  position:absolute;
+  inset: 0;
+  display:flex;
   align-items:center;
   justify-content:center;
+  font-size: 34px;
+  filter: drop-shadow(0 6px 16px rgba(0,0,0,0.45));
 }
-.pomoTime{ font-size:52px; font-weight:1100; letter-spacing:.6px; }
-.pomoSub{ color: var(--muted); font-weight:900; margin-top:6px; }
-.pomoBtns{ display:flex; gap:10px; flex-wrap:wrap; }
+.dialPointer{
+  position:absolute;
+  left: 50%;
+  top: 10px;
+  width: 4px;
+  height: 18px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.85);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.45);
+}
 
-@media (max-width: 1200px){
-  .layout{ grid-template-columns: 300px 1fr 340px; }
+/* Pomodoro */
+.pomoGrid{
+  display:grid;
+  grid-template-columns: 420px 1fr;
+  gap: 12px;
+  min-height: 0;
+}
+.pomoRingCard{ min-height: 420px; }
+
+.ringWrap{
+  position: relative;
+  width: 280px;
+  height: 280px;
+  margin: 10px auto 6px auto;
+}
+.ringSvg{
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg); /* start uppifrån */
+}
+.ringBg{
+  fill: none;
+  stroke: rgba(255,255,255,0.12);
+  stroke-width: 10;
+}
+.ringProgress{
+  fill: none;
+  stroke: rgba(118,193,255,0.85);
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 160ms linear;
+}
+.ringCenter{
+  position:absolute;
+  inset: 0;
+  display:flex;
+  flex-direction: column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+.pomoTime{
+  font-size: 44px;
+  font-weight: 900;
+  letter-spacing: -0.6px;
+}
+.pomoMode{
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.pomoBtns{
+  display:flex;
+  gap: 10px;
+  justify-content:center;
+  margin-top: 8px;
+}
+
+/* Responsive: iPad (landscape/desktop) – vi behåller 3 kolumner men krymper lite */
+@media (max-width: 1180px){
+  .app{ grid-template-columns: 320px 1fr 320px; }
+  .pomoGrid{ grid-template-columns: 1fr; }
+  .ringWrap{ width: 260px; height: 260px; }
+}
+
+/* Extra: undvik “hoppscroll” pga overscroll */
+.panel, .rightInner{
+  overscroll-behavior: contain;
 }

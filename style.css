@@ -403,7 +403,7 @@ body{
 .modalActions{ margin-top: 10px; display:flex; justify-content:flex-end; gap:10px; }
 
 /* =======================
-   Pomodoro (SVG-rotate, iPad-safe)
+   Pomodoro (Desktop Chrome + Safari safe)
    ======================= */
 
 .pomoWrap{ max-width: 520px; }
@@ -415,20 +415,20 @@ body{
   margin-top: 8px;
 }
 
-/* INGEN CSS-rotation här längre */
+/* INGEN CSS-rotation här */
 .pomoSvg{
   width:100%;
   height:100%;
 }
 
-/* Bakgrundsring */
+/* Track */
 .pomoTrack{
   fill:none;
   stroke: rgba(255,255,255,.08);
   stroke-width: 16;
 }
 
-/* Progress-ring */
+/* Progress */
 .pomoProg{
   fill:none;
   stroke: rgba(0,209,255,.88);
@@ -436,13 +436,13 @@ body{
   stroke-linecap: round;
   filter: url(#pomoGlow);
 
-  /* dasharray sätts via JS */
+  /* dasharray sätts via JS (inte i CSS) */
   stroke-dashoffset: 0;
 
   transition: stroke 180ms ease;
 }
 
-/* Center text behöver inte “rota tillbaka” längre */
+/* Center text — INGEN rotation */
 .pomoCenter{
   position:absolute;
   inset:0;

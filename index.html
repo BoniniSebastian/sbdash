@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>SB Dash</title>
-  <link rel="stylesheet" href="style.css?v=4" />
+  <link rel="stylesheet" href="style.css?v=5" />
 </head>
 <body>
 
@@ -34,7 +34,7 @@
       <div class="sheetBody">
         <div class="viewTrack" id="viewTrack">
 
-          <!-- KALENDER -->
+          <!-- 1) KALENDER -->
           <div class="viewPage" data-view="calendar">
             <div class="viewTitle">Kalender</div>
 
@@ -54,7 +54,7 @@
             </div>
           </div>
 
-          <!-- AKTIV PRIO -->
+          <!-- 2) AKTIV PRIO -->
           <div class="viewPage" data-view="prio">
             <div class="viewTitle">Aktiv prio</div>
 
@@ -67,7 +67,7 @@
             <div class="miniHint">Swipe höger→vänster = slutför • Tryck = redigera</div>
           </div>
 
-          <!-- VÄDER (placeholder tills vi kopplar in) -->
+          <!-- 3) VÄDER (placeholder tills vi kopplar in) -->
           <div class="viewPage" data-view="weather">
             <div class="viewTitle">Väder</div>
             <div class="miniHint">(kopplas in sen)</div>
@@ -90,12 +90,12 @@
 
     <img class="dialRing" id="dialRing" src="assets/ui/knob-ring.svg" alt="Knob ring">
 
-    <!-- Om SVG saknas -> vi visar emoji fallback -->
-    <img class="dialIcon" id="dialIcon" src="assets/ui/icon-weather.svg" alt="Dial icon">
-    <div class="dialEmoji" id="dialEmoji" aria-hidden="true">☀️</div>
+    <!-- Starta med kalender-ikonen -->
+    <img class="dialIcon" id="dialIcon" src="assets/ui/icon-calendar.svg" alt="Dial icon">
+    <div class="dialEmoji" id="dialEmoji" aria-hidden="true">📅</div>
   </div>
 </div>
 
-<script src="app.js?v=4"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>

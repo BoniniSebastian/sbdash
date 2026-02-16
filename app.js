@@ -882,7 +882,7 @@
   if (!pomoProg) return;
   // Negativ dashoffset = ringen går åt andra hållet
   pomoProg.style.strokeDashoffset = String(-C * (1 - pct));
-}
+    
   const setColor = (pct) => {
     if (!pomoProg) return;
     if (pct > 0.40) pomoProg.style.stroke = "rgba(0,209,255,.88)";

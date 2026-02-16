@@ -1,58 +1,320 @@
-backdrop-filter: blur(10px);
-flex:0 0 auto;
+:root{
+  --bg:#070a0f;
+  --text:#e9f0ff;
+  --muted:#aab6d1;
+  --line:rgba(255,255,255,.10);
+  --glow:rgba(0,209,255,.18);
+  --radius:16px;
+  --shadow: 0 14px 30px rgba(0,0,0,.42);
 }
 
+*{box-sizing:border-box}
+html,body{height:100%; overflow:hidden}
+body{
+  margin:0;
+  display:flex;
+  flex-direction:column;
+  background:
+    radial-gradient(1200px 600px at 35% 0%, rgba(0,209,255,.08), transparent 60%),
+    radial-gradient(900px 500px at 80% 20%, rgba(0,209,255,.05), transparent 55%),
+    var(--bg);
+  color:var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+}
+
+/* Topbar */
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:30;
+  display:grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items:center;
+  gap:12px;
+  padding:10px 12px;
+  border-bottom:1px solid var(--line);
+  background: rgba(7,10,15,.78);
+  backdrop-filter: blur(10px);
+  flex:0 0 auto;
+}
 .brand{display:flex; align-items:center; gap:10px}
-
-.gearTop{
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  color: rgba(255,255,255,.92);
-  border-radius: 12px;
-  padding: 7px 9px;
-  font-weight: 900;
-  cursor:pointer;
-}
-
 .brandDot{
-width:10px; height:10px; border-radius:999px;
-background: linear-gradient(135deg, rgba(0,209,255,.95), rgba(0,209,255,.38));
-box-shadow: 0 0 14px rgba(0,209,255,.28);
+  width:10px; height:10px; border-radius:999px;
+  background: linear-gradient(135deg, rgba(0,209,255,.95), rgba(0,209,255,.38));
+  box-shadow: 0 0 14px rgba(0,209,255,.28);
 }
 .brandTitle{font-weight:900; letter-spacing:.2px; font-size:14px}
 .brandSub{font-size:11px; color:var(--muted); margin-top:2px}
-
 .topDate{
-justify-self:center;
-color: rgba(255,255,255,.80);
-@@ -64,7 +77,7 @@ body{
-min-height:0;
+  justify-self:center;
+  color: rgba(255,255,255,.80);
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.2px;
+}
+.topRight{justify-self:end}
+
+/* Shell */
+.shell{
+  flex:1;
+  width:100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 10px 10px 12px;
+  min-height:0;
 }
 
 /* Layout */
-/* Desktop grid */
 .layout{
-height:100%;
-min-height:0;
-@@ -74,7 +87,7 @@ body{
-align-items:stretch;
+  height:100%;
+  min-height:0;
+  display:grid;
+  grid-template-columns: 260px 1fr 320px;
+  gap:10px;
+  align-items:stretch;
 }
 
 /* Calendar (frilagd) */
-/* Calendar */
 .calendarWrap{
-position:relative;
-border-radius: var(--radius);
-@@ -154,7 +167,7 @@ body{
-overflow:auto;
+  position:relative;
+  border-radius: var(--radius);
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.02);
+  box-shadow: var(--shadow);
+  min-height:0;
+}
+.calScale{
+  width:112%;
+  height:112%;
+  transform: scale(.89);
+  transform-origin: top left;
+}
+.calFrame{
+  display:block;
+  width:100%;
+  height:100%;
+  border:0;
+  background:#0b1118;
+}
+.calOverlay{
+  position:absolute;
+  inset:0;
+  background: rgba(0,0,0,.58);
+  pointer-events:none;
+  mix-blend-mode: multiply;
+}
+
+/* Panels */
+.panel{
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  border:1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+}
+.panel::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  border-radius: calc(var(--radius) + 2px);
+  background: radial-gradient(560px 220px at 40% 0%, var(--glow), transparent 58%);
+  opacity:.70;
+  pointer-events:none;
+}
+.panelHead{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 10px 8px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  flex:0 0 auto;
+}
+.panelHead h2{margin:0; font-size:13px; letter-spacing:.3px}
+.countPill{
+  font-size:12px;
+  font-weight:900;
+  color: rgba(255,255,255,.80);
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  padding:5px 9px;
+  border-radius:999px;
+}
+.panelBody{
+  position:relative;
+  padding: 10px;
+  flex:1 1 auto;
+  min-height:0;
+  overflow:auto;
 }
 
 /* MAIN carousel */
-/* Main carousel */
 .mainBody{ padding:0; overflow:hidden; }
 .viewTrack{
-display:flex;
-@@ -318,19 +331,44 @@ body{
+  display:flex;
+  width:100%;
+  height:100%;
+  transition: transform 260ms ease;
+}
+.viewPage{
+  flex:0 0 100%;
+  padding: 12px 12px;
+  height: 100%;
+  min-height:0;
+  overflow:auto;
+  background: radial-gradient(900px 300px at 20% 0%, rgba(0,209,255,.07), transparent 60%);
+}
+.viewTitle{ font-size:16px; font-weight:900; margin:0 0 6px; }
+
+/* Under-nav */
+.underNav{
+  display:flex;
+  gap:8px;
+  padding:10px 10px 10px;
+  border-top:1px solid rgba(255,255,255,.06);
+  flex-wrap:wrap;
+  flex:0 0 auto;
+}
+.navBtn{
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  color: var(--text);
+  padding:7px 10px;
+  border-radius: 12px;
+  cursor:pointer;
+  font-weight:900;
+  font-size:11px;
+}
+.navBtn.active{
+  border-color: rgba(0,209,255,.35);
+  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
+}
+
+/* Forms/lists */
+.miniForm{ display:flex; gap:8px; margin: 8px 0 10px; flex-wrap:wrap; }
+.miniInput{
+  flex: 1 1 200px;
+  background: rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.10);
+  border-radius: 12px;
+  padding: 9px 10px;
+  color: var(--text);
+  outline:none;
+  font-size:12px;
+}
+.miniInput:focus{ border-color: rgba(0,209,255,.35); box-shadow: 0 0 0 3px rgba(0,209,255,.10); }
+.miniBtn{
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(0,209,255,.16);
+  color: var(--text);
+  padding: 9px 10px;
+  border-radius: 12px;
+  cursor:pointer;
+  font-weight:900;
+  font-size:12px;
+}
+.miniBtn.ghost{ background: rgba(255,255,255,.03); }
+.miniList{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+.miniHint{ color: var(--muted); font-size:11px; margin-top: 8px; }
+.miniMeta{ color: var(--muted); font-size:11px; }
+.miniActions{ display:flex; justify-content:flex-end; gap:10px; margin-top:10px; }
+
+.miniRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 10px;
+  border:1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.02);
+  border-radius: 14px;
+}
+.miniRowLeft{ display:flex; align-items:center; gap:10px; min-width:0; }
+.miniText{
+  font-weight:900;
+  font-size:12px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* Swipe */
+.swipeItem{
+  position:relative;
+  border-radius: 14px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.02);
+  touch-action: pan-y;
+}
+.swipeUnder{ position:absolute; inset:0; background: rgba(0,0,0,.18); pointer-events:none; }
+.swipeContent{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 10px;
+  background: rgba(255,255,255,.02);
+  transform: translateX(0px);
+  will-change: transform;
+}
+.swipeLeft{ display:flex; align-items:center; gap:10px; min-width:0; }
+.swipeText{
+  font-weight:900;
+  font-size:12px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.swipeRight{ flex:0 0 auto; display:flex; align-items:center; gap:10px; }
+
+.pullHint{ margin-top: 6px; font-size: 11px; color: var(--muted); opacity: .75; }
+
+/* Weather */
+.weatherCard{
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  border-radius: 14px;
+  padding: 12px;
+  max-width: 620px;
+}
+.weatherRow{display:flex; align-items:center; gap:12px}
+.weatherIcon{ font-size: 32px; line-height: 1; filter: drop-shadow(0 0 14px rgba(0,209,255,.15)); }
+.weatherBig{display:flex; flex-direction:column}
+.weatherTemp{ font-size: 34px; font-weight: 900; letter-spacing: -.5px; }
+.weatherDesc{ color: var(--muted); font-weight: 900; font-size:12px; margin-top:2px; }
+
+.weatherGrid{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap:8px;
+  margin-top:10px;
+}
+.wCell{
+  border:1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.12);
+  border-radius:12px;
+  padding:10px;
+}
+.wLabel{ color: var(--muted); font-weight: 900; font-size:11px; }
+.wValue{ font-weight: 900; font-size:12px; margin-top:4px; }
+
+.tomorrowBox{
+  margin-top:10px;
+  border:1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.12);
+  border-radius: 12px;
+  padding:10px;
+}
+.tomLabel{ font-weight:900; font-size:12px; margin-bottom:6px; color: rgba(255,255,255,.92); }
+.tomRow{ display:flex; align-items:center; gap:10px; }
 .tomIcon{ font-size: 18px; }
 .tomText{ font-weight:900; font-size:12px; color: var(--muted); }
 
@@ -64,6 +326,82 @@ display:flex;
   z-index:100;
   pointer-events:auto;
   background:transparent;
+}
+.dial{
+  position:relative;
+  width: 182px;
+  height: 182px;
+  display:grid;
+  place-items:center;
+  user-select:none;
+  touch-action:none;
+}
+.dialRing{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  filter: drop-shadow(0 0 16px rgba(0,209,255,.22));
+  transition: transform 80ms linear;
+}
+.dialIcon{
+  position:absolute;
+  width:52px;
+  height:52px;
+  object-fit:contain;
+  filter: drop-shadow(0 0 12px rgba(0,209,255,.22));
+}
+
+/* Modal */
+.modalOverlay{
+  position: fixed;
+  inset: 0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index: 999;
+  background: rgba(0,0,0,.45);
+}
+.modalOverlay.show{ display:flex; }
+.modal{
+  width: min(420px, 92vw);
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.06);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 30px 70px rgba(0,0,0,.55);
+  padding: 12px;
+}
+.modalHead{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.modalTitle{ font-weight:900; font-size:14px; }
+.modalClose{
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor:pointer;
+  font-weight:900;
+}
+.modalEdit{
+  width:100%;
+  margin-top: 10px;
+  height: 56vh;
+  resize: none;
+  border-radius: 12px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.18);
+  color: rgba(255,255,255,.92);
+  padding: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  outline: none;
+}
+.modalEdit:focus{
+  border-color: rgba(0,209,255,.35);
+  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
+}
+.modalActions{ margin-top: 10px; display:flex; justify-content:flex-end; gap:10px; }
+
 /* Pomodoro */
 .pomoWrap{ max-width: 520px; }
 .pomoRing{
@@ -91,98 +429,7 @@ display:flex;
   align-items:center;
   justify-content:center;
   flex-direction:column;
-  transform:none;
-}
-.pomoTime{ font-size: 42px; font-weight: 900; letter-spacing: -.5px; }
-.pomoSub{ margin-top: 6px; font-size: 12px; color: var(--muted); font-weight: 900; }
-.pomoBtns{ display:flex; gap:8px; flex-wrap:wrap; margin-top: 12px; }
-
-/* Dial (used in mobile bottom right) */
-.dial{
-position:relative;
-  width: 182px;
-  height: 182px;
-  width: 150px;
-  height: 150px;
-display:grid;
-place-items:center;
-user-select:none;
-@@ -345,8 +383,8 @@ body{
-}
-.dialIcon{
-position:absolute;
-  width:52px;
-  height:52px;
-  width:46px;
-  height:46px;
-object-fit:contain;
-filter: drop-shadow(0 0 12px rgba(0,209,255,.22));
-}
-@@ -402,53 +440,95 @@ body{
-}
-.modalActions{ margin-top: 10px; display:flex; justify-content:flex-end; gap:10px; }
-
-/* Pomodoro */
-.pomoWrap{ max-width: 520px; }
-.pomoRing{
-  position:relative;
-  width: 280px;
-  height: 280px;
-  margin-top: 8px;
-/* Settings */
-.settingsForm{ margin-top:10px; }
-.settingsLabel{
-  display:block;
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(255,255,255,.86);
-  margin: 6px 0 6px;
-}
-.pomoSvg{ width:100%; height:100%; transform: rotate(-90deg); }
-.pomoTrack{ fill:none; stroke: rgba(255,255,255,.08); stroke-width: 16; }
-.pomoProg{
-  fill:none;
-  stroke: rgba(0,209,255,.85);
-  stroke-width: 16;
-  stroke-linecap: round;
-  filter: url(#pomoGlow);
-  stroke-dasharray: 578;
-  stroke-dashoffset: 0;
-  transition: stroke 180ms ease;
-.settingsInput{
-  width:100%;
-  background: rgba(0,0,0,.18);
-  border:1px solid rgba(255,255,255,.10);
-  border-radius: 12px;
-  padding: 10px;
-  color: rgba(255,255,255,.92);
-  font-size: 13px;
-  outline: none;
-}
-.pomoCenter{
-  position:absolute;
-  inset:0;
-.settingsInput:focus{
-  border-color: rgba(0,209,255,.35);
-  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
-}
-.settingsHint{
-  margin-top: 10px;
-  font-size: 11px;
-  color: var(--muted);
-}
-.settingsActions{
-  margin-top: 12px;
-display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-direction:column;
-  .pomoCenter{
-  ...
-  transform: none;
-  gap:10px;
-  justify-content:flex-end;
-  flex-wrap:wrap;
+  transform: rotate(90deg);
 }
 .pomoTime{ font-size: 42px; font-weight: 900; letter-spacing: -.5px; }
 .pomoSub{ margin-top: 6px; font-size: 12px; color: var(--muted); font-weight: 900; }
@@ -196,64 +443,10 @@ display:flex;
   .pomoRing{ width: 270px; height: 270px; }
   .weatherGrid{ grid-template-columns: 1fr; }
 }
-/* Desktop: hide mobile bottom */
-.mobileBottom{ display:none; }
-
-/* iPhone portrait layout */
 @media (max-width: 860px){
   html,body{ overflow:auto; }
   body{ overflow:auto; }
   .layout{ grid-template-columns: 1fr; }
   .dialFixed{ right:10px; bottom:10px; }
   .calendarWrap{ height: 320px; }
-  html,body{ height:100%; overflow:hidden; }
-
-  .shell{ padding: 10px; max-width: 100%; }
-
-  .layout{
-    grid-template-columns: 1fr;
-    grid-template-rows: 25% 55% auto;
-    gap:10px;
-  }
-
-  .prioPanel{ display:none; } /* desktop prio hidden */
-
-  /* calendar bigger text */
-  .calScale{ width:120%; height:120%; transform: scale(.83); }
-
-  /* bottom zone */
-  .mobileBottom{
-    display:flex;
-    align-items:stretch;
-    justify-content:space-between;
-    gap:10px;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  .mobileBottomLeft{
-    flex:1 1 auto;
-    border:1px solid rgba(255,255,255,.10);
-    background: rgba(255,255,255,.03);
-    border-radius: 16px;
-    padding: 12px 12px;
-    font-weight: 900;
-    font-size: 12px;
-    color: rgba(255,255,255,.86);
-    display:flex;
-    align-items:center;
-  }
-
-  .mobileBottomRight{
-    flex:0 0 auto;
-    border:1px solid rgba(255,255,255,.10);
-    background: rgba(255,255,255,.03);
-    border-radius: 16px;
-    padding: 6px;
-    display:flex;
-    align-items:center;
-    justify-content:flex-end;
-  }
-
-  .underNav{ gap:6px; padding:10px; }
-  .navBtn{ padding:7px 9px; font-size:11px; }
 }

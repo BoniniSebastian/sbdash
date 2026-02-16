@@ -4,12 +4,17 @@
   --muted:#aab6d1;
   --line:rgba(255,255,255,.10);
   --glow:rgba(0,209,255,.18);
-  --radius:16px;
-  --shadow: 0 14px 30px rgba(0,0,0,.42);
+  --radius:22px;
+  --shadow: 0 20px 40px rgba(0,0,0,.45);
 }
 
 *{box-sizing:border-box}
-html,body{height:100%; overflow:hidden}
+
+html,body{
+  height:100%;
+  overflow:hidden; /* LÅST APP */
+}
+
 body{
   margin:0;
   display:flex;
@@ -22,605 +27,203 @@ body{
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
 }
 
-/* Topbar */
+/* ================= TOPBAR ================= */
+
 .topbar{
   position:sticky;
   top:0;
   z-index:30;
-  display:none;
-  grid-template-columns: 1fr auto 1fr;
+  display:flex;
+  justify-content:space-between;
   align-items:center;
-  gap:12px;
-  padding:10px 12px;
+  padding:14px 16px;
   border-bottom:1px solid var(--line);
-  background: rgba(7,10,15,.78);
-  backdrop-filter: blur(10px);
-  flex:0 0 auto;
-}
-.brand{display:flex; align-items:center; gap:10px}
-.brandDot{
-  width:10px; height:10px; border-radius:999px;
-  background: linear-gradient(135deg, rgba(0,209,255,.95), rgba(0,209,255,.38));
-  box-shadow: 0 0 14px rgba(0,209,255,.28);
-}
-.brandTitle{font-weight:900; letter-spacing:.2px; font-size:14px}
-.brandSub{font-size:11px; color:var(--muted); margin-top:2px}
-.topDate{
-  justify-self:center;
-  color: rgba(255,255,255,.80);
-  font-size:12px;
-  font-weight:900;
-  letter-spacing:.2px;
-}
-.topRight{justify-self:end}
-
-/* Shell */
-.shell{
-  flex:1;
-  width:100%;
-  max-width: 1320px;
-  margin: 0 auto;
-  padding: 10px;
-  min-height:0;
+  background: rgba(7,10,15,.75);
+  backdrop-filter: blur(12px);
 }
 
-/* Layout */
-.layout{
-  height:100%;
-  min-height:0;
-  display:grid;
-  grid-template-columns: 260px 1fr 320px;
-  gap:10px;
-  align-items:stretch;
-}
-
-/* Calendar (frilagd) */
-.calendarWrap{
-  position:relative;
-  border-radius: var(--radius);
-  overflow:hidden;
-  border:1px solid rgba(255,255,255,.08);
-  background: rgba(255,255,255,.02);
-  box-shadow: var(--shadow);
-  min-height:0;
-}
-.calScale{
-  width:140%;
-  height:140%;
-  transform: scale(.72);
-  transform-origin: top left;
-}
-.calFrame{
-  display:block;
-  width:100%;
-  height:100%;
-  border:0;
-  background:#0b1118;
-}
-.calOverlay{
-  display:none;
-}
-
-/* Calendar: compact + expand (glass handle under) */
-.calendarWrap{
-  position:relative;
-  border-radius: 14px;
-  overflow:hidden;
-  border:1px solid rgba(255,255,255,.06);
-  background: rgba(255,255,255,.02);
-  box-shadow: none;                 /* ta bort tung shadow */
-  height: 95px;                     /* lagom strip */
-  max-height: 95px;
-  padding: 0;                       /* viktigt */
-}
-
-
-/* Expanded */
-.calendarWrap.calExpanded{
-  height: 560px;          /* justera om du vill */
-  max-height: 560px;
-}
-
-
-
-.calHandle:hover{
-  opacity:1;
-  background: rgba(255,255,255,.08);
-}
-
-.calGrip{
-  width: 36px;
-  height: 3px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.25);
-}
-
-.calHandleRow{
+.brand{
   display:flex;
   align-items:center;
+  gap:10px;
+}
+
+.brandDot{
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background: linear-gradient(135deg, rgba(0,209,255,.95), rgba(0,209,255,.35));
+  box-shadow: 0 0 16px rgba(0,209,255,.3);
+}
+
+.brandTitle{
+  font-weight:900;
+  font-size:15px;
+}
+
+.brandSub{
+  font-size:11px;
+  color:var(--muted);
+}
+
+.topDate{
+  font-size:12px;
+  font-weight:900;
+  color:rgba(255,255,255,.8);
+}
+
+/* ================= MAIN SHELL ================= */
+
+.shell{
+  flex:1;
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  padding:20px 16px;
+  min-height:0;
+}
+
+.layout{
+  width:100%;
+  display:flex;
   justify-content:center;
 }
 
-.calHandleChevron{
-  font-size: 14px;
-  color: rgba(255,255,255,.60);
-  transition: transform 180ms ease;
-}
+/* ================= PANEL ================= */
 
-.calHandle[aria-expanded="true"] .calHandleChevron{
-  transform: rotate(180deg);
-}
-
-
-.calHandleRow{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-}
-
-.calHandleText{
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(255,255,255,.80);
-}
-
-.calHandleChevron{
-  font-size: 14px;
-  color: rgba(255,255,255,.55);
-  transition: transform 180ms ease;
-}
-
-.calHandle[aria-expanded="true"] .calHandleChevron{
-  transform: rotate(180deg);
-}
-/* Calendar: compact + expand (glass handle under) */
-.calendarWrap{
-  height: 260px;          /* compact läge ≈ ~3 events */
-  max-height: 260px;
-  transition: height 220ms ease, max-height 220ms ease;
-}
-
-/* Expanded */
-.calendarWrap.calExpanded{
-  height: 560px;          /* justera om du vill */
-  max-height: 560px;
-}
-
-/* Handle under calendar (glass) */
-.calHandle{
-  border-radius: 14px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.06);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 14px 30px rgba(0,0,0,.35);
-  padding: 10px 10px;
-  cursor: pointer;
-  user-select: none;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-
-.calGrip{
-  width: 44px;
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.18);
-  margin: 0 auto;
-}
-
-.calHandleRow{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-}
-
-.calHandleText{
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(255,255,255,.80);
-}
-
-.calHandleChevron{
-  font-size: 14px;
-  color: rgba(255,255,255,.55);
-  transition: transform 180ms ease;
-}
-
-.calHandle[aria-expanded="true"] .calHandleChevron{
-  transform: rotate(180deg);
-}
-
-
-/* Panels */
 .panel{
+  position:relative;
+  width:100%;
+  max-width:600px;   /* Mobil-känsla */
+  height:100%;
   background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
   border:1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  position:relative;
   overflow:hidden;
   display:flex;
   flex-direction:column;
-  min-height:0;
 }
+
+/* Glow overlay */
 .panel::before{
   content:"";
   position:absolute;
   inset:-2px;
   border-radius: calc(var(--radius) + 2px);
-  background: radial-gradient(560px 220px at 40% 0%, var(--glow), transparent 58%);
-  opacity:.70;
+  background: radial-gradient(560px 220px at 40% 0%, var(--glow), transparent 60%);
+  opacity:.6;
   pointer-events:none;
 }
+
+/* ================= PANEL HEAD ================= */
+
 .panelHead{
-  position:relative;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:10px 10px 8px;
+  padding:16px 18px 12px;
   border-bottom:1px solid rgba(255,255,255,.06);
-  flex:0 0 auto;
-}/* Timer bar under Main-rubrik */
-.timerBar{
-  display:none;                 /* hidden by default */
-  width: 260px;
-  max-width: 44vw;
-  margin-left: auto;
-  gap: 6px;
 }
 
-.timerBar.show{ display:flex; flex-direction:column; }
-
-.timerBarTop{
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap:10px;
+.panelHead h2{
+  margin:0;
+  font-size:14px;
+  letter-spacing:.4px;
 }
 
-.timerBarTime{
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(255,255,255,.92);
-  letter-spacing: .2px;
+/* ================= BODY ================= */
+
+.panelBody{
+  flex:1;
+  overflow:hidden; /* carousel scroll only */
+  min-height:0;
 }
 
-.timerBarLabel{
-  font-size: 11px;
-  font-weight: 900;
-  color: rgba(255,255,255,.55);
-}
+/* ================= CAROUSEL ================= */
 
-.timerBarTrack{
-  width:100%;
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.10);
+.mainBody{
+  padding:0;
   overflow:hidden;
 }
 
-.timerBarFill{
-  height:100%;
-  width:100%;
-  border-radius: 999px;
-  background: rgba(0,209,255,.85);
-  transform-origin: left center;
-  transform: scaleX(1);
-  transition: transform 160ms linear, background 180ms ease;
-}
-
-.panelHead h2{margin:0; font-size:13px; letter-spacing:.3px}
-.countPill{
-  font-size:12px;
-  font-weight:900;
-  color: rgba(255,255,255,.80);
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  padding:5px 9px;
-  border-radius:999px;
-}
-.panelBody{
-  position:relative;
-  padding: 10px;
-  flex:1 1 auto;
-  min-height:0;
-  overflow:auto;
-}
-
-/* MAIN carousel */
-.mainBody{ padding:0; overflow:hidden; }
 .viewTrack{
   display:flex;
   width:100%;
   height:100%;
-  transition: transform 260ms ease;
+  transition: transform 300ms ease;
 }
+
 .viewPage{
   flex:0 0 100%;
-  padding: 12px 12px;
-  height: 100%;
-  min-height:0;
+  padding:20px;
   overflow:auto;
-  background: radial-gradient(900px 300px at 20% 0%, rgba(0,209,255,.07), transparent 60%);
-}
-.viewTitle{ font-size:16px; font-weight:900; margin:0 0 6px; }
-
-/* Under-nav */
-.underNav{
-  display:flex;
-  gap:8px;
-  padding:10px 10px 10px;
-  border-top:1px solid rgba(255,255,255,.06);
-  flex-wrap:wrap;
-  flex:0 0 auto;
-}
-.navBtn{
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  color: var(--text);
-  padding:7px 10px;
-  border-radius: 12px;
-  cursor:pointer;
-  font-weight:900;
-  font-size:11px;
-}
-.navBtn.active{
-  border-color: rgba(0,209,255,.35);
-  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
 }
 
-/* Forms/lists */
-.miniForm{ display:flex; gap:8px; margin: 8px 0 10px; flex-wrap:wrap; }
-.miniInput{
-  flex: 1 1 200px;
-  background: rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.10);
-  border-radius: 12px;
-  padding: 9px 10px;
-  color: var(--text);
-  outline:none;
-  font-size:12px;
-}
-.miniInput:focus{ border-color: rgba(0,209,255,.35); box-shadow: 0 0 0 3px rgba(0,209,255,.10); }
-.miniBtn{
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(0,209,255,.16);
-  color: var(--text);
-  padding: 9px 10px;
-  border-radius: 12px;
-  cursor:pointer;
+.viewTitle{
+  font-size:18px;
   font-weight:900;
-  font-size:12px;
+  margin:0 0 12px;
 }
-.miniBtn.ghost{ background: rgba(255,255,255,.03); }
-.miniList{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
-.miniHint{ color: var(--muted); font-size:11px; margin-top: 8px; }
-.miniMeta{ color: var(--muted); font-size:11px; }
-.miniActions{ display:flex; justify-content:flex-end; gap:10px; margin-top:10px; }
 
-.miniRow{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:10px 10px;
-  border:1px solid rgba(255,255,255,.08);
-  background: rgba(255,255,255,.02);
-  border-radius: 14px;
-}
-.miniRowLeft{ display:flex; align-items:center; gap:10px; min-width:0; }
-.miniText{
-  font-weight:900;
-  font-size:12px;
+/* ================= CALENDAR ================= */
+
+.calCard{
+  border-radius:16px;
   overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-/* Swipe */
-.swipeItem{
-  position:relative;
-  border-radius: 14px;
-  overflow:hidden;
+  background:rgba(255,255,255,.03);
   border:1px solid rgba(255,255,255,.08);
-  background: rgba(255,255,255,.02);
-  touch-action: pan-y;
-}
-.swipeUnder{ position:absolute; inset:0; background: rgba(0,0,0,.18); pointer-events:none; }
-.swipeContent{
-  position:relative;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:10px 10px;
-  background: rgba(255,255,255,.02);
-  transform: translateX(0px);
-  will-change: transform;
-}
-.swipeLeft{ display:flex; align-items:center; gap:10px; min-width:0; }
-.swipeText{
-  font-weight:900;
-  font-size:12px;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.swipeRight{ flex:0 0 auto; display:flex; align-items:center; gap:10px; }
-
-.pullHint{ margin-top: 6px; font-size: 11px; color: var(--muted); opacity: .75; }
-
-/* Weather */
-.weatherCard{
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  border-radius: 14px;
-  padding: 12px;
-  max-width: 620px;
-}
-.weatherRow{display:flex; align-items:center; gap:12px}
-.weatherIcon{ font-size: 32px; line-height: 1; filter: drop-shadow(0 0 14px rgba(0,209,255,.15)); }
-.weatherBig{display:flex; flex-direction:column}
-.weatherTemp{ font-size: 34px; font-weight: 900; letter-spacing: -.5px; }
-.weatherDesc{ color: var(--muted); font-weight: 900; font-size:12px; margin-top:2px; }
-
-.weatherGrid{
-  display:grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap:8px;
-  margin-top:10px;
-}
-.wCell{
-  border:1px solid rgba(255,255,255,.08);
-  background: rgba(0,0,0,.12);
-  border-radius:12px;
-  padding:10px;
-}
-.wLabel{ color: var(--muted); font-weight: 900; font-size:11px; }
-.wValue{ font-weight: 900; font-size:12px; margin-top:4px; }
-
-.tomorrowBox{
-  margin-top:10px;
-  border:1px solid rgba(255,255,255,.08);
-  background: rgba(0,0,0,.12);
-  border-radius: 12px;
-  padding:10px;
-}
-.tomLabel{ font-weight:900; font-size:12px; margin-bottom:6px; color: rgba(255,255,255,.92); }
-.tomRow{ display:flex; align-items:center; gap:10px; }
-.tomIcon{ font-size: 18px; }
-.tomText{ font-weight:900; font-size:12px; color: var(--muted); }
-
-/* Dial */
-.dialFixed{
-  position:fixed;
-  right:16px;
-  bottom:16px;
-  z-index:100;
-  pointer-events:auto;
-  background:transparent;
+  backdrop-filter: blur(12px);
 }
 
-.dial{
-  position:relative;
-  width: 220px;
-  height: 220px;
-  display:grid;
-  place-items:center;
-  user-select:none;
-  touch-action:none;
+.calScale{
+  width:115%;
+  height:180px;   /* KOMPAKT */
+  transform: scale(.87);
+  transform-origin: top left;
 }
-.dialRing{
+
+.calFrame{
   width:100%;
   height:100%;
-  object-fit:contain;
-  filter: drop-shadow(0 0 16px rgba(0,209,255,.22));
-  transition: transform 80ms linear;
-}
-.dialIcon{
-  position:absolute;
-  width:100px;
-  height:100px;
-  object-fit:contain;
-  filter: drop-shadow(0 0 12px rgba(0,209,255,.22));
+  border:0;
 }
 
-/* Modal */
-.modalOverlay{
-  position: fixed;
-  inset: 0;
-  display:none;
+/* ================= TIMER ================= */
+
+.timerWrap{
+  margin-top:10px;
+}
+
+.timerRow{
+  display:flex;
   align-items:center;
-  justify-content:center;
-  z-index: 999;
-  background: rgba(0,0,0,.45);
+  gap:20px;
 }
-.modalOverlay.show{ display:flex; }
-.modal{
-  width: min(420px, 92vw);
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.18);
-  background: rgba(255,255,255,.06);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 30px 70px rgba(0,0,0,.55);
-  padding: 12px;
-}
-.modalHead{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.modalTitle{ font-weight:900; font-size:14px; }
-.modalClose{
-  border:1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.04);
-  color: var(--text);
-  border-radius: 10px;
-  padding: 6px 10px;
-  cursor:pointer;
-  font-weight:900;
-}
-.modalEdit{
-  width:100%;
-  margin-top: 10px;
-  height: 56vh;
-  resize: none;
-  border-radius: 12px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.18);
-  color: rgba(255,255,255,.92);
-  padding: 10px;
-  font-size: 13px;
-  line-height: 1.5;
-  outline: none;
-}
-.modalEdit:focus{
-  border-color: rgba(0,209,255,.35);
-  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
-}
-.modalActions{ margin-top: 10px; display:flex; justify-content:flex-end; gap:10px; }
-
-/* =======================
-   Pomodoro (Desktop Chrome + Safari safe)
-   ======================= */
-
-.pomoWrap{ max-width: 520px; }
 
 .pomoRing{
   position:relative;
-  width: 280px;
-  height: 280px;
-  margin-top: 8px;
+  width:220px;
+  height:220px;
 }
 
-/* INGEN CSS-rotation här */
-.pomoSvg{
+.pomoRing svg{
   width:100%;
   height:100%;
 }
 
-/* Track */
 .pomoTrack{
   fill:none;
-  stroke: rgba(255,255,255,.08);
-  stroke-width: 16;
+  stroke:rgba(255,255,255,.08);
+  stroke-width:16;
 }
 
-/* Progress */
 .pomoProg{
   fill:none;
-  stroke: rgba(0,209,255,.88);
-  stroke-width: 16;
-  stroke-linecap: round;
-  filter: url(#pomoGlow);
-
-  /* dasharray sätts via JS (inte i CSS) */
-  stroke-dashoffset: 0;
-
+  stroke:rgba(0,209,255,.88);
+  stroke-width:16;
+  stroke-linecap:round;
+  stroke-dashoffset:0;
   transition: stroke 180ms ease;
 }
 
-/* Center text — INGEN rotation */
 .pomoCenter{
   position:absolute;
   inset:0;
@@ -630,41 +233,82 @@ body{
   flex-direction:column;
 }
 
-.pomoTime{ font-size: 42px; font-weight: 900; letter-spacing: -.5px; }
-.pomoSub{ margin-top: 6px; font-size: 12px; color: var(--muted); font-weight: 900; }
-.pomoBtns{ display:flex; gap:8px; flex-wrap:wrap; margin-top: 12px; }
-@media (max-width: 1200px){
-  html,body{ overflow:auto; }
-  body{ overflow:auto; }
-
-  .layout{
-    grid-template-columns: 1fr;
-    grid-auto-rows: min-content;
-  }
-
-  .calendarWrap{ order: 1; }
-  .calHandle{ order: 2; }
-  .mainPanel{ order: 3; }
-  .prioPanel{ order: 4; }
-
-  .prioPanel{ min-height: 320px; }
+#pomoTime{
+  font-size:38px;
+  font-weight:900;
 }
-/* Stack layout for stående iPad / mobil / smalt desktop:
-   PRIO → MAIN → CALENDAR */
-@media (max-width: 1100px){
-  /* släpp 3-kolumn */
-  .layout{
-    grid-template-columns: 1fr;
-    grid-auto-rows: min-content;
+
+/* Buttons beside circle */
+
+.timerButtons{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.timerButtons button{
+  padding:10px 16px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);
+  color:var(--text);
+  font-weight:900;
+  cursor:pointer;
+}
+
+/* ================= MAIN TIMER BORDER ================= */
+
+.mainBorderSvg{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+
+.mainBorderTrack{
+  fill:none;
+  stroke:rgba(255,255,255,.06);
+  stroke-width:2;
+}
+
+.mainBorderProg{
+  fill:none;
+  stroke:rgba(0,209,255,.7);
+  stroke-width:2;
+  stroke-dasharray:400;
+  stroke-dashoffset:0;
+  transition: stroke 180ms ease;
+}
+
+/* ================= FORMS ================= */
+
+input{
+  width:100%;
+  padding:10px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);
+  color:var(--text);
+  margin-bottom:8px;
+}
+
+button{
+  padding:8px 14px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);
+  color:var(--text);
+  font-weight:900;
+  cursor:pointer;
+}
+
+/* ================= MOBILE FINE TUNE ================= */
+
+@media (max-width:600px){
+  .panel{
+    border-radius:18px;
   }
-
-  /* ordning */
-  .prioPanel{ order: 1; }
-  .mainPanel{ order: 2; }
-  .calendarWrap{ order: 3; }
-
-  /* lite tightare prio om den blir för hög */
-  .prioPanel .panelBody{
-    max-height: 320px;
+  .pomoRing{
+    width:200px;
+    height:200px;
   }
-
+}

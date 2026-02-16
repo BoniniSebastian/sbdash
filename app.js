@@ -222,12 +222,22 @@ if (calHandle) {
     tick(10);
   }
 
-  if (dialEl) {
-    dialEl.addEventListener("pointerdown", onDown, { passive: false });
-    window.addEventListener("pointermove", onMove, { passive: false });
-    window.addEventListener("pointerup", onUp, { passive: false });
-    window.addEventListener("pointercancel", onUp, { passive: false });
-  }
+ if (dialEl) {
+  dialEl.addEventListener("pointerdown", onDown, { passive: false });
+  window.addEventListener("pointermove", onMove, { passive: false });
+  window.addEventListener("pointerup", onUp, { passive: false });
+  window.addEventListener("pointercancel", onUp, { passive: false });
+
+  // Wheel på ratten: scroll = byt vy (desktop)
+  dialEl.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const dir = e.deltaY > 0 ? 1 : -1;
+    setViewByIndex(currentIndex + dir);
+    tick(8);
+  }, { passive: false });
+}
+
 
   // ---------- Storage ----------
   const LS_KEY = "sbdash_v4_store";

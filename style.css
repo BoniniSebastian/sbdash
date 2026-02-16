@@ -1,439 +1,259 @@
-:root{
-  --bg: #0b0f17;
-  --panel: #11182a;
-  --panel2: #0f1626;
-  --card: rgba(255,255,255,0.06);
-  --card2: rgba(255,255,255,0.09);
-  --text: rgba(255,255,255,0.92);
-  --muted: rgba(255,255,255,0.65);
-  --muted2: rgba(255,255,255,0.5);
-  --line: rgba(255,255,255,0.10);
-  --shadow: 0 10px 30px rgba(0,0,0,0.35);
-  --radius: 16px;
-  --radius2: 12px;
-  --pad: 14px;
+backdrop-filter: blur(10px);
+flex:0 0 auto;
 }
 
-*{ box-sizing: border-box; }
-html, body { height: 100%; }
-body{
-  margin:0;
-  background: radial-gradient(1200px 700px at 30% 20%, rgba(118, 193, 255, 0.12), transparent 55%),
-              radial-gradient(900px 600px at 80% 20%, rgba(255, 115, 205, 0.10), transparent 55%),
-              var(--bg);
-  color: var(--text);
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  overflow: hidden; /* superviktigt för “inga överhopp” */
+.brand{display:flex; align-items:center; gap:10px}
+
+.gearTop{
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  color: rgba(255,255,255,.92);
+  border-radius: 12px;
+  padding: 7px 9px;
+  font-weight: 900;
+  cursor:pointer;
 }
 
-/* --- App grid --- */
-.app{
-  height: 100%;
-  width: 100%;
-  display: grid;
-  grid-template-columns: 360px minmax(520px, 1fr) 360px;
-  gap: 14px;
-  padding: 14px;
+.brandDot{
+width:10px; height:10px; border-radius:999px;
+background: linear-gradient(135deg, rgba(0,209,255,.95), rgba(0,209,255,.38));
+box-shadow: 0 0 14px rgba(0,209,255,.28);
+}
+.brandTitle{font-weight:900; letter-spacing:.2px; font-size:14px}
+.brandSub{font-size:11px; color:var(--muted); margin-top:2px}
+
+.topDate{
+justify-self:center;
+color: rgba(255,255,255,.80);
+@@ -64,7 +77,7 @@ body{
+min-height:0;
 }
 
-.col{
-  min-height: 0; /* kritiskt för att interna scrolls ska fungera */
-  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  position: relative;
+/* Layout */
+/* Desktop grid */
+.layout{
+height:100%;
+min-height:0;
+@@ -74,7 +87,7 @@ body{
+align-items:stretch;
 }
 
-.left, .right{
-  display: flex;
-  flex-direction: column;
-}
-
-.center{
-  display: grid;
-  grid-template-rows: auto 1fr;
-  min-height: 0;
-}
-
-.colHeader, .centerHeader{
-  padding: 14px 14px 10px 14px;
-  border-bottom: 1px solid var(--line);
-  background: rgba(0,0,0,0.12);
-}
-
-.colHeader h2{
-  margin: 0;
-  font-size: 18px;
-  letter-spacing: 0.2px;
-}
-.sub{ font-size: 12px; color: var(--muted); margin-top: 3px; }
-
-.centerHeader{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  align-items: center;
-}
-.todayText{
-  font-size: 16px;
-  font-weight: 600;
-}
-.hint{ font-size: 12px; color: var(--muted2); margin-top: 4px; }
-
-.viewTitle{
-  font-size: 18px;
-  font-weight: 700;
-  text-align: right;
-}
-.viewSubtitle{
-  font-size: 12px;
-  color: var(--muted);
-  text-align: right;
-  margin-top: 4px;
-}
-
-/* --- Calendar --- */
+/* Calendar (frilagd) */
+/* Calendar */
 .calendarWrap{
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  background: rgba(0,0,0,0.10);
-}
-.calendarFrame{
-  width: 100%;
-  height: 100%;
-  border: 0;
-  display: block;
-  background: #fff;
-  opacity: 0; /* blir 1 när src satts */
-  transition: opacity 160ms ease;
-}
-.calendarPlaceholder{
-  position: absolute;
-  inset: 0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-  padding: 22px;
-  color: rgba(255,255,255,0.88);
-}
-.phTitle{ font-size: 18px; font-weight: 700; margin-bottom: 10px; }
-.phText{ font-size: 13px; color: var(--muted); line-height: 1.35; }
-
-/* --- Center carousel --- */
-.carousel{
-  position: relative;
-  min-height: 0;
-  overflow: hidden; /* inga layout-hopp */
-  background: rgba(0,0,0,0.10);
-}
-.panel{
-  position: absolute;
-  inset: 0;
-  padding: 14px;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-  display: none;
-}
-.panel.active{
-  display: block;
-}
-.panelInner{
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 100%;
+position:relative;
+border-radius: var(--radius);
+@@ -154,7 +167,7 @@ body{
+overflow:auto;
 }
 
-.panelTop{
-  display:flex;
-  align-items:center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.panelTop h3{
-  margin: 0;
-  font-size: 18px;
-}
-.panelTopRight{
-  display:flex;
-  gap: 8px;
-  align-items:center;
-}
+/* MAIN carousel */
+/* Main carousel */
+.mainBody{ padding:0; overflow:hidden; }
+.viewTrack{
+display:flex;
+@@ -318,19 +331,44 @@ body{
+.tomIcon{ font-size: 18px; }
+.tomText{ font-weight:900; font-size:12px; color: var(--muted); }
 
-/* --- Cards & rows --- */
-.card{
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius2);
-  padding: 12px;
-}
-.cardTitle{
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 10px;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-}
-.rows{
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.rowItem{
-  display:flex;
-  gap: 10px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 10px;
-  border-radius: 12px;
-  background: rgba(0,0,0,0.18);
-  border: 1px solid rgba(255,255,255,0.08);
-}
-.rowLeft{
-  display:flex;
-  gap: 10px;
-  align-items:center;
-  min-width: 0;
-}
-.rowText{
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.rowActions{
-  display:flex;
-  gap: 8px;
-  align-items:center;
-  flex-shrink: 0;
-}
-.small{ font-size: 12px; }
-.muted{ color: var(--muted); }
-.big{ font-size: 34px; font-weight: 800; letter-spacing: -0.4px; }
-
-/* Weather mini */
-.grid2{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
-.miniCard{
-  background: rgba(0,0,0,0.18);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px;
-  padding: 10px;
-}
-.miniLabel{ font-size: 12px; color: var(--muted); }
-.miniValue{ font-size: 16px; font-weight: 700; margin-top: 4px; }
-
-/* Inputs & buttons */
-.textInput{
-  width: 260px;
-  max-width: 38vw;
-  height: 38px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(0,0,0,0.18);
-  color: var(--text);
-  padding: 0 12px;
-  outline: none;
-}
-.textInput:focus{ border-color: rgba(118,193,255,0.45); }
-
-.textArea{
-  width: 100%;
-  height: 160px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(0,0,0,0.18);
-  color: var(--text);
-  padding: 10px 12px;
-  outline: none;
-  resize: none;
-}
-
-button{
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.08);
-  color: var(--text);
-  border-radius: 12px;
-  padding: 9px 12px;
-  cursor: pointer;
-  transition: transform 80ms ease, background 120ms ease, border-color 120ms ease;
-  user-select: none;
-}
-button:active{ transform: translateY(1px); }
-.primaryBtn{
-  background: rgba(118,193,255,0.22);
-  border-color: rgba(118,193,255,0.40);
-}
-.dangerBtn{
-  background: rgba(255,120,120,0.18);
-  border-color: rgba(255,120,120,0.35);
-}
-.ghostBtn{
-  background: rgba(255,255,255,0.06);
-}
-.chipBtn{
-  padding: 8px 10px;
-  border-radius: 999px;
-}
-.wideTop{ width: 100%; margin-top: 10px; }
-
-/* Right column */
-.rightInner{
-  flex: 1;
-  min-height: 0;
-  padding: 14px;
-  display:flex;
-  flex-direction: column;
-  gap: 12px;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Dial dock (bottom-right) */
-.dialDock{
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  width: 240px;
-  pointer-events: none; /* card får pointer events */
-}
-.dialCard{
-  pointer-events: auto;
-  background: rgba(0,0,0,0.22);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 18px;
-  padding: 12px;
-  box-shadow: 0 18px 40px rgba(0,0,0,0.45);
-  display:flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.dialMeta{
-  display:flex;
-  align-items: baseline;
-  justify-content: space-between;
-}
-.dialMetaTitle{
-  font-size: 12px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-.dialMetaValue{
-  font-size: 13px;
-  font-weight: 700;
-}
-.dialHelp{
-  font-size: 12px;
-  color: var(--muted2);
-  text-align: center;
-}
-
-.dial{
-  width: 150px;
-  height: 150px;
-  margin: 0 auto;
-  touch-action: none;
-  outline: none;
-}
-.dialFace{
-  width: 100%;
-  height: 100%;
-  border-radius: 999px;
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.16), rgba(255,255,255,0.06) 55%, rgba(0,0,0,0.15));
-  border: 1px solid rgba(255,255,255,0.12);
-  position: relative;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.24);
-}
-.dialIcon{
-  position:absolute;
-  inset: 0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size: 34px;
-  filter: drop-shadow(0 6px 16px rgba(0,0,0,0.45));
-}
-.dialPointer{
-  position:absolute;
-  left: 50%;
-  top: 10px;
-  width: 4px;
-  height: 18px;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background: rgba(255,255,255,0.85);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.45);
-}
-
+/* Dial */
+.dialFixed{
+  position:fixed;
+  right:14px;
+  bottom:14px;
+  z-index:100;
+  pointer-events:auto;
+  background:transparent;
 /* Pomodoro */
-.pomoGrid{
-  display:grid;
-  grid-template-columns: 420px 1fr;
-  gap: 12px;
-  min-height: 0;
-}
-.pomoRingCard{ min-height: 420px; }
-
-.ringWrap{
-  position: relative;
+.pomoWrap{ max-width: 520px; }
+.pomoRing{
+  position:relative;
   width: 280px;
   height: 280px;
-  margin: 10px auto 6px auto;
-}
-.ringSvg{
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg); /* start uppifrån */
-}
-.ringBg{
-  fill: none;
-  stroke: rgba(255,255,255,0.12);
-  stroke-width: 10;
-}
-.ringProgress{
-  fill: none;
-  stroke: rgba(118,193,255,0.85);
-  stroke-width: 10;
-  stroke-linecap: round;
-  transition: stroke-dashoffset 160ms linear;
-}
-.ringCenter{
-  position:absolute;
-  inset: 0;
-  display:flex;
-  flex-direction: column;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-}
-.pomoTime{
-  font-size: 44px;
-  font-weight: 900;
-  letter-spacing: -0.6px;
-}
-.pomoMode{
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--muted);
-}
-.pomoBtns{
-  display:flex;
-  gap: 10px;
-  justify-content:center;
   margin-top: 8px;
 }
-
-/* Responsive: iPad (landscape/desktop) – vi behåller 3 kolumner men krymper lite */
-@media (max-width: 1180px){
-  .app{ grid-template-columns: 320px 1fr 320px; }
-  .pomoGrid{ grid-template-columns: 1fr; }
-  .ringWrap{ width: 260px; height: 260px; }
+.pomoSvg{ width:100%; height:100%; transform: rotate(-90deg); }
+.pomoTrack{ fill:none; stroke: rgba(255,255,255,.08); stroke-width: 16; }
+.pomoProg{
+  fill:none;
+  stroke: rgba(0,209,255,.85);
+  stroke-width: 16;
+  stroke-linecap: round;
+  filter: url(#pomoGlow);
+  stroke-dasharray: 578;
+  stroke-dashoffset: 0;
+  transition: stroke 180ms ease;
 }
+.pomoCenter{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  transform:none;
+}
+.pomoTime{ font-size: 42px; font-weight: 900; letter-spacing: -.5px; }
+.pomoSub{ margin-top: 6px; font-size: 12px; color: var(--muted); font-weight: 900; }
+.pomoBtns{ display:flex; gap:8px; flex-wrap:wrap; margin-top: 12px; }
 
-/* Extra: undvik “hoppscroll” pga overscroll */
-.panel, .rightInner{
-  overscroll-behavior: contain;
+/* Dial (used in mobile bottom right) */
+.dial{
+position:relative;
+  width: 182px;
+  height: 182px;
+  width: 150px;
+  height: 150px;
+display:grid;
+place-items:center;
+user-select:none;
+@@ -345,8 +383,8 @@ body{
+}
+.dialIcon{
+position:absolute;
+  width:52px;
+  height:52px;
+  width:46px;
+  height:46px;
+object-fit:contain;
+filter: drop-shadow(0 0 12px rgba(0,209,255,.22));
+}
+@@ -402,53 +440,95 @@ body{
+}
+.modalActions{ margin-top: 10px; display:flex; justify-content:flex-end; gap:10px; }
+
+/* Pomodoro */
+.pomoWrap{ max-width: 520px; }
+.pomoRing{
+  position:relative;
+  width: 280px;
+  height: 280px;
+  margin-top: 8px;
+/* Settings */
+.settingsForm{ margin-top:10px; }
+.settingsLabel{
+  display:block;
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(255,255,255,.86);
+  margin: 6px 0 6px;
+}
+.pomoSvg{ width:100%; height:100%; transform: rotate(-90deg); }
+.pomoTrack{ fill:none; stroke: rgba(255,255,255,.08); stroke-width: 16; }
+.pomoProg{
+  fill:none;
+  stroke: rgba(0,209,255,.85);
+  stroke-width: 16;
+  stroke-linecap: round;
+  filter: url(#pomoGlow);
+  stroke-dasharray: 578;
+  stroke-dashoffset: 0;
+  transition: stroke 180ms ease;
+.settingsInput{
+  width:100%;
+  background: rgba(0,0,0,.18);
+  border:1px solid rgba(255,255,255,.10);
+  border-radius: 12px;
+  padding: 10px;
+  color: rgba(255,255,255,.92);
+  font-size: 13px;
+  outline: none;
+}
+.pomoCenter{
+  position:absolute;
+  inset:0;
+.settingsInput:focus{
+  border-color: rgba(0,209,255,.35);
+  box-shadow: 0 0 0 3px rgba(0,209,255,.10);
+}
+.settingsHint{
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.settingsActions{
+  margin-top: 12px;
+display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  .pomoCenter{
+  ...
+  transform: none;
+  gap:10px;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+}
+.pomoTime{ font-size: 42px; font-weight: 900; letter-spacing: -.5px; }
+.pomoSub{ margin-top: 6px; font-size: 12px; color: var(--muted); font-weight: 900; }
+.pomoBtns{ display:flex; gap:8px; flex-wrap:wrap; margin-top: 12px; }
+
+/* Responsive */
+@media (max-width: 1100px){
+  .layout{ grid-template-columns: 240px 1fr 300px; }
+  .dial{ width: 172px; height: 172px; }
+  .dialIcon{ width: 50px; height: 50px; }
+  .pomoRing{ width: 270px; height: 270px; }
+  .weatherGrid{ grid-template-columns: 1fr; }
+}
+/* Desktop: hide mobile bottom */
+.mobileBottom{ display:none; }
+
+/* iPhone portrait layout */
+@media (max-width: 860px){
+  html,body{ overflow:auto; }
+  body{ overflow:auto; }
+  .layout{ grid-template-columns: 1fr; }
+  .dialFixed{ right:10px; bottom:10px; }
+  .calendarWrap{ height: 320px; }
+  html,body{ height:100%; overflow:hidden; }
+
+  .shell{ padding: 10px; max-width: 100%; }
+
+  .layout{
+    grid-template-columns: 1fr;
+    grid-template-rows: 25% 55% auto;
+    gap:10px;
+  }
+
+  .prioPanel{ display:none; } /* desktop prio hidden */
+
+  /* calendar bigger text */
+  .calScale{ width:120%; height:120%; transform: scale(.83); }
+
+  /* bottom zone */
+  .mobileBottom{
+    display:flex;
+    align-items:stretch;
+    justify-content:space-between;
+    gap:10px;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .mobileBottomLeft{
+    flex:1 1 auto;
+    border:1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.03);
+    border-radius: 16px;
+    padding: 12px 12px;
+    font-weight: 900;
+    font-size: 12px;
+    color: rgba(255,255,255,.86);
+    display:flex;
+    align-items:center;
+  }
+
+  .mobileBottomRight{
+    flex:0 0 auto;
+    border:1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.03);
+    border-radius: 16px;
+    padding: 6px;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+  }
+
+  .underNav{ gap:6px; padding:10px; }
+  .navBtn{ padding:7px 9px; font-size:11px; }
 }

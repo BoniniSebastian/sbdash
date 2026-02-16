@@ -85,9 +85,9 @@ body{
   min-height:0;
 }
 .calScale{
-  width:130%;
-  height:130%;
-  transform: scale(.65);
+  width:120%;
+  height:120%;
+  transform: scale(.72);
   transform-origin: top left;
 }
 .calFrame{
@@ -98,18 +98,22 @@ body{
   background:#0b1118;
 }
 .calOverlay{
-  position:absolute;
-  inset:0;
-  background: rgba(0,0,0,.58);
-  pointer-events:none;
-  mix-blend-mode: multiply;
+  display:none;
 }
+
 /* Calendar: compact + expand (glass handle under) */
 .calendarWrap{
-  height: 80px;          /* compact läge ≈ ~3 events */
-  max-height: 80px;
-  transition: height 220ms ease, max-height 220ms ease;
+  position:relative;
+  border-radius: 14px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.02);
+  box-shadow: none;                 /* ta bort tung shadow */
+  height: 95px;                     /* lagom strip */
+  max-height: 95px;
+  padding: 0;                       /* viktigt */
 }
+
 
 /* Expanded */
 .calendarWrap.calExpanded{
@@ -117,22 +121,7 @@ body{
   max-height: 560px;
 }
 
-/* Handle under calendar (glass) */
-.calHandle{
-  border-radius: 12px;
-  border:1px solid rgba(255,255,255,.06);
-  background: rgba(255,255,255,.04);
-  backdrop-filter: blur(14px);
-  padding: 6px 10px;
-  cursor: pointer;
-  user-select: none;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:6px;
-  opacity:.65;
-  transition: opacity 180ms ease, background 180ms ease;
-}
+
 
 .calHandle:hover{
   opacity:1;

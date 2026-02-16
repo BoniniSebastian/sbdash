@@ -275,8 +275,8 @@ body{
   stroke:rgba(0,209,255,.7);
   stroke-width:2;
   stroke-dasharray:400;
-  stroke-dashoffset:0;
-  transition: stroke 180ms ease;
+  stroke-dashoffset:400; /* HELT dold från start */
+  transition: stroke 180ms ease, stroke-dashoffset 200ms linear;
 }
 
 /* ================= FORMS ================= */

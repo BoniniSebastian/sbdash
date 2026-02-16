@@ -135,7 +135,55 @@ body{
   padding:10px 10px 8px;
   border-bottom:1px solid rgba(255,255,255,.06);
   flex:0 0 auto;
+}/* Timer bar under Main-rubrik */
+.timerBar{
+  display:none;                 /* hidden by default */
+  width: 260px;
+  max-width: 44vw;
+  margin-left: auto;
+  gap: 6px;
 }
+
+.timerBar.show{ display:flex; flex-direction:column; }
+
+.timerBarTop{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.timerBarTime{
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(255,255,255,.92);
+  letter-spacing: .2px;
+}
+
+.timerBarLabel{
+  font-size: 11px;
+  font-weight: 900;
+  color: rgba(255,255,255,.55);
+}
+
+.timerBarTrack{
+  width:100%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.10);
+  overflow:hidden;
+}
+
+.timerBarFill{
+  height:100%;
+  width:100%;
+  border-radius: 999px;
+  background: rgba(0,209,255,.85);
+  transform-origin: left center;
+  transform: scaleX(1);
+  transition: transform 160ms linear, background 180ms ease;
+}
+
 .panelHead h2{margin:0; font-size:13px; letter-spacing:.3px}
 .countPill{
   font-size:12px;

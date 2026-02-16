@@ -4,245 +4,130 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>SB Dash</title>
-  <link rel="stylesheet" href="style.css?v=409" />
+  <link rel="stylesheet" href="style.css?v=501" />
 </head>
 <body>
 
-  <header class="topbar">
-    <div class="brand">
-      <div class="brandDot"></div>
-      <div>
-        <div class="brandTitle">SB Dash</div>
-        <div class="brandSub">Control dashboard</div>
-      </div>
-    </div>
-
-    <div class="topDate" id="todayText">—</div>
-    <div class="topRight"></div>
-  </header>
-
-  <main class="shell">
-    <section class="layout">
-
-      <!-- VÄNSTER: Google Kalender (FRILAGD, ingen panel) -->
-      <aside class="calendarWrap">
-        <div class="calScale">
-          <iframe
-            class="calFrame"
-            src="https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0"
-            frameborder="0"
-            scrolling="no">
-          </iframe>
-        </div>
-        <div class="calOverlay" aria-hidden="true"></div>
-      </aside>
-      
-     
-
-</div>
-
-
-      <!-- MITTEN: Main -->
-    <section class="panel mainPanel">
-  <div class="panelHead">
-    <h2>Main</h2>
-
-    <!-- Timer bar (hidden until running) -->
-    <div class="timerBar" id="timerBar" aria-hidden="true">
-      <div class="timerBarTop">
-        <span class="timerBarTime" id="timerBarTime">00:00</span>
-        <span class="timerBarLabel" id="timerBarLabel">Timer</span>
-      </div>
-      <div class="timerBarTrack">
-        <div class="timerBarFill" id="timerBarFill"></div>
-      </div>
+<header class="topbar">
+  <div class="brand">
+    <div class="brandDot"></div>
+    <div>
+      <div class="brandTitle">SB Dash</div>
+      <div class="brandSub">Control dashboard</div>
     </div>
   </div>
+  <div class="topDate" id="todayText">—</div>
+</header>
 
+<main class="shell">
+  <section class="layout">
 
-        <div class="panelBody mainBody">
-          <div class="viewTrack" id="viewTrack">
+    <!-- MAIN (ONLY PANEL NOW) -->
+    <section class="panel mainPanel">
 
-            <!-- 1) WEATHER -->
-            <div class="viewPage" data-view="weather">
-              <div class="viewTitle">Väder</div>
+      <!-- Timer border -->
+      <svg class="mainBorderSvg" viewBox="0 0 100 100" aria-hidden="true">
+        <rect class="mainBorderTrack" x="2" y="2" width="96" height="96" rx="12"></rect>
+        <rect class="mainBorderProg" id="mainBorderProg" x="2" y="2" width="96" height="96" rx="12"></rect>
+      </svg>
 
-              <div class="weatherCard">
-                <div class="weatherRow">
-                  <div class="weatherIcon" id="weatherIcon">⛅️</div>
-                  <div class="weatherBig">
-                    <div class="weatherTemp" id="weatherTemp">—°</div>
-                    <div class="weatherDesc" id="weatherDesc">Laddar…</div>
-                  </div>
-                </div>
+      <div class="panelHead">
+        <h2>Main</h2>
+      </div>
 
-                <div class="weatherGrid">
-                  <div class="wCell">
-                    <div class="wLabel">Vind</div>
-                    <div class="wValue" id="weatherWind">—</div>
-                  </div>
-                  <div class="wCell">
-                    <div class="wLabel">Plats</div>
-                    <div class="wValue" id="weatherPlace">—</div>
-                  </div>
-                  <div class="wCell">
-                    <div class="wLabel">Uppdaterad</div>
-                    <div class="wValue" id="weatherUpdated">—</div>
-                  </div>
-                </div>
+      <div class="panelBody mainBody">
+        <div class="viewTrack" id="viewTrack">
 
-                <div class="tomorrowBox">
-                  <div class="tomLabel">Imorgon</div>
-                  <div class="tomRow">
-                    <div class="tomIcon" id="tomIcon">🌥️</div>
-                    <div class="tomText" id="tomText">—</div>
-                  </div>
-                </div>
-
-                <div class="miniActions">
-                  <button id="weatherRefreshBtn" class="miniBtn ghost">Uppdatera</button>
-                </div>
+          <!-- 1) CALENDAR -->
+          <div class="viewPage" data-view="calendar">
+            <div class="viewTitle">Kalender</div>
+            <div class="calCard">
+              <div class="calScale">
+                <iframe
+                  class="calFrame"
+                  src="https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0"
+                  frameborder="0"
+                  scrolling="no">
+                </iframe>
               </div>
             </div>
+          </div>
 
-            <!-- 2) NEWS -->
-            <div class="viewPage" data-view="news" id="newsPage">
-              <div class="viewTitle">Nyheter</div>
-              <div class="pullHint" id="newsPullHint">Dra ned för att uppdatera</div>
-              <div id="newsMeta" class="miniHint" style="margin-top:6px;">Laddar…</div>
-              <ul id="newsList" class="miniList" style="margin-top:10px;"></ul>
-            </div>
+          <!-- 2) WEATHER -->
+          <div class="viewPage" data-view="weather">
+            <div class="viewTitle">Väder</div>
+            <div id="weatherContent">Laddar…</div>
+          </div>
 
-            <!-- 3) TODO -->
-            <div class="viewPage" data-view="todo">
-              <div class="viewTitle">Att göra</div>
-              <div class="miniForm">
-                <input id="todoInput" class="miniInput" type="text" placeholder="Skriv en uppgift…" maxlength="120">
-                <button id="todoAddBtn" class="miniBtn">+ Lägg</button>
-              </div>
-              <ul id="todoList" class="miniList"></ul>
-              <div class="miniHint">Swipe höger→vänster = slutför</div>
-            </div>
+          <!-- 3) NEWS -->
+          <div class="viewPage" data-view="news">
+            <div class="viewTitle">Nyheter</div>
+            <ul id="newsList"></ul>
+          </div>
 
-            <!-- 4) IDEAS -->
-            <div class="viewPage" data-view="ideas">
-              <div class="viewTitle">Idéer</div>
-              <div class="miniForm">
-                <input id="ideaInput" class="miniInput" type="text" placeholder="Skriv en idé…" maxlength="160">
-                <button id="ideaAddBtn" class="miniBtn">+ Spara</button>
-              </div>
-              <ul id="ideasList" class="miniList"></ul>
-              <div class="miniHint">Swipe höger→vänster = arkivera (till Slutförda)</div>
-            </div>
+          <!-- 4) TODO -->
+          <div class="viewPage" data-view="todo">
+            <div class="viewTitle">Att göra</div>
+            <input id="todoInput" placeholder="Ny uppgift" />
+            <button id="todoAddBtn">Lägg</button>
+            <ul id="todoList"></ul>
+          </div>
 
-            <!-- 5) DONE -->
-            <div class="viewPage" data-view="done">
-              <div class="viewTitle">Slutförda</div>
-              <ul id="doneList" class="miniList"></ul>
-              <div class="miniActions">
-                <button id="doneClearBtn" class="miniBtn ghost">Rensa slutförda</button>
-              </div>
-              <div class="miniHint">↩︎ återställ till rätt lista (prio/todo/idéer)</div>
-            </div>
+          <!-- 5) IDEAS -->
+          <div class="viewPage" data-view="ideas">
+            <div class="viewTitle">Idéer</div>
+            <input id="ideaInput" placeholder="Ny idé" />
+            <button id="ideaAddBtn">Spara</button>
+            <ul id="ideasList"></ul>
+          </div>
 
-            <!-- 6) POMODORO -->
-            <div class="viewPage" data-view="pomodoro">
-              <div class="viewTitle">Timer</div>
+          <!-- 6) DONE -->
+          <div class="viewPage" data-view="done">
+            <div class="viewTitle">Slutförda</div>
+            <ul id="doneList"></ul>
+          </div>
 
-              <div class="pomoWrap">
+          <!-- 7) AKTIV PRIO (NEW IN MAIN) -->
+          <div class="viewPage" data-view="prio">
+            <div class="viewTitle">Aktiv prio</div>
+
+            <input id="prioInput" placeholder="Ny superprio" />
+            <button id="prioAddBtn">Lägg</button>
+
+            <ul id="prioList"></ul>
+          </div>
+
+          <!-- 8) TIMER -->
+          <div class="viewPage" data-view="timer">
+            <div class="viewTitle">Timer</div>
+
+            <div class="timerWrap">
+              <div class="timerRow">
                 <div class="pomoRing">
-                  <svg class="pomoSvg" viewBox="0 0 240 240" aria-hidden="true">
-                    <defs>
-                      <filter id="pomoGlow" x="-50%" y="-50%" width="200%" height="200%">
-                        <feGaussianBlur stdDeviation="4" result="blur"/>
-                        <feMerge>
-                          <feMergeNode in="blur"/>
-                          <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
-                      </filter>
-                    </defs>
-
-                    <circle class="pomoTrack" cx="120" cy="120" r="92" transform="rotate(-90 120 120)"></circle>
-<circle class="pomoProg" id="pomoProg" cx="120" cy="120" r="92" transform="rotate(-90 120 120)"></circle>
-
+                  <svg viewBox="0 0 240 240">
+                    <circle cx="120" cy="120" r="92" class="pomoTrack"></circle>
+                    <circle cx="120" cy="120" r="92" class="pomoProg" id="pomoProg"></circle>
                   </svg>
-
                   <div class="pomoCenter">
-                    <div class="pomoTime" id="pomoTime">05:00</div>
-                    <div class="pomoSub" id="pomoSub">Redo</div>
+                    <div id="pomoTime">05:00</div>
                   </div>
                 </div>
 
-                <div class="pomoBtns">
-                  <button class="miniBtn ghost" data-pomo="5">5</button>
-                  <button class="miniBtn ghost" data-pomo="10">10</button>
-                  <button class="miniBtn ghost" data-pomo="15">15</button>
-                  <button class="miniBtn" id="pomoStartBtn">Start</button>
-                  <button class="miniBtn ghost" id="pomoResetBtn">Reset</button>
+                <div class="timerButtons">
+                  <button id="pomoStartBtn">Start</button>
+                  <button id="pomoResetBtn">Reset</button>
                 </div>
-
-                <div class="miniHint">Ring: cyan → orange → röd när tiden går ner</div>
               </div>
             </div>
-
-          </div>
-        </div>
-
-        <div class="underNav" id="underNav">
-          <button class="navBtn active" data-view="weather">Väder</button>
-          <button class="navBtn" data-view="news">Nyheter</button>
-          <button class="navBtn" data-view="todo">Att göra</button>
-          <button class="navBtn" data-view="ideas">Idéer</button>
-          <button class="navBtn" data-view="done">Slutförda</button>
-          <button class="navBtn" data-view="pomodoro">Timer</button>
-        </div>
-      </section>
-
-      <!-- HÖGER: Aktiv prio -->
-      <aside class="panel prioPanel">
-        <div class="panelHead">
-          <h2>Aktiv prio</h2>
-          <span class="countPill" id="prioCount">0</span>
-        </div>
-
-        <div class="panelBody">
-          <div class="miniForm" style="margin-top:0;">
-            <input id="prioInput" class="miniInput" type="text" placeholder="Lägg till superprio…" maxlength="160">
-            <button id="prioAddBtn" class="miniBtn">+ Lägg</button>
           </div>
 
-          <ul class="miniList" id="prioList"></ul>
-          <div class="miniHint">Tryck = öppna • Swipe = slutför</div>
         </div>
-      </aside>
+      </div>
 
     </section>
-  </main>
+  </section>
+</main>
 
-  <!-- FIXED DIAL -->
-  <div class="dialFixed" aria-label="Ratt">
-    <div class="dial" id="dial">
-      <img class="dialRing" id="dialRing" src="assets/ui/knob-ring.svg" alt="Knob ring">
-      <img class="dialIcon" id="dialIcon" src="assets/ui/icon-weather.svg" alt="Dial icon">
-    </div>
-  </div>
-
-  <!-- Modal (prio edit) -->
-  <div class="modalOverlay" id="modalOverlay" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-label="Detaljvy">
-      <div class="modalHead">
-        <div class="modalTitle">Aktiv prio</div>
-        <button class="modalClose" id="modalCloseBtn">✕</button>
-      </div>
-
-      <textarea class="modalEdit" id="modalEdit" placeholder="Skriv här…"></textarea>
-
-      <div class="modalActions">
-        <button class="miniBtn" id="modalDoneBtn">Slutför</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="app.js?v=407"></script>
+<script src="app.js?v=501"></script>
 </body>
 </html>

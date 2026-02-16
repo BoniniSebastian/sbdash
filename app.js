@@ -866,17 +866,23 @@
     dragStart = null;
   };
 
-  sheet?.addEventListener("pointerup", endDrag, { passive: true });
-  sheet?.addEventListener("pointercancel", () => {
-    sheet.style.transform = "";
-    sheet.classList.remove("dragging");
-    dragStart = null;
-  }, { passive: true });
-  sheet?.addEventListener("lostpointercapture", () => {
-    sheet.style.transform = "";
-    sheet.classList.remove("dragging");
-    dragStart = null;
-  }, { passive: true });
+sheet?.addEventListener("pointerup", () => {
+  sheet.style.transform = "";
+  sheet.classList.remove("dragging");
+  dragStart = null;
+}, { passive: true });
+
+sheet?.addEventListener("pointercancel", () => {
+  sheet.style.transform = "";
+  sheet.classList.remove("dragging");
+  dragStart = null;
+}, { passive: true });
+
+sheet?.addEventListener("lostpointercapture", () => {
+  sheet.style.transform = "";
+  sheet.classList.remove("dragging");
+  dragStart = null;
+}, { passive: true });
 
   // ---------- Init ----------
   // start: sheet stängd, men wheel preview synlig

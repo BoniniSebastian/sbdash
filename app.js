@@ -1,773 +1,262 @@
-/* =========================
-   SB Dash (Stable iPad/Desktop)
-   - Left: Google Calendar embed (agenda)
-   - Center: Panels (weather/news/todo/ideas/done/pomodoro)
-   - Right: Active prio
-   - Bottom-right: Dial to switch view + live icon
-   - Pomodoro: SVG ring drains correctly
-   - Storage: localStorage
-   ========================= */
+}
+attachPullToRefresh(newsPage, newsPullHint, loadNews);
 
-/** ====== CONFIG ====== **/
-const CALENDAR_EMBED_SRC = ""; 
-// 1) Gå till Google Kalender -> Inställningar -> din kalender -> Integrera kalender
-// 2) Kopiera iframe src (agenda/standard)
-// 3) Klistra här som sträng, ex:
-// const CALENDAR_EMBED_SRC = "https://calendar.google.com/calendar/embed?mode=AGENDA&...";
+  // ---------- WEATHER ----------
+  const weatherIconEl = $("weatherIcon");
+  const weatherTempEl = $("weatherTemp");
+  const weatherDescEl = $("weatherDesc");
+  const weatherWindEl = $("weatherWind");
+  const weatherPlaceEl = $("weatherPlace");
+  const weatherUpdatedEl = $("weatherUpdated");
+  const weatherRefreshBtn = $("weatherRefreshBtn");
+  const tomIconEl = $("tomIcon");
+  const tomTextEl = $("tomText");
 
-const NEWS_RSS_URL = "https://www.svt.se/nyheter/rss.xml"; // kan bytas
-const WEATHER_LAT = 59.3293; // Stockholm
-const WEATHER_LON = 18.0686;
+  function iconForCode(code) {
+    if (code === 0) return "☀️";
+    if (code === 1 || code === 2) return "🌤️";
+    if (code === 3) return "☁️";
+    if (code === 45 || code === 48) return "🌫️";
+    if ([51,53,55,61,63,65,80,81,82].includes(code)) return "🌧️";
+    if ([71,73,75].includes(code)) return "🌨️";
+    if ([95,96,99].includes(code)) return "⛈️";
+    return "⛅️";
+  // ---------- Weather ----------
+const weatherIconEl = $("weatherIcon");
+const weatherTempEl = $("weatherTemp");
+const weatherDescEl = $("weatherDesc");
+const weatherWindEl = $("weatherWind");
+const weatherPlaceEl = $("weatherPlace");
+const weatherUpdatedEl = $("weatherUpdated");
+const weatherRefreshBtn = $("weatherRefreshBtn");
+const tomIconEl = $("tomIcon");
+const tomTextEl = $("tomText");
 
-/** ====== VIEWS ====== **/
-const VIEWS = [
-  { key: "weather",  title: "Väder",    sub: "Stockholm (Open-Meteo)", icon: "☀️" },
-  { key: "news",     title: "Nyheter",  sub: "RSS (fallback om CORS)",  icon: "📰" },
-  { key: "todo",     title: "Todo",     sub: "Att göra",               icon: "✅" },
-  { key: "ideas",    title: "Ideas",    sub: "Tankar & idéer",         icon: "💡" },
-  { key: "done",     title: "Done",     sub: "Avklarat",               icon: "🏁" },
-  { key: "pomodoro", title: "Pomodoro", sub: "Fokusblock",             icon: "⏱️" },
-];
+const WEATHER_CACHE_KEY = "sbdash_weather_cache_v4";
 
-let currentIndex = 0;
+function iconForCode(code) {
+  if (code === 0) return "☀️";
+  if (code === 1 || code === 2) return "🌤️";
+  if (code === 3) return "☁️";
+  if (code === 45 || code === 48) return "🌫️";
+  if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) return "🌧️";
+  if ([71, 73, 75].includes(code)) return "🌨️";
+  if ([95, 96, 99].includes(code)) return "⛈️";
+  return "⛅️";
+}
+function textForCode(code) {
+  const m = {
+    0: "Klart",
+    1: "Mestadels klart",
+    2: "Delvis molnigt",
+    3: "Mulet",
+    45: "Dimma",
+    48: "Isdimma",
+    51: "Duggregn (lätt)",
+    53: "Duggregn",
+    55: "Duggregn (kraftigt)",
+    61: "Regn (lätt)",
+    63: "Regn",
+    65: "Regn (kraftigt)",
+    71: "Snö (lätt)",
+    73: "Snö",
+    75: "Snö (kraftigt)",
+    80: "Skurar (lätta)",
+    81: "Skurar",
+    82: "Skurar (kraftiga)",
+    95: "Åska",
+    96: "Åska + hagel",
+    99: "Åska + hagel",
+  };
+  return m[code] || `Väderkod ${code}`;
+}
 
-/** ====== STORAGE ====== **/
-const LS = {
-  todo: "sbdash.todo.v1",
-  ideas: "sbdash.ideas.v1",
-  done: "sbdash.done.v1",
-  prio: "sbdash.prio.v1",
-  pomo: "sbdash.pomo.v1",
-};
+function saveWeatherCache(payload) {
+  try { localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify(payload)); } catch {}
+}
+function loadWeatherCache() {
+  try { return JSON.parse(localStorage.getItem(WEATHER_CACHE_KEY) || "null"); } catch { return null; }
+}
 
-function loadList(key, fallback = []) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : fallback;
-  } catch {
-    return fallback;
+function setWeatherUI({ t, w, code, placeLabel, updatedTs, tomCode, tomMin, tomMax }) {
+  if (weatherIconEl) weatherIconEl.textContent = iconForCode(code);
+  if (weatherTempEl) weatherTempEl.textContent = `${t}°`;
+  if (weatherDescEl) weatherDescEl.textContent = textForCode(code);
+  if (weatherWindEl) weatherWindEl.textContent = `${w} m/s`;
+  if (weatherPlaceEl) weatherPlaceEl.textContent = placeLabel;
+
+  if (weatherUpdatedEl) {
+    weatherUpdatedEl.textContent = new Date(updatedTs).toLocaleString("sv-SE", {
+      hour: "2-digit",
+      minute: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+    });
+}
+
+  function textForCode(code) {
+    const m = {
+      0:"Klart",1:"Mestadels klart",2:"Delvis molnigt",3:"Mulet",
+      45:"Dimma",48:"Isdimma",
+      51:"Duggregn (lätt)",53:"Duggregn",55:"Duggregn (kraftigt)",
+      61:"Regn (lätt)",63:"Regn",65:"Regn (kraftigt)",
+      71:"Snö (lätt)",73:"Snö",75:"Snö (kraftigt)",
+      80:"Skurar (lätta)",81:"Skurar",82:"Skurar (kraftiga)",
+      95:"Åska",96:"Åska + hagel",99:"Åska + hagel"
+    };
+    return m[code] || `Väderkod ${code}`;
   }
-}
-function saveList(key, list) {
-  localStorage.setItem(key, JSON.stringify(list));
-}
-
-let todo  = loadList(LS.todo);
-let ideas = loadList(LS.ideas);
-let done  = loadList(LS.done);
-let prio  = loadList(LS.prio);
-
-/** ====== DOM ====== **/
-const $ = (id) => document.getElementById(id);
-
-const todayText = $("todayText");
-const viewTitle = $("viewTitle");
-const viewSubtitle = $("viewSubtitle");
-
-const panels = Array.from(document.querySelectorAll(".panel"));
-const dial = $("dial");
-const dialIcon = $("dialIcon");
-const dialViewLabel = $("dialViewLabel");
-
-const gcalFrame = $("gcalFrame");
-const calendarPlaceholder = $("calendarPlaceholder");
-
-/** ====== DATE ====== **/
-function setDates() {
-  const now = new Date();
-  const weekday = now.toLocaleDateString("sv-SE", { weekday: "long" });
-  const date = now.toLocaleDateString("sv-SE", { day: "2-digit", month: "long", year: "numeric" });
-  todayText.textContent = `${weekday} ${date}`;
-}
-setDates();
-
-/** ====== CALENDAR ====== **/
-function initCalendar() {
-  if (CALENDAR_EMBED_SRC && CALENDAR_EMBED_SRC.trim().length > 0) {
-    gcalFrame.src = CALENDAR_EMBED_SRC.trim();
-    gcalFrame.style.opacity = "1";
-    calendarPlaceholder.style.display = "none";
-  } else {
-    gcalFrame.removeAttribute("src");
-    gcalFrame.style.opacity = "0";
-    calendarPlaceholder.style.display = "flex";
-  }
-}
-initCalendar();
-
-/** ====== VIEW SWITCHING ====== **/
-function setActiveView(index) {
-  const safeIndex = (index + VIEWS.length) % VIEWS.length;
-  currentIndex = safeIndex;
-
-  const v = VIEWS[currentIndex];
-
-  // panel show/hide (no transform = no “hopps”)
-  panels.forEach(p => p.classList.toggle("active", p.dataset.view === v.key));
-
-  // header
-  viewTitle.textContent = v.title;
-  viewSubtitle.textContent = v.sub;
-
-  // dial
-  dialIcon.textContent = v.icon;
-  dialViewLabel.textContent = v.title;
-  dial.setAttribute("aria-valuenow", String(currentIndex));
-
-  // rotate dial pointer by setting CSS transform on face
-  // We rotate the entire face while pointer stays at top.
-  const face = dial.querySelector(".dialFace");
-  const angle = indexToAngle(currentIndex);
-  face.style.transform = `rotate(${angle}deg)`;
-
-  // lazy refresh per view
-  if (v.key === "weather") loadWeather();
-  if (v.key === "news") loadNews();
-  if (v.key === "todo") renderTodo();
-  if (v.key === "ideas") renderIdeas();
-  if (v.key === "done") renderDone();
-  if (v.key === "pomodoro") renderPomodoroNoteState();
+  if (tomIconEl) tomIconEl.textContent = iconForCode(tomCode);
+  if (tomTextEl) tomTextEl.textContent = `${textForCode(tomCode)} • ${tomMin}°–${tomMax}°`;
 }
 
-function indexToAngle(i) {
-  // 6 views -> 60° steps, centered
-  const step = 360 / VIEWS.length;
-  return i * step;
+// Rimlighetsfilter (så vi aldrig visar tokvärden)
+function clampReasonableTempC(t) {
+  // Sverige: vi tillåter stort spann, men stoppar absurda fel
+  if (typeof t !== "number" || Number.isNaN(t)) return null;
+  if (t > 35 || t < -40) return null;
+  return t;
 }
 
-setActiveView(0);
+async function fetchWeather(lat, lon) {
+  const url =
+    `https://api.open-meteo.com/v1/forecast` +
+    `?latitude=${encodeURIComponent(lat)}` +
+    `&longitude=${encodeURIComponent(lon)}` +
+    `&current=temperature_2m,wind_speed_10m,weather_code` +
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
+    `&forecast_days=2` +
+    `&temperature_unit=celsius` +           // <-- tvinga Celsius
+    `&wind_speed_unit=ms` +
+    `&timezone=Europe%2FStockholm`;
 
-/** ====== DIAL INTERACTION (drag + wheel + keyboard) ====== **/
-let dragging = false;
-
-function pointerToAngle(e) {
-  const rect = dial.getBoundingClientRect();
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-
-  const x = (e.clientX ?? (e.touches && e.touches[0].clientX)) - cx;
-  const y = (e.clientY ?? (e.touches && e.touches[0].clientY)) - cy;
-
-  // angle where 0 is up
-  const rad = Math.atan2(y, x);
-  let deg = (rad * 180) / Math.PI;
-  deg = deg + 90; // rotate so “up” is 0
-  if (deg < 0) deg += 360;
-  return deg;
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error("Weather fetch failed");
+  return r.json();
 }
-
-function angleToIndex(deg) {
-  const step = 360 / VIEWS.length;
-  const i = Math.round(deg / step) % VIEWS.length;
-  return i;
-}
-
-function onDialPointerDown(e) {
-  dragging = true;
-  dial.setPointerCapture?.(e.pointerId);
-  e.preventDefault();
-}
-function onDialPointerMove(e) {
-  if (!dragging) return;
-  const deg = pointerToAngle(e);
-  const idx = angleToIndex(deg);
-  if (idx !== currentIndex) setActiveView(idx);
-}
-function onDialPointerUp(e) {
-  dragging = false;
-  try { dial.releasePointerCapture?.(e.pointerId); } catch {}
-}
-
-dial.addEventListener("pointerdown", onDialPointerDown);
-dial.addEventListener("pointermove", onDialPointerMove);
-dial.addEventListener("pointerup", onDialPointerUp);
-dial.addEventListener("pointercancel", onDialPointerUp);
-
-dial.addEventListener("wheel", (e) => {
-  e.preventDefault();
-  const dir = Math.sign(e.deltaY);
-  setActiveView(currentIndex + (dir > 0 ? 1 : -1));
-}, { passive: false });
-
-dial.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowRight" || e.key === "ArrowDown") setActiveView(currentIndex + 1);
-  if (e.key === "ArrowLeft" || e.key === "ArrowUp") setActiveView(currentIndex - 1);
-});
-
-/** ====== ACTIVE PRIO ====== **/
-const prioInput = $("prioInput");
-const addPrioBtn = $("addPrio");
-const activePrioList = $("activePrioList");
-
-function renderPrio() {
-  if (!prio.length) {
-    activePrioList.innerHTML = `<div class="muted">Inget i Aktiv prio ännu.</div>`;
-    return;
-  }
-
-  activePrioList.innerHTML = "";
-  prio.forEach((text, idx) => {
-    const el = document.createElement("div");
-    el.className = "rowItem";
-    el.innerHTML = `
-      <div class="rowLeft">
-        <div class="rowText">${escapeHtml(text)}</div>
-      </div>
-      <div class="rowActions">
-        <button class="ghostBtn" data-act="up" data-i="${idx}">↑</button>
-        <button class="ghostBtn" data-act="down" data-i="${idx}">↓</button>
-        <button class="dangerBtn" data-act="del" data-i="${idx}">X</button>
-      </div>
-    `;
-    activePrioList.appendChild(el);
-  });
-}
-renderPrio();
-
-addPrioBtn.addEventListener("click", () => {
-  const val = (prioInput.value || "").trim();
-  if (!val) return;
-  prio.unshift(val);
-  prioInput.value = "";
-  saveList(LS.prio, prio);
-  renderPrio();
-});
-
-activePrioList.addEventListener("click", (e) => {
-  const btn = e.target.closest("button");
-  if (!btn) return;
-  const i = Number(btn.dataset.i);
-  const act = btn.dataset.act;
-
-  if (act === "del") prio.splice(i, 1);
-  if (act === "up" && i > 0) [prio[i-1], prio[i]] = [prio[i], prio[i-1]];
-  if (act === "down" && i < prio.length - 1) [prio[i+1], prio[i]] = [prio[i], prio[i+1]];
-
-  saveList(LS.prio, prio);
-  renderPrio();
-});
-
-/** ====== TODO / IDEAS / DONE ====== **/
-const todoInput = $("todoInput");
-const addTodo = $("addTodo");
-const todoList = $("todoList");
-
-const ideaInput = $("ideaInput");
-const addIdea = $("addIdea");
-const ideasList = $("ideasList");
-
-const doneList = $("doneList");
-const clearDone = $("clearDone");
-
-addTodo.addEventListener("click", () => {
-  const t = (todoInput.value || "").trim();
-  if (!t) return;
-  todo.unshift(t);
-  todoInput.value = "";
-  saveList(LS.todo, todo);
-  renderTodo();
-});
-
-addIdea.addEventListener("click", () => {
-  const t = (ideaInput.value || "").trim();
-  if (!t) return;
-  ideas.unshift(t);
-  ideaInput.value = "";
-  saveList(LS.ideas, ideas);
-  renderIdeas();
-});
-
-clearDone.addEventListener("click", () => {
-  done = [];
-  saveList(LS.done, done);
-  renderDone();
-});
-
-function renderTodo() {
-  if (!todo.length) {
-    todoList.innerHTML = `<div class="muted">Tomt.</div>`;
-    return;
-  }
-  todoList.innerHTML = "";
-  todo.forEach((text, idx) => {
-    const el = document.createElement("div");
-    el.className = "rowItem";
-    el.innerHTML = `
-      <div class="rowLeft">
-        <div class="rowText">${escapeHtml(text)}</div>
-      </div>
-      <div class="rowActions">
-        <button class="ghostBtn" data-act="prio" data-i="${idx}">Prio</button>
-        <button class="primaryBtn" data-act="done" data-i="${idx}">Klar</button>
-        <button class="dangerBtn" data-act="del" data-i="${idx}">X</button>
-      </div>
-    `;
-    todoList.appendChild(el);
-  });
-}
-
-function renderIdeas() {
-  if (!ideas.length) {
-    ideasList.innerHTML = `<div class="muted">Tomt.</div>`;
-    return;
-  }
-  ideasList.innerHTML = "";
-  ideas.forEach((text, idx) => {
-    const el = document.createElement("div");
-    el.className = "rowItem";
-    el.innerHTML = `
-      <div class="rowLeft">
-        <div class="rowText">${escapeHtml(text)}</div>
-      </div>
-      <div class="rowActions">
-        <button class="ghostBtn" data-act="todo" data-i="${idx}">Till Todo</button>
-        <button class="dangerBtn" data-act="del" data-i="${idx}">X</button>
-      </div>
-    `;
-    ideasList.appendChild(el);
-  });
-}
-
-function renderDone() {
-  if (!done.length) {
-    doneList.innerHTML = `<div class="muted">Inget klart ännu.</div>`;
-    return;
-  }
-  doneList.innerHTML = "";
-  done.forEach((text, idx) => {
-    const el = document.createElement("div");
-    el.className = "rowItem";
-    el.innerHTML = `
-      <div class="rowLeft">
-        <div class="rowText">${escapeHtml(text)}</div>
-      </div>
-      <div class="rowActions">
-        <button class="ghostBtn" data-act="back" data-i="${idx}">Till Todo</button>
-        <button class="dangerBtn" data-act="del" data-i="${idx}">X</button>
-      </div>
-    `;
-    doneList.appendChild(el);
-  });
-}
-
-todoList.addEventListener("click", (e) => {
-  const btn = e.target.closest("button");
-  if (!btn) return;
-  const i = Number(btn.dataset.i);
-  const act = btn.dataset.act;
-
-  if (act === "del") {
-    todo.splice(i, 1);
-  } else if (act === "done") {
-    const item = todo.splice(i, 1)[0];
-    done.unshift(item);
-    saveList(LS.done, done);
-  } else if (act === "prio") {
-    const item = todo[i];
-    if (item) prio.unshift(item);
-    saveList(LS.prio, prio);
-    renderPrio();
-  }
-
-  saveList(LS.todo, todo);
-  renderTodo();
-});
-
-ideasList.addEventListener("click", (e) => {
-  const btn = e.target.closest("button");
-  if (!btn) return;
-  const i = Number(btn.dataset.i);
-  const act = btn.dataset.act;
-
-  if (act === "del") {
-    ideas.splice(i, 1);
-  } else if (act === "todo") {
-    const item = ideas.splice(i, 1)[0];
-    todo.unshift(item);
-    saveList(LS.todo, todo);
-    renderTodo();
-  }
-
-  saveList(LS.ideas, ideas);
-  renderIdeas();
-});
-
-doneList.addEventListener("click", (e) => {
-  const btn = e.target.closest("button");
-  if (!btn) return;
-  const i = Number(btn.dataset.i);
-  const act = btn.dataset.act;
-
-  if (act === "del") {
-    done.splice(i, 1);
-  } else if (act === "back") {
-    const item = done.splice(i, 1)[0];
-    todo.unshift(item);
-    saveList(LS.todo, todo);
-    renderTodo();
-  }
-
-  saveList(LS.done, done);
-  renderDone();
-});
-
-/** ====== WEATHER (Open-Meteo) ====== **/
-const weatherCard = $("weatherCard");
-const weatherHours = $("weatherHours");
-const wWind = $("wWind");
-const wRain = $("wRain");
-$("refreshWeather").addEventListener("click", loadWeather);
-
-let weatherLoading = false;
 
 async function loadWeather() {
-  if (weatherLoading) return;
-  weatherLoading = true;
+  if (weatherDescEl) weatherDescEl.textContent = "Laddar…";
 
+  const nowTs = Date.now();
+
+  // 1) Försök geolocation
+  const tryGeo = () =>
+    new Promise((resolve, reject) => {
+      if (!navigator.geolocation) return reject(new Error("no geolocation"));
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: false,
+        timeout: 7000,
+        maximumAge: 30 * 60 * 1000,
+      });
+    });
+
+  function getSavedCity() {
+    const name = (localStorage.getItem(LS_CITY_NAME) || "").trim() || DEFAULT_CITY_NAME;
+    const lat = Number(localStorage.getItem(LS_CITY_LAT));
+    const lon = Number(localStorage.getItem(LS_CITY_LON));
+    if (Number.isFinite(lat) && Number.isFinite(lon)) return { name, lat, lon };
+    return { name: DEFAULT_CITY_NAME, lat: DEFAULT_CITY_LAT, lon: DEFAULT_CITY_LON };
+  }
   try {
+    let lat = 59.3293, lon = 18.0686;
+    let placeLabel = "Stockholm (fallback)";
+
+  async function fetchWeather(lat, lon, label) {
     const url =
       `https://api.open-meteo.com/v1/forecast` +
-      `?latitude=${WEATHER_LAT}&longitude=${WEATHER_LON}` +
-      `&hourly=temperature_2m,precipitation,weathercode,windspeed_10m` +
-      `&current_weather=true&timezone=Europe%2FStockholm`;
-
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) throw new Error("Weather fetch failed");
-    const data = await res.json();
-
-    const cw = data.current_weather;
-    const temp = cw?.temperature;
-    const wind = cw?.windspeed;
-
-    weatherCard.querySelector(".big").textContent =
-      (typeof temp === "number") ? `${Math.round(temp)}°` : "—";
-
-    weatherCard.querySelector(".muted").textContent =
-      (cw?.time) ? `Senast: ${formatTime(cw.time)}` : "—";
-
-    wWind.textContent = (typeof wind === "number") ? `${Math.round(wind)} m/s` : "—";
-
-    // show next 8 hours
-    const hours = data.hourly?.time || [];
-    const temps = data.hourly?.temperature_2m || [];
-    const rains = data.hourly?.precipitation || [];
-    const winds = data.hourly?.windspeed_10m || [];
-
-    const nowIso = cw?.time;
-    let startIndex = 0;
-    if (nowIso && hours.length) {
-      const idx = hours.indexOf(nowIso);
-      startIndex = idx >= 0 ? idx : 0;
+      `?latitude=${encodeURIComponent(lat)}` +
+      `&longitude=${encodeURIComponent(lon)}` +
+      `&current=temperature_2m,wind_speed_10m,weather_code` +
+      `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
+      `&forecast_days=2` +
+      `&timezone=Europe%2FStockholm`;
+    try {
+      const pos = await tryGeo();
+      lat = pos.coords.latitude;
+      lon = pos.coords.longitude;
+      placeLabel = "Din plats";
+    } catch {
+      // geo fail => Stockholm fallback
     }
 
-    const items = [];
-    let totalRain = 0;
+    const r = await fetch(url, { cache: "no-store" });
+    if (!r.ok) throw new Error("Weather fetch failed");
+    const data = await r.json();
+    const data = await fetchWeather(lat, lon);
 
-    for (let i = startIndex; i < Math.min(startIndex + 8, hours.length); i++) {
-      totalRain += Number(rains[i] || 0);
-      items.push({
-        t: formatHour(hours[i]),
-        temp: Math.round(temps[i]),
-        rain: Number(rains[i] || 0),
-        wind: Math.round(winds[i] || 0)
-      });
+    const cur = data.current;
+    const t = Math.round(cur.temperature_2m);
+    const w = Math.round(cur.wind_speed_10m);
+    const code = cur.weather_code;
+
+    if (weatherIconEl) weatherIconEl.textContent = iconForCode(code);
+    if (weatherTempEl) weatherTempEl.textContent = `${t}°`;
+    if (weatherDescEl) weatherDescEl.textContent = textForCode(code);
+    if (weatherWindEl) weatherWindEl.textContent = `${w} m/s`;
+    if (weatherPlaceEl) weatherPlaceEl.textContent = label;
+    if (weatherUpdatedEl) weatherUpdatedEl.textContent = new Date().toLocaleString("sv-SE", {
+      hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit",
+    });
+    const cur = data.current || {};
+    const daily = data.daily || {};
+
+    const d = data.daily;
+    if (d?.time?.length >= 2) {
+      const tmax = Math.round(d.temperature_2m_max[1]);
+      const tmin = Math.round(d.temperature_2m_min[1]);
+      const c2 = d.weather_code[1];
+      if (tomIconEl) tomIconEl.textContent = iconForCode(c2);
+      if (tomTextEl) tomTextEl.textContent = `${textForCode(c2)} • ${tmin}°–${tmax}°`;
     }
-
-    wRain.textContent = `${totalRain.toFixed(1)} mm/8h`;
-
-    weatherHours.innerHTML = items.map(it => `
-      <div class="rowItem">
-        <div class="rowLeft">
-          <div class="rowText"><b>${it.t}</b> · ${it.temp}° · ${it.rain.toFixed(1)}mm · ${it.wind}m/s</div>
-        </div>
-      </div>
-    `).join("") || `<div class="muted">Ingen data.</div>`;
-  } catch (err) {
-    weatherCard.querySelector(".big").textContent = "—";
-    weatherCard.querySelector(".muted").textContent = "Kunde inte hämta väder.";
-    weatherHours.innerHTML = `<div class="muted">Kontrollera nätverk.</div>`;
-    wWind.textContent = "—";
-    wRain.textContent = "—";
-  } finally {
-    weatherLoading = false;
   }
-}
+    const rawT = Math.round(cur.temperature_2m);
+    const rawW = Math.round(cur.wind_speed_10m);
+    const code = Number(cur.weather_code);
 
-/** ====== NEWS (RSS with safe fallback) ====== **/
-const newsList = $("newsList");
-$("refreshNews").addEventListener("click", loadNews);
+    const safeT = clampReasonableTempC(rawT);
+    if (safeT === null) throw new Error("unreasonable temp");
 
-let newsLoading = false;
+    // Imorgon
+    const tomCode = Number(daily.weather_code?.[1] ?? code);
+    const tomMax = Math.round(daily.temperature_2m_max?.[1] ?? safeT);
+    const tomMin = Math.round(daily.temperature_2m_min?.[1] ?? safeT);
 
-async function loadNews() {
-  if (newsLoading) return;
-  newsLoading = true;
-
-  // Always keep UI stable
-  newsList.innerHTML = `<div class="muted">Laddar…</div>`;
-
-  try {
-    // Many RSS endpoints block CORS. We try a light proxy via r.jina.ai which often works for text.
-    // If it fails, we show a stable fallback list (so UI never breaks).
-    const proxied = `https://r.jina.ai/http://${NEWS_RSS_URL.replace(/^https?:\/\//, "")}`;
-    const res = await fetch(proxied, { cache: "no-store" });
-    if (!res.ok) throw new Error("RSS blocked");
-    const text = await res.text();
-
-    // Very small/robust parse: pick first ~10 <title> excluding channel title
-    const titles = extractRssTitles(text).slice(0, 10);
-    if (!titles.length) throw new Error("No titles");
-
-    newsList.innerHTML = titles.map(t => `
-      <div class="rowItem">
-        <div class="rowLeft">
-          <div class="rowText">${escapeHtml(t)}</div>
-        </div>
-      </div>
-    `).join("");
-  } catch {
-    const fallback = [
-      "RSS kunde inte hämtas (CORS/proxy).",
-      "Byt NEWS_RSS_URL i app.js eller använd en CORS-vänlig källa.",
-      "UI hålls stabilt även när nyheter inte laddas."
-    ];
-    newsList.innerHTML = fallback.map(t => `
-      <div class="rowItem"><div class="rowLeft"><div class="rowText">${escapeHtml(t)}</div></div></div>
-    `).join("");
-  } finally {
-    newsLoading = false;
-  }
-}
-
-/** ====== POMODORO ====== **/
-const ringProgress = $("ringProgress");
-const pomoTime = $("pomoTime");
-const pomoMode = $("pomoMode");
-const pomoHint = $("pomoHint");
-
-const pomoStart = $("pomoStart");
-const pomoPause = $("pomoPause");
-const pomoReset = $("pomoReset");
-
-const pomoWork = $("pomoWork");
-const pomoShort = $("pomoShort");
-const pomoLong = $("pomoLong");
-
-const pomoNote = $("pomoNote");
-const savePomoNote = $("savePomoNote");
-const pomoNoteSaved = $("pomoNoteSaved");
-
-const RADIUS = 48;
-const CIRC = 2 * Math.PI * RADIUS;
-
-ringProgress.style.strokeDasharray = `${CIRC}`;
-ringProgress.style.strokeDashoffset = `0`;
-
-let pomo = loadPomodoroState();
-let pomoTimer = null;
-
-function loadPomodoroState() {
-  try {
-    const raw = localStorage.getItem(LS.pomo);
-    if (!raw) return defaultPomodoro();
-    const s = JSON.parse(raw);
-    // minimal validation
-    if (!s || typeof s !== "object") return defaultPomodoro();
-    return {
-      mode: s.mode ?? "Work",
-      totalMs: Number.isFinite(s.totalMs) ? s.totalMs : 25 * 60 * 1000,
-      leftMs: Number.isFinite(s.leftMs) ? s.leftMs : 25 * 60 * 1000,
-      running: !!s.running,
-      endsAt: Number.isFinite(s.endsAt) ? s.endsAt : null,
-      note: typeof s.note === "string" ? s.note : ""
+  function loadWeather() {
+    if (weatherDescEl) weatherDescEl.textContent = "Laddar…";
+    const city = getSavedCity();
+    fetchWeather(city.lat, city.lon, city.name).catch(() => {
+    const payload = {
+      t: safeT,
+      w: Number.isFinite(rawW) ? rawW : 0,
+      code: Number.isFinite(code) ? code : 3,
+      placeLabel,
+      updatedTs: nowTs,
+      tomCode: Number.isFinite(tomCode) ? tomCode : 3,
+      tomMin: Number.isFinite(tomMin) ? tomMin : safeT,
+      tomMax: Number.isFinite(tomMax) ? tomMax : safeT,
     };
-  } catch {
-    return defaultPomodoro();
-  }
-}
-function defaultPomodoro() {
-  return { mode: "Work", totalMs: 25 * 60 * 1000, leftMs: 25 * 60 * 1000, running: false, endsAt: null, note: "" };
-}
-function savePomodoroState() {
-  localStorage.setItem(LS.pomo, JSON.stringify(pomo));
-}
 
-function setPomodoroPreset(minutes, modeLabel) {
-  stopPomodoroTick();
-  pomo.mode = modeLabel;
-  pomo.totalMs = minutes * 60 * 1000;
-  pomo.leftMs = pomo.totalMs;
-  pomo.running = false;
-  pomo.endsAt = null;
-  savePomodoroState();
-  renderPomodoro();
-}
-
-pomoWork.addEventListener("click", () => setPomodoroPreset(25, "Work"));
-pomoShort.addEventListener("click", () => setPomodoroPreset(5, "Short break"));
-pomoLong.addEventListener("click", () => setPomodoroPreset(15, "Long break"));
-
-pomoStart.addEventListener("click", () => {
-  if (pomo.running) return;
-  pomo.running = true;
-  pomo.endsAt = Date.now() + pomo.leftMs;
-  savePomodoroState();
-  startPomodoroTick();
-  renderPomodoro();
-});
-
-pomoPause.addEventListener("click", () => {
-  if (!pomo.running) return;
-  // capture remaining precisely
-  pomo.leftMs = Math.max(0, pomo.endsAt - Date.now());
-  pomo.running = false;
-  pomo.endsAt = null;
-  savePomodoroState();
-  stopPomodoroTick();
-  renderPomodoro();
-});
-
-pomoReset.addEventListener("click", () => {
-  stopPomodoroTick();
-  pomo.leftMs = pomo.totalMs;
-  pomo.running = false;
-  pomo.endsAt = null;
-  savePomodoroState();
-  renderPomodoro();
-});
-
-savePomoNote.addEventListener("click", () => {
-  pomo.note = pomoNote.value || "";
-  savePomodoroState();
-  renderPomodoroNoteState(true);
-});
-
-function startPomodoroTick() {
-  stopPomodoroTick();
-  // tick fast but cheap; UI uses simple math
-  pomoTimer = setInterval(() => {
-    if (!pomo.running || !pomo.endsAt) return;
-    const left = pomo.endsAt - Date.now();
-    pomo.leftMs = Math.max(0, left);
-
-    if (pomo.leftMs <= 0) {
-      pomo.running = false;
-      pomo.endsAt = null;
-      savePomodoroState();
-      stopPomodoroTick();
-      pomoHint.textContent = "Klart! Reset eller välj ny preset.";
+    setWeatherUI(payload);
+    saveWeatherCache(payload);
+  } catch (e) {
+    // 2) Om något strular: visa cache
+    const c = loadWeatherCache();
+    if (c) {
+      setWeatherUI({ ...c, placeLabel: (c.placeLabel || "Senaste") + " • cache" });
     } else {
-      // keep hint stable
-      pomoHint.textContent = "SVG-ringen töms när tiden går.";
+if (weatherDescEl) weatherDescEl.textContent = "Kunde inte ladda väder.";
+    });
+      if (weatherTempEl) weatherTempEl.textContent = "--°";
+      if (weatherPlaceEl) weatherPlaceEl.textContent = "—";
+      if (weatherIconEl) weatherIconEl.textContent = "⛅️";
     }
-
-    renderPomodoro(false);
-  }, 250);
+}
 }
 
-function stopPomodoroTick() {
-  if (pomoTimer) clearInterval(pomoTimer);
-  pomoTimer = null;
-}
+  weatherRefreshBtn?.addEventListener("click", loadWeather);
 
-function renderPomodoro(updateHint = true) {
-  const left = pomo.running && pomo.endsAt ? Math.max(0, pomo.endsAt - Date.now()) : pomo.leftMs;
-  const ratio = pomo.totalMs > 0 ? Math.max(0, Math.min(1, left / pomo.totalMs)) : 0;
-
-  // Ring drains: 100% -> 0% means dashoffset goes from 0 -> CIRC
-  const offset = CIRC * (1 - ratio);
-  ringProgress.style.strokeDashoffset = `${offset}`;
-
-  pomoTime.textContent = formatMMSS(left);
-  pomoMode.textContent = pomo.mode;
-
-  if (updateHint) {
-    if (pomo.running) {
-      pomoHint.textContent = "Kör…";
-    } else {
-      pomoHint.textContent = "Pausad / redo.";
-    }
-  }
-  renderPomodoroNoteState(false);
-}
-
-function renderPomodoroNoteState(showSaved) {
-  pomoNote.value = pomo.note || "";
-  const when = new Date().toLocaleString("sv-SE");
-  pomoNoteSaved.textContent = showSaved ? `Sparat ${when}` : (pomo.note ? `Anteckning finns sparad.` : "—");
-}
-
-function resumePomodoroIfRunning() {
-  if (pomo.running && pomo.endsAt) {
-    // If page was closed and time passed
-    const left = pomo.endsAt - Date.now();
-    pomo.leftMs = Math.max(0, left);
-    if (pomo.leftMs <= 0) {
-      pomo.running = false;
-      pomo.endsAt = null;
-      savePomodoroState();
-      renderPomodoro();
-      return;
-    }
-    startPomodoroTick();
-  }
-  renderPomodoro();
-}
-resumePomodoroIfRunning();
-
-/** ====== INIT RENDERS ====== **/
-renderTodo();
-renderIdeas();
-renderDone();
-renderPrio();
-
-/** ====== HELPERS ====== **/
-function formatMMSS(ms) {
-  const totalSec = Math.floor(ms / 1000);
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
-function formatTime(iso) {
-  // iso: "2026-02-16T12:30"
-  try {
-    const d = new Date(iso);
-    return d.toLocaleString("sv-SE", { hour: "2-digit", minute: "2-digit" });
-  } catch { return iso; }
-}
-function formatHour(iso) {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleString("sv-SE", { hour: "2-digit", minute: "2-digit" });
-  } catch { return iso; }
-}
-
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    "\"": "&quot;",
-    "'": "&#039;",
-  }[c]));
-}
-
-// Minimal RSS title extractor (robust enough for jina-proxy text)
-function extractRssTitles(xmlText) {
-  const titles = [];
-  const re = /<title><!\[CDATA\[(.*?)\]\]><\/title>|<title>(.*?)<\/title>/gi;
-  let m;
-  while ((m = re.exec(xmlText))) {
-    const t = (m[1] || m[2] || "").trim();
-    if (!t) continue;
-    titles.push(t);
-  }
-  // usually first title is channel name -> drop it
-  return titles.slice(1);
-}
-
-/** ====== STARTUP LAZY LOADS ====== **/
-loadWeather();
-loadNews();
+if (weatherRefreshBtn) weatherRefreshBtn.addEventListener("click", loadWeather);
+// ---------- POMODORO ----------
+const pomoProg = $("pomoProg");
+const pomoTime = $("pomoTime");

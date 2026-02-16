@@ -1,19 +1,18 @@
-Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
-
-/* SB Dash — app.js (single file, matches your current index.html)
-   Views: prio / todo / ideas / done / news / weather / pomodoro
-   Dial: live icon while rotating + tick vibration (if supported)
-   Swipe: right->left completes (prio/todo/ideas)
-   Done: restore returns to origin list
-   Settings modal: city (weather) + calendar-id (email) saved locally
-   Calendar: Google embed refresh every 3 minutes
-   News: Google News RSS with proxy fallback + pull-to-refresh
+/* SB Dash — app.js (stable iPad/desktop)
+   - Views: weather, news, todo, ideas, done, pomodoro
+   - Dial: live icon while rotating + tick vibration (if supported)
+   - Swipe right->left completes (prio/todo/ideas)
+   - Done: restore returns to origin list
+   - Settings modal: city + calendar-id (email) saved locally
+   - Calendar: Google embed refresh every 3 minutes
+   - News: RSS via proxy fallback + pull-to-refresh
+   - Weather: city -> geocode OR geolocation fallback, with sanity clamp
 */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // -------------------- Date --------------------
+  // ---------- Date ----------
   const todayText = $("todayText");
   if (todayText) {
     const now = new Date();
@@ -22,12 +21,25 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     todayText.textContent = `${weekday} ${date}`;
   }
 
-  // -------------------- Haptics --------------------
+  // ---------- Haptics ----------
   const canVibrate = typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
   const tick = (ms = 8) => { if (canVibrate) navigator.vibrate(ms); };
 
-  // -------------------- Views / Carousel --------------------
-  const VIEWS = ["prio", "todo", "ideas", "done", "news", "weather", "pomodoro"];
+  // ---------- Settings storage ----------
+  const SETTINGS_KEY = "sbdash_settings_v2";
+  let settings = { city: "", calId: "" };
+  try {
+    const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+    settings.city = typeof raw.city === "string" ? raw.city : "";
+    settings.calId = typeof raw.calId === "string" ? raw.calId : "";
+  } catch {}
+
+  function saveSettings() {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  }
+
+  // ---------- Views ----------
+  const VIEWS = ["weather", "news", "todo", "ideas", "done", "pomodoro"];
   let currentIndex = 0;
 
   const track = $("viewTrack");
@@ -38,24 +50,13 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
   const dialIcon = $("dialIcon");
 
   const ICONS = {
-    prio: "assets/ui/icon-todo.svg",     // byt gärna till egen prio-ikon senare
+    weather: "assets/ui/icon-weather.svg",
+    news: "assets/ui/icon-news.svg",
     todo: "assets/ui/icon-todo.svg",
     ideas: "assets/ui/icon-ideas.svg",
     done: "assets/ui/icon-done.svg",
-    news: "assets/ui/icon-news.svg",
-    weather: "assets/ui/icon-weather.svg",
     pomodoro: "assets/ui/icon-pomodoro.svg",
   };
-
-  function setDialIcon(view) {
-    if (dialIcon && ICONS[view]) dialIcon.src = ICONS[view];
-  }
-
-  function syncRotationToIndex() {
-    const step = 360 / VIEWS.length;
-    setRotation(currentIndex * step);
-    lastSector = currentIndex;
-  }
 
   function setViewByIndex(idx, { silent = false } = {}) {
     currentIndex = (idx + VIEWS.length) % VIEWS.length;
@@ -69,7 +70,8 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
       );
     }
 
-    setDialIcon(view);
+    if (dialIcon && ICONS[view]) dialIcon.src = ICONS[view];
+
     if (!silent) syncRotationToIndex();
   }
 
@@ -87,11 +89,10 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     });
   }
 
-  // Wheel navigation on desktop (avoid touch devices)
+  // Desktop wheel (avoid touch devices)
   const mainPanel = document.querySelector(".mainPanel");
   const isCoarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches;
   let wheelCooldown = false;
-
   if (mainPanel && !isCoarsePointer) {
     mainPanel.addEventListener(
       "wheel",
@@ -106,7 +107,7 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     );
   }
 
-  // -------------------- Dial (pointer) --------------------
+  // ---------- Dial rotation ----------
   let isDragging = false;
   let startAngle = 0;
   let currentRotation = 0;
@@ -123,6 +124,11 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
   function sectorFromRotation(deg) {
     const raw = Math.round(deg / STEP);
     return ((raw % VIEWS.length) + VIEWS.length) % VIEWS.length;
+  }
+
+  function syncRotationToIndex() {
+    setRotation(currentIndex * STEP);
+    lastSector = currentIndex;
   }
 
   function onDown(e) {
@@ -150,7 +156,8 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     const s = sectorFromRotation(currentRotation);
     if (s !== lastSector) {
       lastSector = s;
-      setDialIcon(VIEWS[s]); // live icon while spinning
+      const view = VIEWS[s];
+      if (dialIcon && ICONS[view]) dialIcon.src = ICONS[view];
       tick(8);
     }
   }
@@ -173,9 +180,9 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     window.addEventListener("pointercancel", onUp, { passive: false });
   }
 
-  // -------------------- Storage (lists) --------------------
-  const LS_KEY = "sbdash_store_v1";
-  function loadStore() {
+  // ---------- Lists storage ----------
+  const LS_KEY = "sbdash_lists_v2";
+  function loadLists() {
     try {
       const raw = localStorage.getItem(LS_KEY);
       const p = raw ? JSON.parse(raw) : {};
@@ -189,14 +196,12 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
       return { todo: [], ideas: [], super: [], done: [] };
     }
   }
-  const store = loadStore();
-  const saveStore = () => localStorage.setItem(LS_KEY, JSON.stringify(store));
-
+  const store = loadLists();
+  const save = () => localStorage.setItem(LS_KEY, JSON.stringify(store));
   const uid = () => (crypto?.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random()}`);
   const fmt = (ts) =>
     new Date(ts).toLocaleString("sv-SE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
-  // Done origin-aware
   function toDone(origin, item) {
     const clean = { id: item.id, text: item.text, createdAt: item.createdAt || Date.now() };
     store.done.unshift({ ...clean, doneAt: Date.now(), origin });
@@ -213,11 +218,11 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     else if (o === "ideas") store.ideas.unshift(rest);
     else store.todo.unshift(rest);
 
-    saveStore();
+    save();
     renderAll();
   }
 
-  // -------------------- Swipe helper (right->left completes) --------------------
+  // ---------- Swipe helper ----------
   function attachSwipe(el, onComplete) {
     const content = el.querySelector(".swipeContent");
     if (!content) return;
@@ -283,6 +288,7 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
       } else {
         setX(0, true);
       }
+
       pointerId = null;
     };
 
@@ -301,16 +307,12 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     content.className = "swipeContent";
 
     const left = document.createElement("div");
-    left.className = "swipeLeft";
-
     const t = document.createElement("div");
     t.className = "swipeText";
     t.textContent = text;
     left.appendChild(t);
 
     const right = document.createElement("div");
-    right.className = "swipeRight";
-
     const m = document.createElement("div");
     m.className = "miniMeta";
     m.textContent = meta || "";
@@ -328,11 +330,10 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
       content.style.cursor = "pointer";
       content.addEventListener("click", () => onClick());
     }
-
     return li;
   }
 
-  // -------------------- TODO --------------------
+  // ---------- TODO ----------
   const todoInput = $("todoInput");
   const todoAddBtn = $("todoAddBtn");
   const todoList = $("todoList");
@@ -341,7 +342,7 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     const t = (text || "").trim();
     if (!t) return;
     store.todo.unshift({ id: uid(), text: t, createdAt: Date.now() });
-    saveStore();
+    save();
     renderTodo();
   }
 
@@ -350,7 +351,7 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     if (i === -1) return;
     const item = store.todo.splice(i, 1)[0];
     toDone("todo", item);
-    saveStore();
+    save();
     renderTodo();
     renderDone();
   }
@@ -376,14 +377,11 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
       todoInput.focus();
     });
     todoInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        addTodo(todoInput.value);
-        todoInput.value = "";
-      }
+      if (e.key === "Enter") { addTodo(todoInput.value); todoInput.value = ""; }
     });
   }
 
-  // -------------------- IDEAS --------------------
+  // ---------- IDEAS ----------
   const ideaInput = $("ideaInput");
   const ideaAddBtn = $("ideaAddBtn");
   const ideasList = $("ideasList");
@@ -392,7 +390,7 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     const t = (text || "").trim();
     if (!t) return;
     store.ideas.unshift({ id: uid(), text: t, createdAt: Date.now() });
-    saveStore();
+    save();
     renderIdeas();
   }
 
@@ -401,7 +399,7 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     if (i === -1) return;
     const item = store.ideas.splice(i, 1)[0];
     toDone("ideas", item);
-    saveStore();
+    save();
     renderIdeas();
     renderDone();
   }
@@ -427,25 +425,16 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
       ideaInput.focus();
     });
     ideaInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        addIdea(ideaInput.value);
-        ideaInput.value = "";
-      }
+      if (e.key === "Enter") { addIdea(ideaInput.value); ideaInput.value = ""; }
     });
   }
 
-  // -------------------- PRIO (desktop + mobile) --------------------
+  // ---------- PRIO + MODAL ----------
   const prioInput = $("prioInput");
   const prioAddBtn = $("prioAddBtn");
   const prioList = $("prioList");
   const prioCount = $("prioCount");
-  const mobilePrioCount = $("mobilePrioCount");
 
-  const prioInputMobile = $("prioInputMobile");
-  const prioAddBtnMobile = $("prioAddBtnMobile");
-  const prioListMobile = $("prioListMobile");
-
-  // Modal prio
   const prioModalOverlay = $("prioModalOverlay");
   const prioModalCloseBtn = $("prioModalCloseBtn");
   const prioModalEdit = $("prioModalEdit");
@@ -460,17 +449,12 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     if (prioModalOverlay) prioModalOverlay.classList.add("show");
     setTimeout(() => prioModalEdit?.focus(), 60);
   }
-
   function closeModal() {
     modalActiveId = null;
     if (prioModalOverlay) prioModalOverlay.classList.remove("show");
   }
 
-  if (prioModalOverlay) {
-    prioModalOverlay.addEventListener("click", (e) => {
-      if (e.target === prioModalOverlay) closeModal();
-    });
-  }
+  if (prioModalOverlay) prioModalOverlay.addEventListener("click", (e) => { if (e.target === prioModalOverlay) closeModal(); });
   if (prioModalCloseBtn) prioModalCloseBtn.addEventListener("click", closeModal);
 
   function saveModalEdit() {
@@ -478,7 +462,7 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     const i = store.super.findIndex((x) => x.id === modalActiveId);
     if (i === -1) return;
     store.super[i].text = (prioModalEdit?.value || "").trim();
-    saveStore();
+    save();
     renderPrio();
   }
 
@@ -493,7 +477,7 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     const t = (text || "").trim();
     if (!t) return;
     store.super.unshift({ id: uid(), text: t, createdAt: Date.now() });
-    saveStore();
+    save();
     renderPrio();
   }
 
@@ -502,64 +486,50 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     if (i === -1) return;
     const item = store.super.splice(i, 1)[0];
     toDone("super", item);
-    saveStore();
+    save();
     renderPrio();
     renderDone();
   }
 
-  if (prioModalDoneBtn) {
-    prioModalDoneBtn.addEventListener("click", () => {
-      if (!modalActiveId) return closeModal();
-      completePrioById(modalActiveId);
-      closeModal();
-    });
-  }
+  if (prioModalDoneBtn) prioModalDoneBtn.addEventListener("click", () => {
+    if (!modalActiveId) return closeModal();
+    completePrioById(modalActiveId);
+    closeModal();
+  });
 
   function renderPrio() {
-    const n = store.super.length;
-    if (prioCount) prioCount.textContent = String(n);
-    if (mobilePrioCount) mobilePrioCount.textContent = String(n);
+    if (prioCount) prioCount.textContent = String(store.super.length);
+    if (!prioList) return;
 
-    const renderInto = (ul) => {
-      if (!ul) return;
-      ul.innerHTML = "";
-      if (!store.super.length) {
-        ul.innerHTML = `<li class="miniHint">Inget i Aktiv prio just nu.</li>`;
-        return;
-      }
-      for (const item of store.super) {
-        ul.appendChild(
-          mkSwipeItem(
-            { text: item.text, meta: fmt(item.createdAt) },
-            () => completePrioById(item.id),
-            () => openModalForPrio(item)
-          )
-        );
-      }
-    };
+    prioList.innerHTML = "";
+    if (!store.super.length) {
+      prioList.innerHTML = `<li class="miniHint">Inget i Aktiv prio just nu.</li>`;
+      return;
+    }
 
-    renderInto(prioList);
-    renderInto(prioListMobile);
+    for (const item of store.super) {
+      prioList.appendChild(
+        mkSwipeItem(
+          { text: item.text, meta: fmt(item.createdAt) },
+          () => completePrioById(item.id),
+          () => openModalForPrio(item)
+        )
+      );
+    }
   }
 
-  function wirePrioInput(inputEl, btnEl) {
-    if (!inputEl || !btnEl) return;
-    btnEl.addEventListener("click", () => {
-      addPrio(inputEl.value);
-      inputEl.value = "";
-      inputEl.focus();
+  if (prioAddBtn && prioInput) {
+    prioAddBtn.addEventListener("click", () => {
+      addPrio(prioInput.value);
+      prioInput.value = "";
+      prioInput.focus();
     });
-    inputEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        addPrio(inputEl.value);
-        inputEl.value = "";
-      }
+    prioInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { addPrio(prioInput.value); prioInput.value = ""; }
     });
   }
-  wirePrioInput(prioInput, prioAddBtn);
-  wirePrioInput(prioInputMobile, prioAddBtnMobile);
 
-  // -------------------- DONE --------------------
+  // ---------- DONE ----------
   const doneList = $("doneList");
   const doneClearBtn = $("doneClearBtn");
 
@@ -603,21 +573,19 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     }
   }
 
-  if (doneClearBtn) {
-    doneClearBtn.addEventListener("click", () => {
-      store.done = [];
-      saveStore();
-      renderDone();
-    });
-  }
+  if (doneClearBtn) doneClearBtn.addEventListener("click", () => {
+    store.done = [];
+    save();
+    renderDone();
+  });
 
-  // -------------------- NEWS (RSS) + pull-to-refresh --------------------
+  // ---------- News (RSS) + pull-to-refresh ----------
   const RSS_NEWS = "https://news.google.com/rss?hl=sv&gl=SE&ceid=SE:sv";
   const newsListEl = $("newsList");
   const newsMetaEl = $("newsMeta");
   const newsPullHint = $("newsPullHint");
   const newsPage = $("newsPage");
-  const NEWS_CACHE_KEY = "sbdash_news_cache_v1";
+  const NEWS_CACHE_KEY = "sbdash_news_cache_v2";
 
   const PROXIES = [
     (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
@@ -772,7 +740,7 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
 
   attachPullToRefresh(newsPage, newsPullHint, loadNews);
 
-  // -------------------- WEATHER --------------------
+  // ---------- Weather ----------
   const weatherIconEl = $("weatherIcon");
   const weatherTempEl = $("weatherTemp");
   const weatherDescEl = $("weatherDesc");
@@ -783,7 +751,7 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
   const tomIconEl = $("tomIcon");
   const tomTextEl = $("tomText");
 
-  const WEATHER_CACHE_KEY = "sbdash_weather_cache_v1";
+  const WEATHER_CACHE_KEY = "sbdash_weather_cache_v2";
 
   function iconForCode(code) {
     if (code === 0) return "☀️";
@@ -807,7 +775,6 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     };
     return m[code] || `Väderkod ${code}`;
   }
-
   function clampReasonableTempC(t) {
     if (typeof t !== "number" || Number.isNaN(t)) return null;
     if (t > 35 || t < -40) return null;
@@ -937,7 +904,7 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
 
   if (weatherRefreshBtn) weatherRefreshBtn.addEventListener("click", loadWeather);
 
-  // -------------------- Pomodoro --------------------
+  // ---------- Pomodoro ----------
   const pomoProg = $("pomoProg");
   const pomoTime = $("pomoTime");
   const pomoSub = $("pomoSub");
@@ -950,7 +917,7 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
 
   if (pomoProg) {
     pomoProg.style.strokeDasharray = String(C);
-    pomoProg.style.strokeDashoffset = "0"; // full ring at start
+    pomoProg.style.strokeDashoffset = "0"; // full ring
   }
 
   let total = 5 * 60;
@@ -962,11 +929,11 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
 
   const pad2 = (n) => String(n).padStart(2, "0");
 
-  // Correct direction: as time decreases, ring empties
   const setStroke = (pctLeft) => {
     if (!pomoProg) return;
     const p = Math.max(0, Math.min(1, pctLeft));
-    pomoProg.style.strokeDashoffset = String(C * (1 - p)); // 0 full -> C empty
+    // 0 = full, C = empty (ring empties as time goes down)
+    pomoProg.style.strokeDashoffset = String(C * (1 - p));
   };
 
   const setColor = (pctLeft) => {
@@ -1051,28 +1018,28 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
   if (pomoResetBtn) pomoResetBtn.addEventListener("click", resetPomo);
   pomoBtns.forEach((btn) => btn.addEventListener("click", () => setMinutes(Number(btn.dataset.pomo))));
 
-  // -------------------- Calendar embed + auto refresh --------------------
+  // ---------- Calendar ----------
   const calFrame = $("calFrame");
   let calTimer = 0;
 
   function buildCalSrc(calId) {
     const src = (calId || "").trim();
     if (!src) return "";
-    const base =
+    return (
       "https://calendar.google.com/calendar/embed" +
       `?src=${encodeURIComponent(src)}` +
       "&ctz=Europe%2FStockholm" +
       "&mode=AGENDA" +
       "&showTitle=0&showNav=0&showDate=0&showTabs=0&showCalendars=0&showTz=0" +
-      "&wkst=2&hl=sv";
-    return base;
+      "&wkst=2&hl=sv"
+    );
   }
 
   function setCalendar(calId) {
     if (!calFrame) return;
     const base = buildCalSrc(calId);
-    if (!base) { calFrame.src = "about:blank"; return; }
-    calFrame.src = `${base}&_=${Date.now()}`; // cache-bust
+    if (!base) { calFrame.src = ""; return; }
+    calFrame.src = `${base}&_=${Date.now()}`;
   }
 
   function startCalendarAutoRefresh() {
@@ -1083,7 +1050,7 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     }, 3 * 60 * 1000);
   }
 
-  // -------------------- Settings modal --------------------
+  // ---------- Settings modal wiring ----------
   const openSettingsBtn = $("openSettingsBtn");
   const settingsOverlay = $("settingsOverlay");
   const settingsCloseBtn = $("settingsCloseBtn");
@@ -1100,17 +1067,18 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     settingsOverlay?.classList.add("show");
     setTimeout(() => settingsCity?.focus(), 60);
   }
-
   function closeSettings() {
     settingsOverlay?.classList.remove("show");
   }
 
-  function applySettings(city, calId) {
-    settings = {
-      city: (city || "").trim(),
-      calId: (calId || "").trim(),
-    };
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  if (openSettingsBtn) openSettingsBtn.addEventListener("click", openSettings);
+  if (settingsCloseBtn) settingsCloseBtn.addEventListener("click", closeSettings);
+  if (settingsOverlay) settingsOverlay.addEventListener("click", (e) => { if (e.target === settingsOverlay) closeSettings(); });
+
+  if (settingsSaveBtn) settingsSaveBtn.addEventListener("click", () => {
+    settings.city = (settingsCity?.value || "").trim();
+    settings.calId = (settingsCalId?.value || "").trim();
+    saveSettings();
 
     setCalendar(settings.calId);
     startCalendarAutoRefresh();
@@ -1118,30 +1086,22 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
 
     if (settingsHint) settingsHint.textContent = "Sparat ✔︎";
     tick(10);
-  }
+  });
 
-  function resetSettings() {
+  if (settingsResetBtn) settingsResetBtn.addEventListener("click", () => {
     settings = { city: "", calId: "" };
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    saveSettings();
+
     if (settingsCity) settingsCity.value = "";
     if (settingsCalId) settingsCalId.value = "";
     setCalendar("");
     loadWeather();
+
     if (settingsHint) settingsHint.textContent = "Återställt.";
     tick(10);
-  }
+  });
 
-  if (openSettingsBtn) openSettingsBtn.addEventListener("click", openSettings);
-  if (settingsCloseBtn) settingsCloseBtn.addEventListener("click", closeSettings);
-  if (settingsOverlay) {
-    settingsOverlay.addEventListener("click", (e) => {
-      if (e.target === settingsOverlay) closeSettings();
-    });
-  }
-  if (settingsSaveBtn) settingsSaveBtn.addEventListener("click", () => applySettings(settingsCity?.value, settingsCalId?.value));
-  if (settingsResetBtn) settingsResetBtn.addEventListener("click", resetSettings);
-
-  // -------------------- Init --------------------
+  // ---------- Init ----------
   function renderAll() {
     renderPrio();
     renderTodo();
@@ -1150,20 +1110,13 @@ Här. Hela app.js – kopiera och ersätt allt i din app.js med detta:
     renderPomo();
   }
 
-  // Settings load
-  const SETTINGS_KEY = "sbdash_settings_v1";
-  try { settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}"); } catch { settings = {}; }
-  settings = { city: typeof settings.city === "string" ? settings.city : "", calId: typeof settings.calId === "string" ? settings.calId : "" };
-
   renderAll();
   setViewByIndex(0);
   syncRotationToIndex();
 
-  // Calendar
   setCalendar(settings.calId);
   startCalendarAutoRefresh();
 
-  // Weather + News
   loadWeather();
   setInterval(loadWeather, 30 * 60 * 1000);
 

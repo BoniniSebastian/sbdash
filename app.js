@@ -1,50 +1,219 @@
+/* =========================================================
+   SB Dash (Wheel + Sheet) — app.js (full)
+   - Wheel rotate: preview icon changes live
+   - Tap wheel: open sheet
+   - Slide down sheet: close
+   - Views: Calendar, Prio, Weather, News, Todo, Ideas, Done, Timer
+   - Storage for prio/todo/ideas/done
+   ========================================================= */
+
 (() => {
   const $ = (id) => document.getElementById(id);
 
   // ---------- Elements ----------
+  const wheel = $("wheel");
+  const wheelRing = document.querySelector(".wheelRing");
+  const wheelIcon = $("wheelIcon");
+
   const sheetWrap = $("sheetWrap");
   const sheet = $("sheet");
   const sheetTitle = $("sheetTitle");
   const sheetContent = $("sheetContent");
 
-  const wheel = $("wheel");
-  const wheelRing = document.querySelector(".wheelRing");
-  const wheelIcon = $("wheelIcon");
-
   const topDate = $("topDate");
+  const topRight = document.querySelector(".topRight");
 
   // ---------- Date ----------
-  function setDate() {
+  if (topDate) {
     const now = new Date();
     const weekday = now.toLocaleDateString("sv-SE", { weekday: "long" });
     const date = now.toLocaleDateString("sv-SE", { day: "2-digit", month: "long", year: "numeric" });
-    if (topDate) topDate.textContent = `${weekday} ${date}`;
+    topDate.textContent = `${weekday} ${date}`;
   }
-  setDate();
 
-  // ---------- Haptics ----------
+  // ---------- Haptics (optional) ----------
   const canVibrate = !!navigator.vibrate;
-  const tick = (ms = 8) => {
-    if (canVibrate) navigator.vibrate(ms);
-  };
+  const tick = (ms = 8) => { if (canVibrate) navigator.vibrate(ms); };
 
   // ---------- Views ----------
   const VIEWS = [
-    { key: "calendar", icon: "icon-calendar.svg", title: "Kalender" },
-    { key: "prio",     icon: "icon-prio.svg",     title: "Aktiv prio" },
-    { key: "weather",  icon: "icon-weather.svg",  title: "Väder" },
-    { key: "news",     icon: "icon-news.svg",     title: "Nyheter" },
-    { key: "todo",     icon: "icon-todo.svg",     title: "Todo" },
-    { key: "ideas",    icon: "icon-ideas.svg",    title: "Idéer" },
-    { key: "done",     icon: "icon-done.svg",     title: "Done" },
-    { key: "timer",    icon: "icon-pomodoro.svg", title: "Timer" },
+    { id: "calendar", title: "Kalender", icon: "assets/ui/icon-calendar.svg" },
+    { id: "prio",     title: "Aktiv prio", icon: "assets/ui/icon-prio.svg" },
+    { id: "weather",  title: "Väder", icon: "assets/ui/icon-weather.svg" },
+    { id: "news",     title: "Nyheter", icon: "assets/ui/icon-news.svg" },
+    { id: "todo",     title: "Todo", icon: "assets/ui/icon-todo.svg" },
+    { id: "ideas",    title: "Idéer", icon: "assets/ui/icon-ideas.svg" },
+    { id: "done",     title: "Slutförda", icon: "assets/ui/icon-done.svg" },
+    { id: "timer",    title: "Timer", icon: "assets/ui/icon-pomodoro.svg" }
   ];
 
-  let currentIndex = 0;
+  let activeIndex = 0;
 
-  // ---------- Helpers ----------
-  const LS_KEY = "sbdash_mobile_store_v2";
-  const store = (() => {
+  const STEP = 360 / VIEWS.length;
+  let rotationDeg = 0;
+
+  function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+  function pad2(n){ return String(n).padStart(2, "0"); }
+
+  function setPreview(index, { silent = false } = {}) {
+    activeIndex = (index + VIEWS.length) % VIEWS.length;
+    const v = VIEWS[activeIndex];
+
+    if (wheelIcon) wheelIcon.src = v.icon;
+    if (topRight) topRight.textContent = `Preview: ${v.title}`;
+
+    if (!silent) tick(6);
+  }
+
+  function setRotation(deg, { silent = false } = {}) {
+    rotationDeg = deg;
+    if (wheelRing) wheelRing.style.transform = `rotate(${deg}deg)`;
+
+    // sector -> view
+    const idx = sectorFromDeg(deg);
+    setPreview(idx, { silent });
+  }
+
+  function sectorFromDeg(deg) {
+    const raw = Math.round(deg / STEP);
+    const idx = ((raw % VIEWS.length) + VIEWS.length) % VIEWS.length;
+    return idx;
+  }
+
+  function openSheet() {
+    sheetWrap?.classList.add("open");
+    renderView(VIEWS[activeIndex].id);
+  }
+
+  function closeSheet() {
+    sheetWrap?.classList.remove("open");
+  }
+
+  // ---------- Sheet drag-to-close ----------
+  let dragStartY = null;
+
+  sheet?.addEventListener("pointerdown", (e) => {
+    dragStartY = e.clientY;
+    sheet.classList.add("dragging");
+    sheet.setPointerCapture?.(e.pointerId);
+  }, { passive: true });
+
+  sheet?.addEventListener("pointermove", (e) => {
+    if (dragStartY == null) return;
+    const delta = e.clientY - dragStartY;
+
+    // only pull down
+    if (delta > 0) {
+      // keep X translate, add Y translate
+      sheet.style.transform = `translateX(-50%) translateY(${delta}px)`;
+      e.preventDefault?.();
+    }
+  }, { passive: false });
+
+  sheet?.addEventListener("pointerup", (e) => {
+    if (dragStartY == null) return;
+    const delta = e.clientY - dragStartY;
+
+    if (delta > 120) closeSheet();
+
+    sheet.style.transform = "";
+    sheet.classList.remove("dragging");
+    dragStartY = null;
+  }, { passive: true });
+
+  sheet?.addEventListener("pointercancel", () => {
+    sheet.style.transform = "";
+    sheet.classList.remove("dragging");
+    dragStartY = null;
+  }, { passive: true });
+
+  sheet?.addEventListener("lostpointercapture", () => {
+    sheet.style.transform = "";
+    sheet.classList.remove("dragging");
+    dragStartY = null;
+  }, { passive: true });
+
+  // ---------- Wheel interaction (drag rotate + tap open) ----------
+  let isDragging = false;
+  let startAngle = 0;
+
+  // tap detection
+  let tapStartX = 0, tapStartY = 0, tapMoved = false;
+
+  function angle(cx, cy, x, y) {
+    return Math.atan2(y - cy, x - cx) * (180 / Math.PI);
+  }
+
+  wheel?.addEventListener("pointerdown", (e) => {
+    // DO NOT preventDefault here (iOS tap-kill)
+    isDragging = true;
+
+    tapStartX = e.clientX;
+    tapStartY = e.clientY;
+    tapMoved = false;
+
+    const r = wheel.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    startAngle = angle(cx, cy, e.clientX, e.clientY) - rotationDeg;
+
+    wheel.setPointerCapture?.(e.pointerId);
+  }, { passive: true });
+
+  wheel?.addEventListener("pointermove", (e) => {
+    if (!isDragging) return;
+
+    const dx = e.clientX - tapStartX;
+    const dy = e.clientY - tapStartY;
+    if (Math.hypot(dx, dy) > 10) tapMoved = true;
+
+    const r = wheel.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+
+    const deg = angle(cx, cy, e.clientX, e.clientY) - startAngle;
+    setRotation(deg, { silent: true });
+
+    // allow smooth feel
+    e.preventDefault();
+  }, { passive: false });
+
+  wheel?.addEventListener("pointerup", (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    wheel.releasePointerCapture?.(e.pointerId);
+
+    // snap to nearest sector
+    const idx = sectorFromDeg(rotationDeg);
+    const snapped = idx * STEP;
+    setRotation(snapped, { silent: true });
+    setPreview(idx, { silent: true });
+
+    // TAP -> open
+    if (!tapMoved) openSheet();
+  }, { passive: true });
+
+  wheel?.addEventListener("pointercancel", () => {
+    isDragging = false;
+  }, { passive: true });
+
+  // Click fallback (desktop + some iOS cases)
+  wheel?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openSheet();
+  });
+
+  // Desktop wheel scroll (mouse wheel)
+  wheel?.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const dir = e.deltaY > 0 ? 1 : -1;
+    const next = (activeIndex + dir + VIEWS.length) % VIEWS.length;
+    setRotation(next * STEP);
+  }, { passive: false });
+
+  // ---------- Storage ----------
+  const LS_KEY = "sbdash_wheel_store_v1";
+  function loadStore() {
     try {
       const raw = localStorage.getItem(LS_KEY);
       const p = raw ? JSON.parse(raw) : {};
@@ -57,110 +226,25 @@
     } catch {
       return { prio: [], todo: [], ideas: [], done: [] };
     }
-  })();
-
-  const save = () => localStorage.setItem(LS_KEY, JSON.stringify(store));
+  }
+  const store = loadStore();
+  const saveStore = () => localStorage.setItem(LS_KEY, JSON.stringify(store));
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+
   const fmt = (ts) =>
     new Date(ts).toLocaleString("sv-SE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
-  function openSheet() {
-    sheetWrap?.classList.add("open");
-  }
-  function closeSheet() {
-    sheetWrap?.classList.remove("open");
-    if (sheet) {
-      sheet.style.transform = "";
-      sheet.classList.remove("dragging");
-    }
-    dragStart = null;
-  }
-  function isOpen() {
-    return !!sheetWrap?.classList.contains("open");
-  }
-
-  // ---------- Render view ----------
-  function setWheelIcon() {
-    const view = VIEWS[currentIndex];
-    if (!view) return;
-    if (wheelIcon) wheelIcon.src = `assets/ui/${view.icon}`;
-  }
-
-  function renderCalendar() {
-    sheetContent.innerHTML = `
-      <div class="blockTitle">Kalender</div>
-      <div class="card">
-        <div class="calScale">
-          <iframe class="calFrame"
-            src="https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0"
-            frameborder="0" scrolling="no"></iframe>
-        </div>
-      </div>
-      <div class="miniHint" style="margin-top:10px;">
-        (iPhone Safari kan kräva cookies för Google iframe.)
-      </div>
-    `;
-  }
-
-  function renderList({ title, inputId, btnId, listId, placeholder, onAdd, items, renderRow }) {
-    sheetContent.innerHTML = `
-      <div class="blockTitle">${title}</div>
-      <div class="miniForm">
-        <input id="${inputId}" class="miniInput" placeholder="${placeholder}" maxlength="160" />
-        <button id="${btnId}" class="miniBtn">+ Lägg</button>
-      </div>
-      <ul id="${listId}" class="miniList"></ul>
-      <div class="miniHint">Enter = lägg till • Swipe höger→vänster = slutför</div>
-    `;
-
-    const input = $(inputId);
-    const btn = $(btnId);
-    const list = $(listId);
-
-    const add = () => {
-      const t = (input?.value || "").trim();
-      if (!t) return;
-      onAdd(t);
-      input.value = "";
-      input.focus();
-    };
-
-    btn?.addEventListener("click", add);
-    input?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") add();
-    });
-
-    // render items
-    list.innerHTML = "";
-    if (!items.length) {
-      list.innerHTML = `<li class="miniHint">Inget här ännu.</li>`;
-      return;
-    }
-    for (const it of items) list.appendChild(renderRow(it));
-  }
-
-  function toDone(origin, item) {
-    store.done.unshift({ id: item.id, text: item.text, createdAt: item.createdAt, doneAt: Date.now(), origin });
-  }
-
-  function restoreFromDone(id) {
-    const i = store.done.findIndex((x) => x.id === id);
-    if (i === -1) return;
-    const it = store.done.splice(i, 1)[0];
-    const origin = it.origin || "todo";
-    const restored = { id: it.id, text: it.text, createdAt: it.createdAt || Date.now() };
-    if (origin === "prio") store.prio.unshift(restored);
-    else if (origin === "ideas") store.ideas.unshift(restored);
-    else store.todo.unshift(restored);
-    save();
-    renderView();
-  }
-
-  // ---------- Swipe helper ----------
+  // ---------- Swipe helper (optional, used in lists) ----------
   function attachSwipe(li, onComplete) {
-    let startX = 0, startY = 0, curX = 0, dragging = false, locked = false;
-
     const content = li.querySelector(".swipeContent");
+    if (!content) return;
+
+    let dragging = false;
+    let pointerId = null;
+    let startX = 0, startY = 0;
+    let curX = 0;
+    let locked = false;
+
     const setX = (x, animate) => {
       curX = x;
       content.style.transition = animate ? "transform 180ms ease" : "none";
@@ -168,14 +252,17 @@
     };
 
     li.addEventListener("pointerdown", (e) => {
-      dragging = true; locked = false;
-      startX = e.clientX; startY = e.clientY;
+      dragging = true;
+      locked = false;
+      pointerId = e.pointerId;
+      startX = e.clientX;
+      startY = e.clientY;
       setX(0, true);
-      content.setPointerCapture?.(e.pointerId);
+      content.setPointerCapture?.(pointerId);
     }, { passive: true });
 
     li.addEventListener("pointermove", (e) => {
-      if (!dragging) return;
+      if (!dragging || e.pointerId !== pointerId) return;
 
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
@@ -185,21 +272,22 @@
           locked = true;
           if (Math.abs(dy) > Math.abs(dx)) {
             dragging = false;
+            pointerId = null;
             setX(0, true);
             return;
           }
         } else return;
       }
 
-      if (dx > 0) return;
+      if (dx > 0) return; // only right->left
       e.preventDefault();
 
-      const max = -Math.min(240, li.clientWidth * 0.9);
+      const max = -Math.min(220, li.clientWidth * 0.9);
       setX(Math.max(dx, max), false);
     }, { passive: false });
 
-    const finish = () => {
-      if (!dragging) return;
+    const finish = (e) => {
+      if (!dragging || e.pointerId !== pointerId) return;
       dragging = false;
 
       const abs = Math.abs(curX);
@@ -207,151 +295,154 @@
 
       if (abs >= need) {
         setX(-li.clientWidth, true);
-        setTimeout(() => onComplete?.(), 120);
+        setTimeout(() => onComplete?.(), 140);
       } else {
         setX(0, true);
       }
+
+      pointerId = null;
     };
 
     li.addEventListener("pointerup", finish, { passive: true });
     li.addEventListener("pointercancel", finish, { passive: true });
   }
 
-  function mkSwipeRow(text, meta, onComplete, extraLeftHTML = "") {
+  function mkSwipeItem({ text, meta }, onComplete, onClick) {
     const li = document.createElement("li");
     li.className = "swipeItem";
-    li.innerHTML = `
-      <div class="swipeUnder"></div>
-      <div class="swipeContent">
-        <div class="swipeLeft">
-          ${extraLeftHTML}
-          <div class="swipeText"></div>
-        </div>
-        <div class="swipeRight">
-          <div class="miniMeta">${meta || ""}</div>
-        </div>
-      </div>
-    `;
-    li.querySelector(".swipeText").textContent = text;
+
+    const under = document.createElement("div");
+    under.className = "swipeUnder";
+
+    const content = document.createElement("div");
+    content.className = "swipeContent";
+
+    const left = document.createElement("div");
+    left.className = "swipeLeft";
+
+    const t = document.createElement("div");
+    t.className = "swipeText";
+    t.textContent = text;
+
+    left.appendChild(t);
+
+    const right = document.createElement("div");
+    right.className = "swipeRight";
+
+    const m = document.createElement("div");
+    m.className = "miniMeta";
+    m.textContent = meta || "";
+
+    right.appendChild(m);
+
+    content.appendChild(left);
+    content.appendChild(right);
+
+    li.appendChild(under);
+    li.appendChild(content);
+
     attachSwipe(li, onComplete);
+
+    if (onClick) {
+      content.style.cursor = "pointer";
+      content.addEventListener("click", () => onClick());
+    }
+
     return li;
   }
 
-  // ---------- Views content ----------
-  function renderPrio() {
-    renderList({
-      title: "Aktiv prio",
-      inputId: "prioInput",
-      btnId: "prioAddBtn",
-      listId: "prioList",
-      placeholder: "Skriv superprio…",
-      onAdd: (t) => {
-        store.prio.unshift({ id: uid(), text: t, createdAt: Date.now() });
-        save();
-        renderView();
-      },
-      items: store.prio,
-      renderRow: (it) => mkSwipeRow(it.text, fmt(it.createdAt), () => {
-        const i = store.prio.findIndex(x => x.id === it.id);
-        if (i !== -1) {
-          const item = store.prio.splice(i, 1)[0];
-          toDone("prio", item);
-          save();
-          renderView();
-        }
-      })
-    });
-  }
+  // ---------- Renderers ----------
+  const CAL_SRC =
+    "https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0";
 
-  function renderTodo() {
-    renderList({
-      title: "Todo",
-      inputId: "todoInput",
-      btnId: "todoAddBtn",
-      listId: "todoList",
-      placeholder: "Skriv en uppgift…",
-      onAdd: (t) => {
-        store.todo.unshift({ id: uid(), text: t, createdAt: Date.now() });
-        save();
-        renderView();
-      },
-      items: store.todo,
-      renderRow: (it) => mkSwipeRow(it.text, fmt(it.createdAt), () => {
-        const i = store.todo.findIndex(x => x.id === it.id);
-        if (i !== -1) {
-          const item = store.todo.splice(i, 1)[0];
-          toDone("todo", item);
-          save();
-          renderView();
-        }
-      })
-    });
-  }
+  function renderCalendar() {
+    sheetTitle.textContent = "Kalender";
 
-  function renderIdeas() {
-    renderList({
-      title: "Idéer",
-      inputId: "ideaInput",
-      btnId: "ideaAddBtn",
-      listId: "ideasList",
-      placeholder: "Skriv en idé…",
-      onAdd: (t) => {
-        store.ideas.unshift({ id: uid(), text: t, createdAt: Date.now() });
-        save();
-        renderView();
-      },
-      items: store.ideas,
-      renderRow: (it) => mkSwipeRow(it.text, fmt(it.createdAt), () => {
-        const i = store.ideas.findIndex(x => x.id === it.id);
-        if (i !== -1) {
-          const item = store.ideas.splice(i, 1)[0];
-          toDone("ideas", item);
-          save();
-          renderView();
-        }
-      })
-    });
-  }
-
-  function renderDone() {
     sheetContent.innerHTML = `
-      <div class="blockTitle">Done</div>
-      <ul id="doneList" class="miniList"></ul>
-      <div class="miniActions">
-        <button id="doneClearBtn" class="miniBtn">Rensa</button>
-      </div>
-      <div class="miniHint">Tryck ↩︎ för att återställa</div>
-    `;
-    const list = $("doneList");
-    list.innerHTML = "";
-
-    if (!store.done.length) {
-      list.innerHTML = `<li class="miniHint">Inget slutfört ännu.</li>`;
-      return;
-    }
-
-    for (const it of store.done) {
-      const li = document.createElement("li");
-      li.className = "itemRow";
-      li.innerHTML = `
-        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-          <button class="miniBtn" style="padding:6px 10px;font-size:12px;">↩︎</button>
-          <div class="itemText">${it.text}</div>
+      <div class="blockTitle">Kalender</div>
+      <div class="card">
+        <div class="calScale">
+          <iframe class="calFrame" src="${CAL_SRC}" frameborder="0" scrolling="no"></iframe>
         </div>
-        <div class="itemMeta">${fmt(it.doneAt)}</div>
-      `;
-      li.querySelector("button").addEventListener("click", () => restoreFromDone(it.id));
-      list.appendChild(li);
-    }
-
-    $("doneClearBtn").addEventListener("click", () => {
-      store.done = [];
-      save();
-      renderView();
-    });
+      </div>
+      <div class="miniHint" style="margin-top:10px;">
+        (iPhone Safari kan kräva cookies för Google iframe.)
+      </div>
+    `;
   }
 
-  // ---------- Weather (Open-Meteo) ----------
+  function renderPrio() {
+    sheetTitle.textContent = "Aktiv prio";
+
+    sheetContent.innerHTML = `
+      <div class="blockTitle">Aktiv prio</div>
+      <div class="miniForm">
+        <input id="prioInput" class="miniInput" type="text" placeholder="Lägg till superprio…" maxlength="160">
+        <button id="prioAddBtn" class="miniBtn">+ Lägg</button>
+      </div>
+      <ul id="prioList" class="miniList"></ul>
+      <div class="miniHint">Swipe höger→vänster = slutför</div>
+    `;
+
+    const prioInput = $("prioInput");
+    const prioAddBtn = $("prioAddBtn");
+    const prioList = $("prioList");
+
+    const add = () => {
+      const t = (prioInput.value || "").trim();
+      if (!t) return;
+      store.prio.unshift({ id: uid(), text: t, createdAt: Date.now() });
+      saveStore();
+      prioInput.value = "";
+      draw();
+    };
+
+    const completeById = (id) => {
+      const i = store.prio.findIndex(x => x.id === id);
+      if (i === -1) return;
+      const item = store.prio.splice(i, 1)[0];
+      store.done.unshift({ ...item, origin: "prio", doneAt: Date.now() });
+      saveStore();
+      draw();
+    };
+
+    const draw = () => {
+      prioList.innerHTML = "";
+      if (!store.prio.length) {
+        prioList.innerHTML = `<li class="miniHint">Inget i Aktiv prio just nu.</li>`;
+        return;
+      }
+      for (const item of store.prio) {
+        prioList.appendChild(
+          mkSwipeItem({ text: item.text, meta: fmt(item.createdAt) }, () => completeById(item.id), null)
+        );
+      }
+    };
+
+    prioAddBtn.addEventListener("click", add);
+    prioInput.addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });
+
+    draw();
+  }
+
+  // ---- Weather ----
+  async function loadWeather() {
+    // Stockholm fallback
+    const lat = 59.3293, lon = 18.0686;
+
+    const url =
+      `https://api.open-meteo.com/v1/forecast` +
+      `?latitude=${encodeURIComponent(lat)}` +
+      `&longitude=${encodeURIComponent(lon)}` +
+      `&current=temperature_2m,wind_speed_10m,weather_code` +
+      `&timezone=Europe%2FStockholm`;
+
+    const r = await fetch(url, { cache: "no-store" });
+    if (!r.ok) throw new Error("weather failed");
+    const data = await r.json();
+    return data?.current || null;
+  }
+
   function iconForCode(code) {
     if (code === 0) return "☀️";
     if (code === 1 || code === 2) return "🌤️";
@@ -362,113 +453,106 @@
     if ([95,96,99].includes(code)) return "⛈️";
     return "⛅️";
   }
+
   function textForCode(code) {
     const m = {
-      0:"Klart", 1:"Mestadels klart", 2:"Delvis molnigt", 3:"Mulet",
-      45:"Dimma", 48:"Isdimma",
-      51:"Duggregn (lätt)", 53:"Duggregn", 55:"Duggregn (kraftigt)",
-      61:"Regn (lätt)", 63:"Regn", 65:"Regn (kraftigt)",
-      71:"Snö (lätt)", 73:"Snö", 75:"Snö (kraftigt)",
-      80:"Skurar (lätta)", 81:"Skurar", 82:"Skurar (kraftiga)",
-      95:"Åska", 96:"Åska + hagel", 99:"Åska + hagel"
+      0: "Klart", 1: "Mestadels klart", 2: "Delvis molnigt", 3: "Mulet",
+      45: "Dimma", 48: "Isdimma",
+      51: "Duggregn (lätt)", 53: "Duggregn", 55: "Duggregn (kraftigt)",
+      61: "Regn (lätt)", 63: "Regn", 65: "Regn (kraftigt)",
+      71: "Snö (lätt)", 73: "Snö", 75: "Snö (kraftigt)",
+      80: "Skurar (lätta)", 81: "Skurar", 82: "Skurar (kraftiga)",
+      95: "Åska", 96: "Åska + hagel", 99: "Åska + hagel",
     };
     return m[code] || `Väderkod ${code}`;
   }
 
-  async function fetchWeather(lat, lon, label) {
-    const url =
-      `https://api.open-meteo.com/v1/forecast` +
-      `?latitude=${encodeURIComponent(lat)}` +
-      `&longitude=${encodeURIComponent(lon)}` +
-      `&current=temperature_2m,wind_speed_10m,weather_code` +
-      `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
-      `&forecast_days=2` +
-      `&timezone=Europe%2FStockholm`;
-
-    const r = await fetch(url, { cache: "no-store" });
-    if (!r.ok) throw new Error("Weather fetch failed");
-    const data = await r.json();
-
-    const cur = data.current;
-    const t = Math.round(cur.temperature_2m);
-    const w = Math.round(cur.wind_speed_10m);
-    const code = cur.weather_code;
-
-    const d = data.daily;
-    const tmax = d?.temperature_2m_max?.[1] ?? null;
-    const tmin = d?.temperature_2m_min?.[1] ?? null;
-    const c2 = d?.weather_code?.[1] ?? null;
-
+  function renderWeather() {
+    sheetTitle.textContent = "Väder";
     sheetContent.innerHTML = `
       <div class="blockTitle">Väder</div>
-      <div class="card" style="padding:16px">
-        <div style="display:flex;gap:12px;align-items:center;">
-          <div style="font-size:34px">${iconForCode(code)}</div>
+      <div class="card" style="padding:14px;">
+        <div id="wRow" style="display:flex; gap:12px; align-items:center;">
+          <div id="wIcon" style="font-size:34px;">⛅️</div>
           <div>
-            <div style="font-size:38px;font-weight:900;line-height:1">${t}°</div>
-            <div style="color:rgba(255,255,255,.65);font-weight:900">${textForCode(code)}</div>
-            <div class="miniHint" style="margin-top:6px;">${label} • Vind ${w} m/s</div>
+            <div id="wTemp" style="font-size:34px; font-weight:900;">—°</div>
+            <div id="wDesc" class="miniHint" style="margin-top:4px;">Laddar…</div>
           </div>
         </div>
-        <div class="miniHint" style="margin-top:12px;">
-          Uppdaterad: ${new Date().toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit", day:"2-digit", month:"2-digit" })}
-        </div>
-        ${tmax !== null && tmin !== null && c2 !== null ? `
-          <div class="miniHint" style="margin-top:10px;">
-            Imorgon: ${iconForCode(c2)} ${textForCode(c2)} • ${Math.round(tmin)}°–${Math.round(tmax)}°
+        <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+          <div class="itemRow" style="flex:1 1 140px;">
+            <div class="itemText">Vind</div>
+            <div class="itemMeta" id="wWind">—</div>
           </div>
-        ` : ``}
-        <div class="miniActions" style="margin-top:12px;">
-          <button id="weatherRefreshBtn" class="miniBtn">Uppdatera</button>
+          <div class="itemRow" style="flex:1 1 140px;">
+            <div class="itemText">Uppdaterad</div>
+            <div class="itemMeta" id="wUpd">—</div>
+          </div>
+        </div>
+        <div class="miniActions">
+          <button class="miniBtn" id="wRefresh">Uppdatera</button>
         </div>
       </div>
     `;
 
-    $("weatherRefreshBtn")?.addEventListener("click", () => loadWeather());
+    const wIcon = $("wIcon");
+    const wTemp = $("wTemp");
+    const wDesc = $("wDesc");
+    const wWind = $("wWind");
+    const wUpd  = $("wUpd");
+    const wRefresh = $("wRefresh");
+
+    const draw = async () => {
+      try {
+        if (wDesc) wDesc.textContent = "Laddar…";
+        const cur = await loadWeather();
+        if (!cur) throw new Error("no current");
+
+        const t = Math.round(cur.temperature_2m);
+        const w = Math.round(cur.wind_speed_10m);
+        const code = cur.weather_code;
+
+        if (wIcon) wIcon.textContent = iconForCode(code);
+        if (wTemp) wTemp.textContent = `${t}°`;
+        if (wDesc) wDesc.textContent = textForCode(code);
+        if (wWind) wWind.textContent = `${w} m/s`;
+        if (wUpd) wUpd.textContent = new Date().toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+      } catch {
+        if (wDesc) wDesc.textContent = "Kunde inte ladda väder.";
+      }
+    };
+
+    wRefresh?.addEventListener("click", draw);
+    draw();
   }
 
-  function loadWeather() {
-    const fallback = () =>
-      fetchWeather(59.3293, 18.0686, "Stockholm").catch(() => {
-        sheetContent.innerHTML = `<div class="blockTitle">Väder</div><div class="miniHint">Kunde inte ladda väder.</div>`;
-      });
-
-    if (!navigator.geolocation) return fallback();
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude, "Din plats").catch(fallback),
-      fallback,
-      { enableHighAccuracy: false, timeout: 7000, maximumAge: 30 * 60 * 1000 }
-    );
-  }
-
-  // ---------- News (RSS) ----------
+  // ---- News ----
   const RSS_NEWS = "https://news.google.com/rss?hl=sv&gl=SE&ceid=SE:sv";
-  const NEWS_CACHE_KEY = "sbdash_news_cache_mobile_v2";
+  const NEWS_CACHE_KEY = "sbdash_news_cache_wheel_v1";
 
   const PROXIES = [
-    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-    (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//, "")}`,
-    (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`
   ];
 
-  async function fetchTextFallback(url) {
+  async function fetchText(url) {
     let last;
     for (const p of PROXIES) {
       try {
-        const u = p(url);
-        const r = await fetch(u, { cache: "no-store" });
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const t = await r.text();
-        if (u.includes("/get?url=")) {
-          const obj = JSON.parse(t);
-          if (obj?.contents) return obj.contents;
-          throw new Error("No contents");
-        }
-        return t;
+        const r = await fetch(p(url), { cache: "no-store" });
+        if (!r.ok) throw new Error(String(r.status));
+        return await r.text();
       } catch (e) { last = e; }
     }
-    throw last || new Error("All proxies failed");
+    throw last || new Error("proxy failed");
+  }
+
+  function parseRss(xml, max = 12) {
+    const doc = new DOMParser().parseFromString(xml, "text/xml");
+    return Array.from(doc.querySelectorAll("item")).slice(0, max).map(it => ({
+      title: it.querySelector("title")?.textContent?.trim() || "Nyhet",
+      link: it.querySelector("link")?.textContent?.trim() || "#",
+      pubDate: it.querySelector("pubDate")?.textContent?.trim() || ""
+    }));
   }
 
   function saveCache(items) {
@@ -478,88 +562,289 @@
     try { return JSON.parse(localStorage.getItem(NEWS_CACHE_KEY) || "null"); } catch { return null; }
   }
 
-  function parseRss(xml, max = 12) {
-    const doc = new DOMParser().parseFromString(xml, "text/xml");
-    return Array.from(doc.querySelectorAll("item"))
-      .slice(0, max)
-      .map((it) => ({
-        title: it.querySelector("title")?.textContent?.trim() || "Nyhet",
-        link: it.querySelector("link")?.textContent?.trim() || "#",
-        pubDate: it.querySelector("pubDate")?.textContent?.trim() || "",
-      }));
-  }
-
-  async function loadNews() {
-    sheetContent.innerHTML = `<div class="blockTitle">Nyheter</div><div class="miniHint">Laddar…</div>`;
-    try {
-      const xml = await fetchTextFallback(RSS_NEWS);
-      const items = parseRss(xml, 12);
-      saveCache(items);
-      renderNews(items, `Uppdaterad: ${new Date().toLocaleString("sv-SE")}`);
-    } catch {
-      const c = loadCache();
-      if (c?.items?.length) {
-        renderNews(c.items, `Visar cache (senast: ${new Date(c.updatedAt).toLocaleString("sv-SE")})`);
-      } else {
-        renderNews([], "Nyheter kunde inte laddas just nu.");
-      }
-    }
-  }
-
-  function renderNews(items, metaText) {
+  function renderNews() {
+    sheetTitle.textContent = "Nyheter";
     sheetContent.innerHTML = `
       <div class="blockTitle">Nyheter</div>
-      <div class="miniHint">${metaText || ""}</div>
+      <div class="miniHint" id="newsMeta">Laddar…</div>
       <ul class="miniList" id="newsList" style="margin-top:12px;"></ul>
       <div class="miniActions">
-        <button id="newsRefreshBtn" class="miniBtn">Uppdatera</button>
+        <button class="miniBtn" id="newsRefresh">Uppdatera</button>
       </div>
     `;
-    const list = $("newsList");
-    if (!items?.length) {
-      list.innerHTML = `<li class="miniHint">Inget att visa.</li>`;
-    } else {
+
+    const newsMeta = $("newsMeta");
+    const newsList = $("newsList");
+    const newsRefresh = $("newsRefresh");
+
+    const draw = (items, metaText) => {
+      if (newsMeta) newsMeta.textContent = metaText || "";
+      if (!newsList) return;
+      newsList.innerHTML = "";
+
+      if (!items?.length) {
+        newsList.innerHTML = `<li class="miniHint">Inget att visa just nu.</li>`;
+        return;
+      }
+
       for (const it of items) {
-        const pubDate = it.pubDate ? new Date(it.pubDate) : null;
         const li = document.createElement("li");
         li.className = "itemRow";
-        li.innerHTML = `
-          <div class="itemText" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-            ${it.title}
-          </div>
-          <div class="itemMeta">${pubDate && !isNaN(pubDate) ? pubDate.toLocaleString("sv-SE", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" }) : ""}</div>
-        `;
-        li.addEventListener("click", () => window.open(it.link, "_blank", "noopener,noreferrer"));
-        list.appendChild(li);
-      }
-    }
 
-    $("newsRefreshBtn")?.addEventListener("click", loadNews);
+        const left = document.createElement("div");
+        left.className = "itemText";
+        left.style.whiteSpace = "normal";
+        left.style.lineHeight = "1.25";
+
+        const a = document.createElement("a");
+        a.href = it.link;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = it.title;
+        a.style.color = "var(--text)";
+        a.style.textDecoration = "none";
+        a.style.fontWeight = "900";
+        a.style.display = "block";
+
+        left.appendChild(a);
+
+        const right = document.createElement("div");
+        right.className = "itemMeta";
+        if (it.pubDate) {
+          const d = new Date(it.pubDate);
+          right.textContent = isNaN(d.getTime())
+            ? ""
+            : d.toLocaleString("sv-SE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        }
+
+        li.appendChild(left);
+        li.appendChild(right);
+        newsList.appendChild(li);
+      }
+    };
+
+    const load = async () => {
+      try {
+        draw([], "Laddar…");
+        const xml = await fetchText(RSS_NEWS);
+        const items = parseRss(xml, 12);
+        draw(items, `Uppdaterad: ${new Date().toLocaleString("sv-SE")}`);
+        saveCache(items);
+      } catch {
+        const c = loadCache();
+        if (c?.items?.length) {
+          draw(c.items, `Visar cache (senast: ${new Date(c.updatedAt).toLocaleString("sv-SE")})`);
+        } else {
+          draw([], "Nyheter kunde inte laddas just nu.");
+        }
+      }
+    };
+
+    newsRefresh?.addEventListener("click", load);
+    load();
   }
 
-  // ---------- Timer (Pomodoro ring) ----------
-  let total = 5 * 60;
-  let left = total;
-  let running = false;
-  let t0 = 0;
-  let pausedLeft = left;
-  let raf = 0;
+  // ---- Todo / Ideas / Done ----
+  function renderTodo() {
+    sheetTitle.textContent = "Todo";
 
-  const pad2 = (n) => String(n).padStart(2, "0");
+    sheetContent.innerHTML = `
+      <div class="blockTitle">Todo</div>
+      <div class="miniForm">
+        <input id="todoInput" class="miniInput" type="text" placeholder="Skriv en uppgift…" maxlength="120">
+        <button id="todoAddBtn" class="miniBtn">+ Lägg</button>
+      </div>
+      <ul id="todoList" class="miniList"></ul>
+      <div class="miniHint">Swipe höger→vänster = slutför</div>
+    `;
 
-  function renderTimerUI() {
-    const mm = Math.floor(left / 60);
-    const ss = left % 60;
+    const todoInput = $("todoInput");
+    const todoAddBtn = $("todoAddBtn");
+    const todoList = $("todoList");
+
+    const add = () => {
+      const t = (todoInput.value || "").trim();
+      if (!t) return;
+      store.todo.unshift({ id: uid(), text: t, createdAt: Date.now() });
+      saveStore();
+      todoInput.value = "";
+      draw();
+    };
+
+    const completeById = (id) => {
+      const i = store.todo.findIndex(x => x.id === id);
+      if (i === -1) return;
+      const item = store.todo.splice(i, 1)[0];
+      store.done.unshift({ ...item, origin: "todo", doneAt: Date.now() });
+      saveStore();
+      draw();
+    };
+
+    const draw = () => {
+      todoList.innerHTML = "";
+      if (!store.todo.length) {
+        todoList.innerHTML = `<li class="miniHint">Inga uppgifter just nu.</li>`;
+        return;
+      }
+      for (const item of store.todo) {
+        todoList.appendChild(
+          mkSwipeItem({ text: item.text, meta: fmt(item.createdAt) }, () => completeById(item.id), null)
+        );
+      }
+    };
+
+    todoAddBtn.addEventListener("click", add);
+    todoInput.addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });
+
+    draw();
+  }
+
+  function renderIdeas() {
+    sheetTitle.textContent = "Idéer";
+
+    sheetContent.innerHTML = `
+      <div class="blockTitle">Idéer</div>
+      <div class="miniForm">
+        <input id="ideaInput" class="miniInput" type="text" placeholder="Skriv en idé…" maxlength="160">
+        <button id="ideaAddBtn" class="miniBtn">+ Spara</button>
+      </div>
+      <ul id="ideasList" class="miniList"></ul>
+      <div class="miniHint">Swipe höger→vänster = arkivera (till Slutförda)</div>
+    `;
+
+    const ideaInput = $("ideaInput");
+    const ideaAddBtn = $("ideaAddBtn");
+    const ideasList = $("ideasList");
+
+    const add = () => {
+      const t = (ideaInput.value || "").trim();
+      if (!t) return;
+      store.ideas.unshift({ id: uid(), text: t, createdAt: Date.now() });
+      saveStore();
+      ideaInput.value = "";
+      draw();
+    };
+
+    const completeById = (id) => {
+      const i = store.ideas.findIndex(x => x.id === id);
+      if (i === -1) return;
+      const item = store.ideas.splice(i, 1)[0];
+      store.done.unshift({ ...item, origin: "ideas", doneAt: Date.now() });
+      saveStore();
+      draw();
+    };
+
+    const draw = () => {
+      ideasList.innerHTML = "";
+      if (!store.ideas.length) {
+        ideasList.innerHTML = `<li class="miniHint">Inga idéer sparade ännu.</li>`;
+        return;
+      }
+      for (const item of store.ideas) {
+        ideasList.appendChild(
+          mkSwipeItem({ text: item.text, meta: fmt(item.createdAt) }, () => completeById(item.id), null)
+        );
+      }
+    };
+
+    ideaAddBtn.addEventListener("click", add);
+    ideaInput.addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });
+
+    draw();
+  }
+
+  function renderDone() {
+    sheetTitle.textContent = "Slutförda";
+
+    sheetContent.innerHTML = `
+      <div class="blockTitle">Slutförda</div>
+      <ul id="doneList" class="miniList"></ul>
+      <div class="miniActions">
+        <button id="doneClearBtn" class="miniBtn">Rensa slutförda</button>
+      </div>
+      <div class="miniHint">Tryck ↩︎ för att återställa</div>
+    `;
+
+    const doneList = $("doneList");
+    const doneClearBtn = $("doneClearBtn");
+
+    const restore = (id) => {
+      const i = store.done.findIndex(x => x.id === id);
+      if (i === -1) return;
+      const item = store.done.splice(i, 1)[0];
+      const origin = item.origin || "todo";
+      const restored = { id: item.id, text: item.text, createdAt: item.createdAt || Date.now() };
+
+      if (origin === "prio") store.prio.unshift(restored);
+      else if (origin === "ideas") store.ideas.unshift(restored);
+      else store.todo.unshift(restored);
+
+      saveStore();
+      draw();
+    };
+
+    const draw = () => {
+      doneList.innerHTML = "";
+      if (!store.done.length) {
+        doneList.innerHTML = `<li class="miniHint">Inget slutfört ännu.</li>`;
+        return;
+      }
+
+      for (const item of store.done) {
+        const li = document.createElement("li");
+        li.className = "itemRow";
+
+        const left = document.createElement("div");
+        left.style.display = "flex";
+        left.style.alignItems = "center";
+        left.style.gap = "10px";
+        left.style.minWidth = "0";
+
+        const back = document.createElement("button");
+        back.className = "miniBtn";
+        back.textContent = "↩︎";
+        back.style.padding = "8px 10px";
+        back.addEventListener("click", () => restore(item.id));
+
+        const txt = document.createElement("div");
+        txt.className = "itemText";
+        txt.textContent = item.text;
+
+        left.appendChild(back);
+        left.appendChild(txt);
+
+        const right = document.createElement("div");
+        right.className = "itemMeta";
+        right.textContent = item.doneAt ? fmt(item.doneAt) : "";
+
+        li.appendChild(left);
+        li.appendChild(right);
+        doneList.appendChild(li);
+      }
+    };
+
+    doneClearBtn.addEventListener("click", () => {
+      store.done = [];
+      saveStore();
+      draw();
+    });
+
+    draw();
+  }
+
+  // ---- Timer (Pomodoro-like ring) ----
+  function renderTimer() {
+    sheetTitle.textContent = "Timer";
 
     sheetContent.innerHTML = `
       <div class="blockTitle">Timer</div>
 
-      <div class="card" style="padding:16px;max-width:520px;">
-        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
-          <div style="position:relative;width:260px;height:260px;">
-            <svg style="width:100%;height:100%;" viewBox="0 0 240 240" aria-hidden="true">
+      <div class="card" style="padding:16px;">
+        <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
+          <div style="position:relative; width:240px; height:240px;">
+            <svg id="tSvg" viewBox="0 0 240 240" style="width:100%; height:100%;">
               <defs>
-                <filter id="pomoGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <filter id="tGlow" x="-50%" y="-50%" width="200%" height="200%">
                   <feGaussianBlur stdDeviation="4" result="blur"/>
                   <feMerge>
                     <feMergeNode in="blur"/>
@@ -567,326 +852,184 @@
                   </feMerge>
                 </filter>
               </defs>
-              <circle cx="120" cy="120" r="92" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="16"
-                transform="rotate(-90 120 120)"></circle>
-              <circle id="pomoProg" cx="120" cy="120" r="92" fill="none" stroke="rgba(0,209,255,.88)"
-                stroke-width="16" stroke-linecap="round" filter="url(#pomoGlow)"
-                transform="rotate(-90 120 120)"></circle>
+              <circle cx="120" cy="120" r="92"
+                      fill="none" stroke="rgba(255,255,255,.10)" stroke-width="16"
+                      transform="rotate(-90 120 120)"></circle>
+              <circle id="tProg" cx="120" cy="120" r="92"
+                      fill="none" stroke="rgba(0,209,255,.88)" stroke-width="16"
+                      stroke-linecap="round" filter="url(#tGlow)"
+                      transform="rotate(-90 120 120)"></circle>
             </svg>
 
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;">
-              <div id="pomoTime" style="font-size:40px;font-weight:900;letter-spacing:-.5px;">${pad2(mm)}:${pad2(ss)}</div>
-              <div id="pomoSub" style="margin-top:6px;font-size:12px;color:rgba(255,255,255,.55);font-weight:900;">
-                ${!running && left===total ? "Redo" : (running ? "Fokus…" : (left>0 ? "Pausad" : "KLAR"))}
-              </div>
+            <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column;">
+              <div id="tTime" style="font-size:42px; font-weight:900;">05:00</div>
+              <div id="tSub" class="miniHint" style="margin-top:6px;">Redo</div>
             </div>
           </div>
 
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            <button id="pomoStartBtn" class="miniBtn">${running ? "Paus" : "Start"}</button>
-            <button id="pomoResetBtn" class="miniBtn">Reset</button>
+          <div style="display:flex; flex-direction:column; gap:10px; min-width: 160px;">
+            <button class="miniBtn" id="tStart">Start</button>
+            <button class="miniBtn" id="tReset" style="background: rgba(255,255,255,.06);">Reset</button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+              <button class="miniBtn" data-tmin="5"  style="background: rgba(255,255,255,.06);">5</button>
+              <button class="miniBtn" data-tmin="10" style="background: rgba(255,255,255,.06);">10</button>
+              <button class="miniBtn" data-tmin="15" style="background: rgba(255,255,255,.06);">15</button>
+              <button class="miniBtn" data-tmin="25" style="background: rgba(255,255,255,.06);">25</button>
+            </div>
           </div>
         </div>
 
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
-          <button class="miniBtn" data-min="5">5</button>
-          <button class="miniBtn" data-min="10">10</button>
-          <button class="miniBtn" data-min="15">15</button>
-        </div>
-
-        <div class="miniHint" style="margin-top:10px;">Ring: cyan → orange → röd när tiden går ner</div>
+        <div class="miniHint" style="margin-top:12px;">Ring: cyan → orange → röd när tiden går ner</div>
       </div>
     `;
 
-    const prog = $("pomoProg");
-    const C = 2 * Math.PI * 92;
-    if (prog) {
-      prog.style.strokeDasharray = String(C);
-      const pct = total ? Math.max(0, Math.min(1, left / total)) : 0;
-      prog.style.strokeDashoffset = String(C * (1 - pct));
+    const tProg = $("tProg");
+    const tTime = $("tTime");
+    const tSub  = $("tSub");
+    const tStart = $("tStart");
+    const tReset = $("tReset");
+    const tBtns = sheetContent.querySelectorAll("[data-tmin]");
 
-      if (pct > 0.40) prog.style.stroke = "rgba(0,209,255,.88)";
-      else if (pct > 0.15) prog.style.stroke = "rgba(255,165,0,.88)";
-      else prog.style.stroke = "rgba(255,70,70,.88)";
+    const R = 92;
+    const C = 2 * Math.PI * R;
+
+    if (tProg) {
+      tProg.style.strokeDasharray = String(C);
+      tProg.style.strokeDashoffset = "0";
     }
 
-    $("pomoStartBtn")?.addEventListener("click", startPauseTimer);
-    $("pomoResetBtn")?.addEventListener("click", resetTimer);
-    sheetContent.querySelectorAll("[data-min]")?.forEach(btn => {
-      btn.addEventListener("click", () => setMinutes(Number(btn.dataset.min)));
-    });
-  }
+    let total = 5 * 60;
+    let left = total;
+    let running = false;
+    let t0 = 0;
+    let pausedLeft = left;
+    let raf = 0;
 
-  function loopTimer() {
-    if (!running) return;
-    const elapsed = (performance.now() - t0) / 1000;
-    left = Math.max(0, Math.floor(pausedLeft - elapsed));
-
-    renderTimerUI();
-
-    if (left <= 0) {
-      running = false;
-      if (canVibrate) navigator.vibrate([20, 40, 20]);
-      return;
-    }
-    raf = requestAnimationFrame(loopTimer);
-  }
-
-  function startPauseTimer() {
-    if (running) {
-      running = false;
-      pausedLeft = left;
-      cancelAnimationFrame(raf);
-      renderTimerUI();
-      return;
+    function setStroke(pct) {
+      if (!tProg) return;
+      const p = clamp01(pct);
+      // drain from full to empty
+      tProg.style.strokeDashoffset = String(C * (1 - p));
     }
 
-    if (left <= 0) { left = total; pausedLeft = left; }
-    running = true;
-    t0 = performance.now();
-    tick(10);
-    cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(loopTimer);
-    renderTimerUI();
-  }
-
-  function setMinutes(min) {
-    running = false;
-    cancelAnimationFrame(raf);
-    total = Math.round(min * 60);
-    left = total;
-    pausedLeft = left;
-    renderTimerUI();
-    tick(8);
-  }
-
-  function resetTimer() {
-    running = false;
-    cancelAnimationFrame(raf);
-    left = total;
-    pausedLeft = left;
-    renderTimerUI();
-    tick(8);
-  }
-
-  // ---------- renderView main ----------
-  function renderView() {
-    const view = VIEWS[currentIndex];
-    if (!view) return;
-
-    if (sheetTitle) sheetTitle.textContent = view.title;
-    setWheelIcon();
-
-    if (!sheetContent) return;
-
-    switch (view.key) {
-      case "calendar": renderCalendar(); break;
-      case "prio":     renderPrio(); break;
-      case "weather":  loadWeather(); break;
-      case "news":     loadNews(); break;
-      case "todo":     renderTodo(); break;
-      case "ideas":    renderIdeas(); break;
-      case "done":     renderDone(); break;
-      case "timer":    renderTimerUI(); break;
-      default:
-        sheetContent.innerHTML = `<div class="miniHint">Okänd vy</div>`;
+    function setColor(pct) {
+      if (!tProg) return;
+      const p = clamp01(pct);
+      if (p > 0.40) tProg.style.stroke = "rgba(0,209,255,.88)";
+      else if (p > 0.15) tProg.style.stroke = "rgba(255,165,0,.88)";
+      else tProg.style.stroke = "rgba(255,70,70,.88)";
     }
-  }
 
-  // ---------- Wheel behavior (glid + inertia) ----------
-  let isDragging = false;
-  let startAngle = 0;
-  let startRotation = 0;
-  let rotation = 0;
-  let lastT = 0;
-  let lastRot = 0;
-  let vel = 0;
-  let rafInertia = 0;
+    function render() {
+      const safeLeft = Number.isFinite(left) ? Math.max(0, left) : 0;
+      const mm = Math.floor(safeLeft / 60);
+      const ss = safeLeft % 60;
 
-  const STEP = 360 / VIEWS.length;
+      if (tTime) tTime.textContent = `${pad2(mm)}:${pad2(ss)}`;
 
-  function stopInertia() {
-    cancelAnimationFrame(rafInertia);
-    rafInertia = 0;
-  }
+      const pct = total ? (safeLeft / total) : 0;
+      setStroke(pct);
+      setColor(pct);
 
-  function indexFromRotation(deg) {
-    const raw = Math.round(deg / STEP);
-    return ((raw % VIEWS.length) + VIEWS.length) % VIEWS.length;
-  }
-
-  function setRotation(deg, { silent = false } = {}) {
-    rotation = deg;
-    if (wheelRing) wheelRing.style.transform = `rotate(${deg}deg)`;
-
-    const idx = indexFromRotation(rotation);
-    if (idx !== currentIndex) {
-      currentIndex = idx;
-      setWheelIcon();
-      if (isOpen()) renderView(); // byt sida live när rutan är öppen
-      if (!silent) tick(6);
+      if (tSub) {
+        if (!running && safeLeft === total) tSub.textContent = "Redo";
+        else if (running && safeLeft > 0) tSub.textContent = "Fokus…";
+        else if (!running && safeLeft > 0) tSub.textContent = "Pausad";
+        else tSub.textContent = "KLAR";
+      }
     }
-  }
 
-  function snapToIndex(idx) {
-    currentIndex = idx;
-    renderView();
-    setRotation(idx * STEP, { silent: true });
-    tick(10);
-  }
+    function loop() {
+      if (!running) return;
+      const elapsed = (performance.now() - t0) / 1000;
+      left = Math.max(0, Math.floor(pausedLeft - elapsed));
+      render();
 
-  function getAngle(e) {
-    const r = wheel.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    return Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI);
-  }
-
-  function startInertia() {
-    stopInertia();
-    const friction = 0.92;
-
-    const step = () => {
-      vel *= friction;
-      if (Math.abs(vel) < 0.12) {
-        snapToIndex(indexFromRotation(rotation));
+      if (left <= 0) {
+        running = false;
+        if (tStart) tStart.textContent = "Start";
+        if (canVibrate) navigator.vibrate([20, 40, 20]);
         return;
       }
-      setRotation(rotation + vel);
-      rafInertia = requestAnimationFrame(step);
-    };
-
-    rafInertia = requestAnimationFrame(step);
-  }
-
-  let tapStartX = 0, tapStartY = 0, tapMoved = false;
-
-  function onDown(e) {
-    if (!wheel) return;
-    tapMoved = false;
-    tapStartX = e.clientX; tapStartY = e.clientY;
-
-    stopInertia();
-    isDragging = true;
-    wheel.setPointerCapture?.(e.pointerId);
-
-    startAngle = getAngle(e);
-    startRotation = rotation;
-
-    lastT = performance.now();
-    lastRot = rotation;
-    vel = 0;
-
-    e.preventDefault();
-  }
-
-  function onMove(e) {
-    if (!isDragging) return;
-
-    const dx = e.clientX - tapStartX;
-    const dy = e.clientY - tapStartY;
-    if (Math.abs(dx) > 6 || Math.abs(dy) > 6) tapMoved = true;
-
-    const a = getAngle(e);
-    let delta = a - startAngle;
-    if (delta > 180) delta -= 360;
-    if (delta < -180) delta += 360;
-
-    // “Rätt håll”: dra ned på höger sida = samma känsla som scroll ned
-    setRotation(startRotation + delta);
-
-    const t = performance.now();
-    const dt = Math.max(8, t - lastT);
-    vel = ((rotation - lastRot) / dt) * 16;
-    vel = Math.max(-14, Math.min(14, vel));
-    lastT = t;
-    lastRot = rotation;
-
-    e.preventDefault();
-  }
-
-  function onUp(e) {
-    if (!isDragging) return;
-    isDragging = false;
-    e.preventDefault();
-
-    if (!tapMoved) {
-      // tap öppnar rutan
-      if (!isOpen()) openSheet();
-      renderView();
-      return;
+      raf = requestAnimationFrame(loop);
     }
 
-    startInertia();
-  }
+    function startPause() {
+      if (running) {
+        running = false;
+        if (tStart) tStart.textContent = "Start";
+        pausedLeft = left;
+        cancelAnimationFrame(raf);
+        render();
+        return;
+      }
 
-  function onWheel(e) {
-    e.preventDefault();
-    const dir = e.deltaY > 0 ? 1 : -1;
-    setRotation(rotation + dir * STEP);
-    if (isOpen()) renderView();
-  }
+      if (left <= 0) { left = total; pausedLeft = left; }
 
-  wheel?.addEventListener("pointerdown", onDown, { passive: false });
-  window.addEventListener("pointermove", onMove, { passive: false });
-  window.addEventListener("pointerup", onUp, { passive: false });
-  window.addEventListener("pointercancel", onUp, { passive: false });
-  wheel?.addEventListener("wheel", onWheel, { passive: false });
+      running = true;
+      if (tStart) tStart.textContent = "Paus";
+      t0 = performance.now();
+      tick(10);
 
-  // ---------- Sheet drag to close (fix cancel) ----------
-  let dragStart = null;
-
-  sheet?.addEventListener("pointerdown", (e) => {
-    if (!isOpen()) return;
-    dragStart = e.clientY;
-    sheet.classList.add("dragging");
-    sheet.setPointerCapture?.(e.pointerId);
-  }, { passive: true });
-
-  sheet?.addEventListener("pointermove", (e) => {
-    if (dragStart === null) return;
-    const delta = e.clientY - dragStart;
-
-    if (delta > 0) {
-      sheet.style.transform = `translateX(-50%) translateY(${delta}px)`;
-    }
-  }, { passive: true });
-
-  const endDrag = (e) => {
-    if (dragStart === null) return;
-    const delta = e.clientY - dragStart;
-
-    if (delta > 120) {
-      closeSheet();
-    } else {
-      sheet.style.transform = "";
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(loop);
     }
 
-    sheet.classList.remove("dragging");
-    dragStart = null;
-  };
+    function setMinutes(m) {
+      const min = Number(m);
+      if (!Number.isFinite(min) || min <= 0) return;
+      running = false;
+      cancelAnimationFrame(raf);
+      if (tStart) tStart.textContent = "Start";
+      total = Math.round(min * 60);
+      left = total;
+      pausedLeft = left;
+      render();
+      tick(8);
+    }
 
-sheet?.addEventListener("pointerup", () => {
-  sheet.style.transform = "";
-  sheet.classList.remove("dragging");
-  dragStart = null;
-}, { passive: true });
+    function reset() {
+      running = false;
+      cancelAnimationFrame(raf);
+      if (tStart) tStart.textContent = "Start";
+      left = total;
+      pausedLeft = left;
+      render();
+      tick(8);
+    }
 
-sheet?.addEventListener("pointercancel", () => {
-  sheet.style.transform = "";
-  sheet.classList.remove("dragging");
-  dragStart = null;
-}, { passive: true });
+    tStart?.addEventListener("click", startPause);
+    tReset?.addEventListener("click", reset);
+    tBtns.forEach(btn => btn.addEventListener("click", () => setMinutes(btn.dataset.tmin)));
 
-sheet?.addEventListener("lostpointercapture", () => {
-  sheet.style.transform = "";
-  sheet.classList.remove("dragging");
-  dragStart = null;
-}, { passive: true });
+    render();
+  }
+
+  // ---------- Main render switch ----------
+  function renderView(id) {
+    if (!sheetTitle || !sheetContent) return;
+
+    // Always ensure sheet open when rendering (safe)
+    sheetWrap?.classList.add("open");
+
+    switch (id) {
+      case "calendar": return renderCalendar();
+      case "prio":     return renderPrio();
+      case "weather":  return renderWeather();
+      case "news":     return renderNews();
+      case "todo":     return renderTodo();
+      case "ideas":    return renderIdeas();
+      case "done":     return renderDone();
+      case "timer":    return renderTimer();
+      default:
+        sheetTitle.textContent = "Preview";
+        sheetContent.innerHTML = `<div class="miniHint">Okänd vy.</div>`;
+    }
+  }
 
   // ---------- Init ----------
-  // start: sheet stängd, men wheel preview synlig
+  // Start: sheet stängd, men preview synlig
   setRotation(0, { silent: true });
-  setWheelIcon();
+  setPreview(0, { silent: true });
   closeSheet();
 })();

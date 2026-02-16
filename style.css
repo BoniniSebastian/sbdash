@@ -290,3 +290,75 @@ body{
     width: min(92vw, 330px);
   }
 }
+/* =========================
+   Missing pieces (needed by app.js)
+   ========================= */
+
+.miniHint{
+  color: rgba(255,255,255,.55);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.miniMeta{
+  color: rgba(255,255,255,.55);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.miniActions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top:12px;
+}
+
+/* Swipe rows */
+.swipeItem{
+  position:relative;
+  border-radius: 14px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  touch-action: pan-y;
+}
+
+.swipeUnder{
+  position:absolute;
+  inset:0;
+  background: rgba(0,0,0,.18);
+  pointer-events:none;
+}
+
+.swipeContent{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:12px 12px;
+  transform: translateX(0px);
+  will-change: transform;
+}
+
+.swipeLeft{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+
+.swipeText{
+  font-weight:900;
+  font-size:14px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.swipeRight{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}

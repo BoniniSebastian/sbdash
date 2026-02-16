@@ -4,12 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>SB Dash</title>
-  <link rel="stylesheet" href="style.css?v=600" />
+  <link rel="stylesheet" href="style.css?v=801" />
 </head>
 <body>
 
   <header class="topbar">
     <div class="brand">
+      <button class="gearTop" id="openSettingsBtn" aria-label="Inställningar">⚙️</button>
       <div class="brandDot"></div>
       <div>
         <div class="brandTitle">SB Dash</div>
@@ -25,32 +26,23 @@
     <section class="layout">
 
       <!-- VÄNSTER: Kalender -->
-      <aside class="panel calendarPanel">
+      <aside class="panel calendarPanel" aria-label="Kalender">
         <div class="panelHead">
           <h2>Kalender</h2>
-          <span class="tag">Google</span>
+          <span class="tag">Agenda</span>
         </div>
 
         <div class="panelBody calendarBody">
           <div class="calWrap">
-            <iframe
-              id="calFrame"
-              class="calFrame"
-              src=""
-              frameborder="0"
-              scrolling="yes"
-              loading="lazy">
-            </iframe>
+            <iframe id="calFrame" class="calFrame" src="" frameborder="0" scrolling="yes" loading="lazy"></iframe>
             <div class="calOverlay" aria-hidden="true"></div>
           </div>
-          <div class="miniHint" style="margin-top:10px;">
-            Agenda embed (lägg in din länk i app.js).
-          </div>
+          <div class="miniHint">Ställ in din kalender via ⚙️ (mail/ID).</div>
         </div>
       </aside>
 
-      <!-- MITTEN: Main carousel -->
-      <section class="panel mainPanel">
+      <!-- MITTEN: Main -->
+      <section class="panel mainPanel" aria-label="Main">
         <div class="panelHead">
           <h2>Main</h2>
           <span class="tag">Scroll • Knappar • Ratt</span>
@@ -94,6 +86,10 @@
                     <div class="tomText" id="tomText">—</div>
                   </div>
                 </div>
+
+                <div class="miniActions">
+                  <button id="weatherRefreshBtn" class="miniBtn ghost">Uppdatera</button>
+                </div>
               </div>
             </div>
 
@@ -109,25 +105,25 @@
             <div class="viewPage" data-view="todo">
               <div class="viewTitle">Att göra</div>
               <div class="miniForm">
-                <input id="todoInput" class="miniInput" type="text" placeholder="Skriv en uppgift…" maxlength="120">
+                <input id="todoInput" class="miniInput" type="text" placeholder="Skriv en uppgift…" maxlength="160">
                 <button id="todoAddBtn" class="miniBtn">+ Lägg</button>
               </div>
               <ul id="todoList" class="miniList"></ul>
               <div class="miniHint">Swipe höger→vänster = slutför</div>
             </div>
 
-            <!-- IDEER -->
+            <!-- IDEAS -->
             <div class="viewPage" data-view="ideas">
               <div class="viewTitle">Idéer</div>
               <div class="miniForm">
-                <input id="ideaInput" class="miniInput" type="text" placeholder="Skriv en idé…" maxlength="160">
+                <input id="ideaInput" class="miniInput" type="text" placeholder="Skriv en idé…" maxlength="200">
                 <button id="ideaAddBtn" class="miniBtn">+ Spara</button>
               </div>
               <ul id="ideasList" class="miniList"></ul>
-              <div class="miniHint">Swipe höger→vänster = arkivera</div>
+              <div class="miniHint">Swipe höger→vänster = arkivera (till Slutförda)</div>
             </div>
 
-            <!-- SLUTFÖRDA -->
+            <!-- DONE -->
             <div class="viewPage" data-view="done">
               <div class="viewTitle">Slutförda</div>
               <ul id="doneList" class="miniList"></ul>
@@ -172,7 +168,7 @@
                   <button class="miniBtn ghost" id="pomoResetBtn">Reset</button>
                 </div>
 
-                <div class="miniHint">Ring: cyan → orange → röd när tiden går ner</div>
+                <div class="miniHint">Ringen töms när tiden går ner.</div>
               </div>
             </div>
 
@@ -190,7 +186,7 @@
       </section>
 
       <!-- HÖGER: Aktiv prio -->
-      <aside class="panel prioPanel">
+      <aside class="panel prioPanel" aria-label="Aktiv prio">
         <div class="panelHead">
           <h2>Aktiv prio</h2>
           <span class="countPill" id="prioCount">0</span>
@@ -198,7 +194,7 @@
 
         <div class="panelBody">
           <div class="miniForm" style="margin-top:0;">
-            <input id="prioInput" class="miniInput" type="text" placeholder="Lägg till superprio…" maxlength="160">
+            <input id="prioInput" class="miniInput" type="text" placeholder="Lägg till superprio…" maxlength="220">
             <button id="prioAddBtn" class="miniBtn">+ Lägg</button>
           </div>
 
@@ -208,7 +204,7 @@
       </aside>
 
       <!-- HÖGER NERE: Ratt -->
-      <aside class="panel dialPanel">
+      <aside class="panel dialPanel" aria-label="Ratt">
         <div class="panelBody dialBody">
           <div class="dialWrap">
             <div class="dial" id="dial">
@@ -238,6 +234,31 @@
     </div>
   </div>
 
-  <script src="app.js?v=600"></script>
+  <!-- Modal: Inställningar -->
+  <div class="modalOverlay" id="settingsOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Inställningar">
+      <div class="modalHead">
+        <div class="modalTitle">Inställningar</div>
+        <button class="modalClose" id="settingsCloseBtn">✕</button>
+      </div>
+
+      <div class="settingsForm">
+        <label class="settingsLabel">Stad (för väder)</label>
+        <input id="settingsCity" class="settingsInput" type="text" placeholder="t.ex. Värmdö eller Stockholm">
+
+        <label class="settingsLabel" style="margin-top:10px;">Google Kalender-ID (mail)</label>
+        <input id="settingsCalId" class="settingsInput" type="text" placeholder="t.ex. namn@gmail.com">
+
+        <div class="settingsHint" id="settingsHint">Sparas lokalt på den här enheten.</div>
+
+        <div class="settingsActions">
+          <button class="miniBtn" id="settingsSaveBtn">Spara</button>
+          <button class="miniBtn ghost" id="settingsResetBtn">Återställ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=801"></script>
 </body>
 </html>

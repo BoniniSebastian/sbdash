@@ -744,6 +744,7 @@
   } catch (e) {
     if (statusEl) statusEl.textContent = "Kan inte läsa nyheter (proxy/CORS).";
   }
+  }
   /* =========================
      VIEW SWITCH
   ========================= */

@@ -596,7 +596,7 @@ body{
   top: 44%;
   transform: translate(-50%,-50%);
   z-index: 22;
-  font-size: 16px;
+  font-size: 80px;
   font-weight: 400;          /* inte fet */
   letter-spacing: .8px;
   opacity: .75;

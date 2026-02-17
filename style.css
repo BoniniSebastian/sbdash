@@ -351,9 +351,11 @@ body{
 /* Calendar iframe scale */
 .calScale{
   width:118%;
-  height: 220px;
-  transform: scale(.86);
+  height: 300px;
+  transform: scale(.92);
   transform-origin: top left;
+  border-radius: 18px;   /* ← rundare */
+  overflow: hidden;      /* ← viktigt */
 }
 .calFrame{
   width:100%;

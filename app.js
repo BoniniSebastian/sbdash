@@ -206,18 +206,22 @@
   }, { passive: false });
 
   wheel?.addEventListener("pointerup", () => {
-    if (!dragging) return;
-    dragging = false;
+  if (!dragging) return;
+  dragging = false;
 
-    const idx = sectorFromDeg(rotationDeg);
-    setRotation(idx * STEP);
+  const idx = sectorFromDeg(rotationDeg);
+  setRotation(idx * STEP);
 
-    if (!didDrag) {
-      openSheet();
-      renderView(VIEW_DEFS[activeIndex].id);
-    }
-  }, { passive: true });
-
+  if (!didDrag) {
+    // Tryck utan drag → öppna sheet
+    openSheet();
+    renderView(VIEW_DEFS[activeIndex].id);
+  } else {
+    // Drag + släpp → om sheet redan är öppen, byt sida
+    renderActiveIfOpen();
+  }
+}, { passive: true });
+  
   wheel?.addEventListener("pointercancel", () => { dragging = false; }, { passive: true });
 
   wheel?.addEventListener("wheel", (e) => {
@@ -225,6 +229,7 @@
     const dir = e.deltaY > 0 ? 1 : -1;
     const next = (activeIndex + dir + VIEW_DEFS.length) % VIEW_DEFS.length;
     setRotation(next * STEP);
+    renderActiveIfOpen();
   }, { passive: false });
 
   wheel?.addEventListener("click", () => {
@@ -722,7 +727,12 @@
   /* =========================
      VIEW SWITCH
   ========================= */
-  function renderView(id) {
+function renderActiveIfOpen() {
+  if (sheetWrap?.classList.contains("open")) {
+    renderView(VIEW_DEFS[activeIndex].id);
+  }
+}
+    function renderView(id) {
     if (id === "calendar") return renderCalendar();
     if (id === "prio")     return renderList("prio", "Aktiv prio", true);
     if (id === "weather")  return renderWeather();

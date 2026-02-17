@@ -8,6 +8,8 @@
    ========================================================= */
 
 (() => {
+   alert("JS loaded OK");
+
   const $ = (id) => document.getElementById(id);
 
   // ---------- Elements ----------

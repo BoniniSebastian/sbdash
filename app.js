@@ -74,13 +74,13 @@
      VIEWS
   ========================= */
   const VIEW_DEFS = [
-    { id: "calendar", label: "KALENDER",   icon: "assets/ui/icon-calendar.svg" },
-    { id: "prio",     label: "PRIOS", icon: "assets/ui/icon-prio.svg" },
-    { id: "weather",  label: "VÄDER",      icon: "assets/ui/icon-weather.svg" },
-    { id: "news",     label: "NYHETER",    icon: "assets/ui/icon-news.svg" },
-    { id: "todo",     label: "TODO",       icon: "assets/ui/icon-todo.svg" },
-    { id: "ideas",    label: "IDÉER",      icon: "assets/ui/icon-ideas.svg" },
-    { id: "timer",    label: "TIMER",      icon: "assets/ui/icon-pomodoro.svg" },
+    { id: "calendar", label: "KALENDER", icon: "assets/ui/icon-calendar.svg" },
+    { id: "prio",     label: "PRIOS",    icon: "assets/ui/icon-prio.svg" },
+    { id: "weather",  label: "VÄDER",    icon: "assets/ui/icon-weather.svg" },
+    { id: "news",     label: "NYHETER",  icon: "assets/ui/icon-news.svg" },
+    { id: "todo",     label: "TODO",     icon: "assets/ui/icon-todo.svg" },
+    { id: "ideas",    label: "IDÉER",    icon: "assets/ui/icon-ideas.svg" },
+    { id: "timer",    label: "TIMER",    icon: "assets/ui/icon-pomodoro.svg" },
   ];
 
   let activeIndex = 0;
@@ -111,18 +111,17 @@
   }
 
   /* =========================
-     SHEET OPEN/CLOSE
-     (Premium wheel toggle via body.sheetOpen)
+     SHEET OPEN/CLOSE (premium wheel toggle)
   ========================= */
   function openSheet() {
     sheetWrap?.classList.add("open");
-    document.body.classList.add("sheetOpen");   // ✅ premium wheel
+    document.body.classList.add("sheetOpen");
     if (centerLabelEl) centerLabelEl.style.opacity = "0";
   }
 
   function closeSheet() {
     sheetWrap?.classList.remove("open");
-    document.body.classList.remove("sheetOpen"); // ✅ premium wheel
+    document.body.classList.remove("sheetOpen");
     if (centerLabelEl) centerLabelEl.style.opacity = "1";
   }
 
@@ -146,9 +145,9 @@
     }
   }, { passive: false });
 
-  sheet?.addEventListener("pointerup", () => {
+  sheet?.addEventListener("pointerup", (e) => {
     if (sheetDragStartY == null) return;
-    const delta = event.clientY - sheetDragStartY;
+    const delta = e.clientY - sheetDragStartY;
     if (delta > 120) closeSheet();
 
     sheet.style.transform = "";
@@ -206,22 +205,20 @@
   }, { passive: false });
 
   wheel?.addEventListener("pointerup", () => {
-  if (!dragging) return;
-  dragging = false;
+    if (!dragging) return;
+    dragging = false;
 
-  const idx = sectorFromDeg(rotationDeg);
-  setRotation(idx * STEP);
+    const idx = sectorFromDeg(rotationDeg);
+    setRotation(idx * STEP);
 
-  if (!didDrag) {
-    // Tryck utan drag → öppna sheet
-    openSheet();
-    renderView(VIEW_DEFS[activeIndex].id);
-  } else {
-    // Drag + släpp → om sheet redan är öppen, byt sida
-    renderActiveIfOpen();
-  }
-}, { passive: true });
-  
+    if (!didDrag) {
+      openSheet();
+      renderView(VIEW_DEFS[activeIndex].id);
+    } else {
+      renderActiveIfOpen();
+    }
+  }, { passive: true });
+
   wheel?.addEventListener("pointercancel", () => { dragging = false; }, { passive: true });
 
   wheel?.addEventListener("wheel", (e) => {
@@ -309,6 +306,7 @@
     TIMER.total = Math.round(m * 60);
     TIMER.left = TIMER.total;
     TIMER.pausedLeft = TIMER.left;
+
     updateWheelTimerProgress();
     renderTimerUIOnly();
   }
@@ -318,6 +316,7 @@
     cancelAnimationFrame(TIMER.raf);
     TIMER.left = TIMER.total;
     TIMER.pausedLeft = TIMER.left;
+
     updateWheelTimerProgress();
     renderTimerUIOnly();
   }
@@ -360,6 +359,7 @@
       renderTimerUIOnly();
       return;
     }
+
     TIMER.raf = requestAnimationFrame(timerLoop);
   }
 
@@ -523,7 +523,7 @@
   }
 
   /* =========================
-     LISTS + ENTER
+     LISTS
   ========================= */
   function renderList(type, label, allowModal) {
     setSheetTitleWithDone(label);
@@ -658,81 +658,84 @@
     `).join("");
   }
 
+  /* =========================
+     NEWS (RSS)
+  ========================= */
   async function renderNews() {
-  sheetTitle.textContent = "Nyheter";
-  sheetContent.innerHTML = `
-    <div class="card" style="padding:14px;">
-      <div class="miniHint" id="newsStatus">Laddar…</div>
-      <div id="newsList" class="newsList" style="margin-top:10px;"></div>
-    </div>
-  `;
+    sheetTitle.textContent = "Nyheter";
+    sheetContent.innerHTML = `
+      <div class="card" style="padding:14px;">
+        <div class="miniHint" id="newsStatus">Laddar…</div>
+        <div id="newsList" class="newsList" style="margin-top:10px;"></div>
+      </div>
+    `;
 
-  const feeds = [
-    { name: "SVT Nyheter", url: "https://www.svt.se/nyheter/rss.xml" },
-    { name: "DN",         url: "https://www.dn.se/rss/" },
-  ];
+    const feeds = [
+      { name: "SVT Nyheter", url: "https://www.svt.se/nyheter/rss.xml" },
+      { name: "DN",         url: "https://www.dn.se/rss/" },
+    ];
 
-  const proxy = (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
+    const proxy = (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
 
-  function parseRss(xmlText, sourceName) {
-    const doc = new DOMParser().parseFromString(xmlText, "text/xml");
-    const items = [...doc.querySelectorAll("item")].slice(0, 12);
-    return items.map((it) => ({
-      source: sourceName,
-      title: (it.querySelector("title")?.textContent || "").trim(),
-      link:  (it.querySelector("link")?.textContent  || "").trim(),
-      date:  new Date(it.querySelector("pubDate")?.textContent || Date.now()),
-    })).filter(x => x.title && x.link);
-  }
-
-  try {
-    const results = await Promise.allSettled(
-      feeds.map(async f => {
-        const r = await fetch(proxy(f.url), { cache: "no-store" });
-        const txt = await r.text();
-        return parseRss(txt, f.name);
-      })
-    );
-
-    const merged = results
-      .filter(x => x.status === "fulfilled")
-      .flatMap(x => x.value)
-      .sort((a,b) => b.date - a.date)
-      .slice(0, 18);
-
-    const status = $("newsStatus");
-    const listEl = $("newsList");
-
-    if (!merged.length) {
-      if (status) status.textContent = "Kunde inte läsa RSS just nu.";
-      return;
+    function parseRss(xmlText, sourceName) {
+      const doc = new DOMParser().parseFromString(xmlText, "text/xml");
+      const items = [...doc.querySelectorAll("item")].slice(0, 12);
+      return items.map((it) => ({
+        source: sourceName,
+        title: (it.querySelector("title")?.textContent || "").trim(),
+        link:  (it.querySelector("link")?.textContent  || "").trim(),
+        date:  new Date(it.querySelector("pubDate")?.textContent || Date.now()),
+      })).filter(x => x.title && x.link);
     }
 
-    if (status) status.textContent = `Senaste: ${merged.length} artiklar`;
-    if (listEl) {
-      listEl.innerHTML = merged.map(n => `
-        <a class="newsItem" href="${n.link}" target="_blank" rel="noopener">
-          <div class="newsTop">
+    try {
+      const results = await Promise.allSettled(
+        feeds.map(async f => {
+          const r = await fetch(proxy(f.url), { cache: "no-store" });
+          const txt = await r.text();
+          return parseRss(txt, f.name);
+        })
+      );
+
+      const merged = results
+        .filter(x => x.status === "fulfilled")
+        .flatMap(x => x.value)
+        .sort((a,b) => b.date - a.date)
+        .slice(0, 18);
+
+      const status = $("newsStatus");
+      const listEl = $("newsList");
+
+      if (!merged.length) {
+        if (status) status.textContent = "Kunde inte läsa RSS just nu.";
+        return;
+      }
+
+      if (status) status.textContent = `Senaste: ${merged.length} artiklar`;
+      if (listEl) {
+        listEl.innerHTML = merged.map(n => `
+          <a class="newsItem" href="${n.link}" target="_blank" rel="noopener">
             <div class="newsTitle">${n.title}</div>
-          </div>
-          <div class="newsMeta">${n.source} • ${n.date.toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit", day:"2-digit", month:"2-digit" })}</div>
-        </a>
-      `).join("");
+            <div class="newsMeta">${n.source} • ${n.date.toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit", day:"2-digit", month:"2-digit" })}</div>
+          </a>
+        `).join("");
+      }
+    } catch (e) {
+      const status = $("newsStatus");
+      if (status) status.textContent = "Fel vid hämtning av nyheter.";
     }
-  } catch (e) {
-    const status = $("newsStatus");
-    if (status) status.textContent = "Fel vid hämtning av nyheter.";
   }
 
   /* =========================
      VIEW SWITCH
   ========================= */
-function renderActiveIfOpen() {
-  if (sheetWrap?.classList.contains("open")) {
-    renderView(VIEW_DEFS[activeIndex].id);
+  function renderActiveIfOpen() {
+    if (sheetWrap?.classList.contains("open")) {
+      renderView(VIEW_DEFS[activeIndex].id);
+    }
   }
-}
-    function renderView(id) {
+
+  function renderView(id) {
     if (id === "calendar") return renderCalendar();
     if (id === "prio")     return renderList("prio", "Aktiv prio", true);
     if (id === "weather")  return renderWeather();

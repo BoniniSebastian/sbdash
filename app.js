@@ -17,6 +17,11 @@
   const startPrioCountEl = $("startPrioCount");
   const centerLabelEl = $("centerLabel");
 
+  // ✅ PREVIEW elements (nya)
+  const previewWrap = $("previewWrap");
+  const previewTitle = $("previewTitle");
+  const previewBody = $("previewBody");
+
   function clamp01(x){ return Math.max(0, Math.min(1,x)); }
   function pad2(n){ return String(n).padStart(2,"0"); }
 
@@ -86,11 +91,140 @@
     return ((raw % VIEW_DEFS.length)+VIEW_DEFS.length)%VIEW_DEFS.length;
   }
 
+  /* =========================
+     PREVIEW (bakom hjulet)
+  ========================= */
+  const cache = {
+    weather: null,   // { now: {t, wind, hum}, temps[], pop[] }
+    news: null,      // [{title, source, link, date}]
+  };
+
+  function setPreviewCard(title, html){
+    if (!previewTitle || !previewBody) return;
+    previewTitle.textContent = title || "";
+    previewBody.innerHTML = html || "";
+  }
+
+  function renderPreview(id){
+    if (!previewWrap) return;
+
+    // Om sheet är öppen: göm preview (du kan göra den “frostig” via CSS senare)
+    if (sheetWrap?.classList.contains("open")) {
+      previewWrap.style.opacity = "0";
+      previewWrap.style.pointerEvents = "none";
+      return;
+    }
+
+    previewWrap.style.opacity = "1";
+    previewWrap.style.pointerEvents = "none";
+
+    if (id === "weather") {
+      if (cache.weather) {
+        const w = cache.weather;
+        setPreviewCard("Väder", `
+          <div style="display:flex;justify-content:space-between;font-weight:900;font-size:18px;">
+            <div>${w.now.t}°</div>
+            <div>${w.now.wind} m/s</div>
+            <div>${w.now.hum}%</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:10px;opacity:.8;font-weight:900;font-size:12px;">
+            ${w.temps.map((t,i)=>`
+              <div style="text-align:center;min-width:38px;">
+                <div>+${i}h</div>
+                <div>${t}°</div>
+                <div>${w.pop[i]}%</div>
+              </div>
+            `).join("")}
+          </div>
+        `);
+      } else {
+        setPreviewCard("Väder", `<div class="miniHint">Vrid/tryck för att ladda väder…</div>`);
+      }
+      return;
+    }
+
+    if (id === "news") {
+      if (cache.news?.length) {
+        const top = cache.news.slice(0,3);
+        setPreviewCard("Nyheter", `
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            ${top.map(n => `
+              <div style="border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03);border-radius:14px;padding:10px;">
+                <div style="font-weight:900;font-size:13px;line-height:1.2;">${escapeHtml(n.title)}</div>
+                <div class="miniHint" style="margin-top:6px;">${escapeHtml(n.source)} • ${n.date.toLocaleString("sv-SE",{hour:"2-digit",minute:"2-digit"})}</div>
+              </div>
+            `).join("")}
+          </div>
+        `);
+      } else {
+        setPreviewCard("Nyheter", `<div class="miniHint">Vrid/tryck för att ladda nyheter…</div>`);
+      }
+      return;
+    }
+
+    if (id === "prio") {
+      const c = Array.isArray(store.prio) ? store.prio.length : 0;
+      const first = store.prio?.[0]?.text ? escapeHtml(store.prio[0].text) : "Inga prios ännu";
+      setPreviewCard("Prios", `
+        <div style="font-weight:900;font-size:16px;">Aktiva: ${c}</div>
+        <div class="miniHint" style="margin-top:8px;">${first}</div>
+      `);
+      return;
+    }
+
+    if (id === "todo") {
+      const c = Array.isArray(store.todo) ? store.todo.length : 0;
+      const first = store.todo?.[0]?.text ? escapeHtml(store.todo[0].text) : "Inga TODO ännu";
+      setPreviewCard("TODO", `
+        <div style="font-weight:900;font-size:16px;">Antal: ${c}</div>
+        <div class="miniHint" style="margin-top:8px;">${first}</div>
+      `);
+      return;
+    }
+
+    if (id === "ideas") {
+      const c = Array.isArray(store.ideas) ? store.ideas.length : 0;
+      const first = store.ideas?.[0]?.text ? escapeHtml(store.ideas[0].text) : "Inga idéer ännu";
+      setPreviewCard("Idéer", `
+        <div style="font-weight:900;font-size:16px;">Antal: ${c}</div>
+        <div class="miniHint" style="margin-top:8px;">${first}</div>
+      `);
+      return;
+    }
+
+    if (id === "timer") {
+      setPreviewCard("Timer", `
+        <div style="font-weight:900;font-size:18px;">${timerText()}</div>
+        <div class="miniHint" style="margin-top:6px;">Tryck för att starta/pausa</div>
+      `);
+      return;
+    }
+
+    if (id === "calendar") {
+      setPreviewCard("Kalender", `<div class="miniHint">Tryck för att öppna kalender</div>`);
+      return;
+    }
+
+    setPreviewCard("", "");
+  }
+
+  function escapeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#39;");
+  }
+
   function setPreview(index){
     activeIndex = (index + VIEW_DEFS.length)%VIEW_DEFS.length;
     const v = VIEW_DEFS[activeIndex];
     if(wheelIcon) wheelIcon.src = v.icon;
     setCenterLabel(v.label);
+
+    // ✅ uppdatera preview när du scrollar på startsidan
+    renderPreview(v.id);
   }
 
   function setRotation(deg){
@@ -113,13 +247,24 @@
     sheetWrap?.classList.add("open");
     document.body.classList.add("sheetOpen");
     if(centerLabelEl) centerLabelEl.style.opacity="0";
+
+    // ✅ göm preview när sheet öppnas
+    renderPreview(VIEW_DEFS[activeIndex].id);
   }
 
   function closeSheet(){
     sheetWrap?.classList.remove("open");
     document.body.classList.remove("sheetOpen");
     if(centerLabelEl) centerLabelEl.style.opacity="1";
+
+    // ✅ visa preview igen
+    renderPreview(VIEW_DEFS[activeIndex].id);
   }
+
+  // ✅ klick på “tom yta” i sheetWrap stänger
+  sheetWrap?.addEventListener("click", (e) => {
+    if (e.target === sheetWrap) closeSheet();
+  });
 
   /* Drag-to-close */
   let sheetDragStartY = null;
@@ -290,6 +435,7 @@
     TIMER.pausedLeft=TIMER.left;
     updateWheelTimerProgress();
     renderTimerUIOnly();
+    renderPreview("timer");
   }
 
   function resetTimer(){
@@ -299,6 +445,7 @@
     TIMER.pausedLeft=TIMER.left;
     updateWheelTimerProgress();
     renderTimerUIOnly();
+    renderPreview("timer");
   }
 
   function startPauseTimer(){
@@ -307,6 +454,7 @@
       TIMER.pausedLeft=TIMER.left;
       cancelAnimationFrame(TIMER.raf);
       renderTimerUIOnly();
+      renderPreview("timer");
       return;
     }
 
@@ -320,6 +468,7 @@
     cancelAnimationFrame(TIMER.raf);
     TIMER.raf=requestAnimationFrame(timerLoop);
     renderTimerUIOnly();
+    renderPreview("timer");
   }
 
   function timerLoop(){
@@ -330,6 +479,7 @@
 
     updateWheelTimerProgress();
     renderTimerUIOnly();
+    if (!sheetWrap?.classList.contains("open")) renderPreview("timer");
 
     if(TIMER.left<=0){
       TIMER.running=false;
@@ -337,6 +487,7 @@
       if(canVibrate) navigator.vibrate([20,40,20]);
       updateWheelTimerProgress();
       renderTimerUIOnly();
+      renderPreview("timer");
       return;
     }
     TIMER.raf=requestAnimationFrame(timerLoop);
@@ -473,6 +624,7 @@
       saveStore();
       input.value = "";
       if (type === "prio") updateStartPrioCount();
+      renderPreview(type);
       draw();
     };
 
@@ -486,6 +638,7 @@
       store.done.unshift({ ...item, origin: type, doneAt: Date.now() });
       saveStore();
       if (type === "prio") updateStartPrioCount();
+      renderPreview(type);
       draw();
     }
 
@@ -569,22 +722,32 @@
     const r = await fetch(url, { cache:"no-store" });
     const data = await r.json();
 
-    $("wNow").innerHTML = `
-      <div>${Math.round(data.current.temperature_2m)}°</div>
-      <div>${Math.round(data.current.wind_speed_10m)} m/s</div>
-      <div>${Math.round(data.current.relative_humidity_2m)}%</div>
-    `;
-
-    const temps = data.hourly.temperature_2m.slice(0, 6);
+    const nowObj = {
+      t: Math.round(data.current.temperature_2m),
+      wind: Math.round(data.current.wind_speed_10m),
+      hum: Math.round(data.current.relative_humidity_2m),
+    };
+    const temps = data.hourly.temperature_2m.slice(0, 6).map(x => Math.round(x));
     const pop = data.hourly.precipitation_probability.slice(0, 6);
+
+    cache.weather = { now: nowObj, temps, pop };
+
+    $("wNow").innerHTML = `
+      <div>${nowObj.t}°</div>
+      <div>${nowObj.wind} m/s</div>
+      <div>${nowObj.hum}%</div>
+    `;
 
     $("wForecast").innerHTML = temps.map((t, i) => `
       <div class="wxMini">
         <div class="wxMiniTop">+${i}h</div>
-        <div class="wxMiniTemp">${Math.round(t)}°</div>
+        <div class="wxMiniTemp">${t}°</div>
         <div class="wxMiniPop">${pop[i]}%</div>
       </div>
     `).join("");
+
+    // ✅ uppdatera preview om du går tillbaka till start
+    renderPreview("weather");
   }
 
   /* =========================
@@ -604,7 +767,6 @@
       { name: "Omni",        url: "https://omni.se/rss" },
     ];
 
-    // ✅ Extra proxy som ofta funkar när andra strular (inkl. iPhone)
     const proxies = [
       (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//, "")}`,
       (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
@@ -626,7 +788,6 @@
     }
 
     function parseRss(xmlText, sourceName){
-      // r.jina.ai kan “wrappa” text – men DOMParser funkar oftast ändå.
       const doc = new DOMParser().parseFromString(xmlText, "text/xml");
       const items = [...doc.querySelectorAll("item")].slice(0, 12);
       return items.map((it) => ({
@@ -660,16 +821,21 @@
         return;
       }
 
+      cache.news = merged;
+
       if(statusEl) statusEl.textContent = `Senaste: ${merged.length} artiklar (${okCount}/${feeds.length} källor)`;
 
       if(listEl){
         listEl.innerHTML = merged.map(n => `
           <a class="newsItem" href="${n.link}" target="_blank" rel="noopener">
-            <div class="newsTitle">${n.title}</div>
-            <div class="newsMeta">${n.source} • ${n.date.toLocaleString("sv-SE",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"})}</div>
+            <div class="newsTitle">${escapeHtml(n.title)}</div>
+            <div class="newsMeta">${escapeHtml(n.source)} • ${n.date.toLocaleString("sv-SE",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"})}</div>
           </a>
         `).join("");
       }
+
+      // ✅ uppdatera preview om du går tillbaka till start
+      renderPreview("news");
     }catch(e){
       if(statusEl) statusEl.textContent = "Kan inte läsa nyheter (proxy/CORS).";
     }
@@ -693,4 +859,5 @@
   ========================= */
   setRotation(0);
   updateWheelTimerProgress();
+  renderPreview(VIEW_DEFS[0].id);
 })();

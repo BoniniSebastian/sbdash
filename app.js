@@ -19,13 +19,10 @@
   const startPrioCountEl = $("startPrioCount");
   const centerLabelEl = $("centerLabel");
 
-  if (topRight) topRight.textContent = ""; // remove "—" / preview
+  if (topRight) topRight.textContent = ""; // remove — / preview
 
-  /* =========================
-     HELPERS
-  ========================= */
-  function clamp01(x){ return Math.max(0, Math.min(1, x)); }
-  function pad2(n){ return String(n).padStart(2, "0"); }
+  function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+  function pad2(n) { return String(n).padStart(2, "0"); }
 
   /* =========================
      STORAGE
@@ -126,7 +123,7 @@
   }
 
   /* =========================
-     SHEET drag-to-close (restored)
+     SHEET drag-to-close
   ========================= */
   let sheetDragStartY = null;
 
@@ -204,14 +201,13 @@
     }
   }, { passive: false });
 
-  wheel?.addEventListener("pointerup", (e) => {
+  wheel?.addEventListener("pointerup", () => {
     if (!dragging) return;
     dragging = false;
 
     const idx = sectorFromDeg(rotationDeg);
     setRotation(idx * STEP);
 
-    // tap => open sheet + render
     if (!didDrag) {
       openSheet();
       renderView(VIEW_DEFS[activeIndex].id);
@@ -229,7 +225,6 @@
     setRotation(next * STEP);
   }, { passive: false });
 
-  // click fallback
   wheel?.addEventListener("click", () => {
     openSheet();
     renderView(VIEW_DEFS[activeIndex].id);
@@ -371,10 +366,11 @@
     TIMER.raf = requestAnimationFrame(timerLoop);
   }
 
-  function renderTimerUIOnly(fromLoop = false) {
+  function renderTimerUIOnly() {
     const tTime = $("tTime");
     const tState = $("tState");
     const tStartBtn = $("tStartBtn");
+
     if (tTime) tTime.textContent = timerText();
     if (tStartBtn) tStartBtn.textContent = TIMER.running ? "Paus" : "Start";
 
@@ -421,29 +417,27 @@
   }
 
   /* =========================
-     SWIPE (robust, not stuck)
+     SWIPE (ATTACH ON contentEl)
   ========================= */
-  function attachSwipe(li, onComplete) {
-    const content = li.querySelector(".swipeContent");
-    if (!content) return;
+  function attachSwipe(contentEl, li, onComplete) {
+    if (!contentEl || !li) return;
 
-    let startX = 0;
-    let startY = 0;
+    let startX = 0, startY = 0;
     let curX = 0;
     let dragging = false;
     let locked = false;
-    let mode = null; // "h" or "v"
+    let mode = null; // "h" | "v"
     let pid = null;
 
     const setX = (x, animate) => {
       curX = x;
-      content.style.transition = animate ? "transform 180ms ease" : "none";
-      content.style.transform = `translateX(${x}px)`;
+      contentEl.style.transition = animate ? "transform 180ms ease" : "none";
+      contentEl.style.transform = `translateX(${x}px)`;
     };
 
     const reset = () => setX(0, true);
 
-    content.addEventListener("pointerdown", (e) => {
+    contentEl.addEventListener("pointerdown", (e) => {
       dragging = true;
       locked = false;
       mode = null;
@@ -451,10 +445,10 @@
       startX = e.clientX;
       startY = e.clientY;
       setX(0, true);
-      content.setPointerCapture?.(pid);
+      contentEl.setPointerCapture?.(pid);
     }, { passive: true });
 
-    content.addEventListener("pointermove", (e) => {
+    contentEl.addEventListener("pointermove", (e) => {
       if (!dragging || e.pointerId !== pid) return;
 
       const dx = e.clientX - startX;
@@ -464,6 +458,7 @@
         if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
           locked = true;
           mode = Math.abs(dx) >= Math.abs(dy) ? "h" : "v";
+
           if (mode === "v") {
             dragging = false;
             pid = null;
@@ -499,20 +494,9 @@
       mode = null;
     };
 
-    content.addEventListener("pointerup", finish, { passive: true });
-    content.addEventListener("pointercancel", () => {
-      dragging = false;
-      pid = null;
-      mode = null;
-      reset();
-    }, { passive: true });
-
-    content.addEventListener("lostpointercapture", () => {
-      dragging = false;
-      pid = null;
-      mode = null;
-      reset();
-    }, { passive: true });
+    contentEl.addEventListener("pointerup", finish, { passive: true });
+    contentEl.addEventListener("pointercancel", () => { dragging = false; pid = null; mode = null; reset(); }, { passive: true });
+    contentEl.addEventListener("lostpointercapture", () => { dragging = false; pid = null; mode = null; reset(); }, { passive: true });
   }
 
   function mkSwipeItem({ text, meta }, onComplete, onClick) {
@@ -545,51 +529,12 @@
 
     li.appendChild(content);
 
-    attachSwipe(li, onComplete);
+    // ✅ attach on content (stable)
+    attachSwipe(content, li, onComplete);
 
     if (onClick) content.addEventListener("click", onClick);
 
     return li;
-  }
-
-  /* =========================
-     MODAL (prio notes only)
-  ========================= */
-  function openModal(item) {
-    const wrap = document.createElement("div");
-    wrap.className = "modalWrap open";
-    wrap.innerHTML = `
-      <div class="modalBackdrop"></div>
-      <div class="modalCard">
-        <div class="modalHeader">
-          <div class="modalTitle">Anteckning</div>
-          <button class="modalClose">✕</button>
-        </div>
-        <div class="modalBody">
-          <div class="modalMainText"></div>
-          <textarea class="modalTextArea" placeholder="Skriv mer…"></textarea>
-        </div>
-        <div class="modalFooter">
-          <button class="miniBtn">Spara</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(wrap);
-
-    wrap.querySelector(".modalMainText").textContent = item.text;
-    const ta = wrap.querySelector(".modalTextArea");
-    ta.value = item.note || "";
-    setTimeout(() => ta.focus(), 60);
-
-    const close = () => wrap.remove();
-    wrap.querySelector(".modalBackdrop").onclick = close;
-    wrap.querySelector(".modalClose").onclick = close;
-
-    wrap.querySelector(".miniBtn").onclick = () => {
-      item.note = ta.value || "";
-      saveStore();
-      close();
-    };
   }
 
   /* =========================
@@ -607,7 +552,7 @@
   }
 
   /* =========================
-     LIST RENDER + ENTER to add
+     LISTS + ENTER
   ========================= */
   function renderList(type, label, allowModal) {
     setSheetTitleWithDone(label);
@@ -637,11 +582,7 @@
     };
 
     addBtn.addEventListener("click", add);
-
-    // ✅ Enter adds item
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") add();
-    });
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });
 
     function complete(id) {
       const i = store[type].findIndex((x) => x.id === id);
@@ -689,7 +630,7 @@
   }
 
   /* =========================
-     CALENDAR (restored working CAL_SRC)
+     CALENDAR (working CAL_SRC)
   ========================= */
   const CAL_SRC =
     "https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0";
@@ -747,9 +688,6 @@
     `).join("");
   }
 
-  /* =========================
-     NEWS placeholder
-  ========================= */
   function renderNews() {
     sheetTitle.textContent = "Nyheter";
     sheetContent.innerHTML = `<div class="miniHint">Kommer snart.</div>`;
@@ -773,5 +711,5 @@
   ========================= */
   setRotation(0);
   setPreview(0);
-  updateWheelTimerProgress(); // show timer ring immediately (even if not running)
+  updateWheelTimerProgress(); // show timer ring immediately
 })();

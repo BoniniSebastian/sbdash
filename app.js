@@ -16,16 +16,22 @@
   const topDate = $("topDate");
   const topRight = document.querySelector(".topRight");
 
-  // Start overlay (only prio count now)
   const startPrioCountEl = $("startPrioCount");
   const centerLabelEl = $("centerLabel");
 
-  if (topRight) topRight.textContent = "";
+  if (topRight) topRight.textContent = ""; // remove "—" / preview
+
+  /* =========================
+     HELPERS
+  ========================= */
+  function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+  function pad2(n){ return String(n).padStart(2, "0"); }
 
   /* =========================
      STORAGE
   ========================= */
   const LS_KEY = "sbdash_store_v3";
+
   function loadStore() {
     try {
       const raw = localStorage.getItem(LS_KEY);
@@ -34,14 +40,16 @@
       return { prio: [], todo: [], ideas: [], done: [] };
     }
   }
+
   const store = loadStore();
   const saveStore = () => localStorage.setItem(LS_KEY, JSON.stringify(store));
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+
   const fmt = (ts) =>
     new Date(ts).toLocaleString("sv-SE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
   /* =========================
-     TOP DATE (keep)
+     TOP DATE
   ========================= */
   function updateTopDate() {
     if (!topDate) return;
@@ -54,7 +62,7 @@
   setInterval(updateTopDate, 60_000);
 
   /* =========================
-     START PRIO COUNT (centered under topbar)
+     START PRIO COUNT
   ========================= */
   function updateStartPrioCount() {
     if (!startPrioCountEl) return;
@@ -105,19 +113,23 @@
   }
 
   /* =========================
-     SHEET OPEN/CLOSE + swipe-to-close restore
+     SHEET OPEN/CLOSE
   ========================= */
   function openSheet() {
     sheetWrap?.classList.add("open");
+    if (centerLabelEl) centerLabelEl.style.opacity = "0";
   }
+
   function closeSheet() {
     sheetWrap?.classList.remove("open");
-    // show center label always in start view
     if (centerLabelEl) centerLabelEl.style.opacity = "1";
   }
 
-  // Drag down to close (restored)
+  /* =========================
+     SHEET drag-to-close (restored)
+  ========================= */
   let sheetDragStartY = null;
+
   sheet?.addEventListener("pointerdown", (e) => {
     sheetDragStartY = e.clientY;
     sheet.classList.add("dragging");
@@ -136,7 +148,6 @@
   sheet?.addEventListener("pointerup", (e) => {
     if (sheetDragStartY == null) return;
     const delta = e.clientY - sheetDragStartY;
-
     if (delta > 120) closeSheet();
 
     sheet.style.transform = "";
@@ -200,12 +211,15 @@
     const idx = sectorFromDeg(rotationDeg);
     setRotation(idx * STEP);
 
-    // tap => open sheet
+    // tap => open sheet + render
     if (!didDrag) {
       openSheet();
       renderView(VIEW_DEFS[activeIndex].id);
-      if (centerLabelEl) centerLabelEl.style.opacity = "0";
     }
+  }, { passive: true });
+
+  wheel?.addEventListener("pointercancel", () => {
+    dragging = false;
   }, { passive: true });
 
   wheel?.addEventListener("wheel", (e) => {
@@ -215,60 +229,289 @@
     setRotation(next * STEP);
   }, { passive: false });
 
-  // Click fallback
+  // click fallback
   wheel?.addEventListener("click", () => {
     openSheet();
     renderView(VIEW_DEFS[activeIndex].id);
-    if (centerLabelEl) centerLabelEl.style.opacity = "0";
   });
 
   /* =========================
-     SWIPE (you said it works now)
+     TIMER (global) + WHEEL RING
+  ========================= */
+  const TIMER = {
+    total: 5 * 60,
+    left: 5 * 60,
+    running: false,
+    t0: 0,
+    pausedLeft: 5 * 60,
+    raf: 0
+  };
+
+  const canVibrate = !!navigator.vibrate;
+
+  // SVG overlay around wheel
+  const wheelSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  wheelSvg.setAttribute("class", "wheelTimerSvg");
+  wheelSvg.innerHTML = `
+    <circle id="wheelTimerBg"></circle>
+    <circle id="wheelTimerProg"></circle>
+  `;
+  wheel?.appendChild(wheelSvg);
+
+  function updateWheelTimerProgress() {
+    const bg = document.getElementById("wheelTimerBg");
+    const prog = document.getElementById("wheelTimerProg");
+    if (!wheel || !wheelSvg || !bg || !prog) return;
+
+    const size = wheel.getBoundingClientRect().width;
+    const r = (size / 2) - 5;
+    const cx = size / 2;
+    const cy = size / 2;
+
+    wheelSvg.setAttribute("viewBox", `0 0 ${size} ${size}`);
+
+    bg.setAttribute("cx", cx);
+    bg.setAttribute("cy", cy);
+    bg.setAttribute("r", r);
+
+    prog.setAttribute("cx", cx);
+    prog.setAttribute("cy", cy);
+    prog.setAttribute("r", r);
+
+    const C = 2 * Math.PI * r;
+    bg.style.strokeDasharray = String(C);
+    bg.style.strokeDashoffset = "0";
+
+    prog.style.strokeDasharray = String(C);
+
+    const pct = TIMER.total ? (TIMER.left / TIMER.total) : 0;
+    prog.style.strokeDashoffset = String(C * (1 - clamp01(pct)));
+
+    if (pct > 0.40) prog.style.stroke = "rgba(0,209,255,.90)";
+    else if (pct > 0.15) prog.style.stroke = "rgba(255,165,0,.90)";
+    else prog.style.stroke = "rgba(255,70,70,.90)";
+  }
+
+  window.addEventListener("resize", updateWheelTimerProgress);
+
+  function timerText() {
+    const safe = Math.max(0, TIMER.left);
+    const mm = Math.floor(safe / 60);
+    const ss = safe % 60;
+    return `${pad2(mm)}:${pad2(ss)}`;
+  }
+
+  function setTimerMinutes(min) {
+    const m = Number(min);
+    if (!Number.isFinite(m) || m <= 0) return;
+
+    TIMER.running = false;
+    cancelAnimationFrame(TIMER.raf);
+
+    TIMER.total = Math.round(m * 60);
+    TIMER.left = TIMER.total;
+    TIMER.pausedLeft = TIMER.left;
+
+    updateWheelTimerProgress();
+    renderTimerUIOnly();
+  }
+
+  function resetTimer() {
+    TIMER.running = false;
+    cancelAnimationFrame(TIMER.raf);
+
+    TIMER.left = TIMER.total;
+    TIMER.pausedLeft = TIMER.left;
+
+    updateWheelTimerProgress();
+    renderTimerUIOnly();
+  }
+
+  function startPauseTimer() {
+    if (TIMER.running) {
+      TIMER.running = false;
+      TIMER.pausedLeft = TIMER.left;
+      cancelAnimationFrame(TIMER.raf);
+      renderTimerUIOnly();
+      return;
+    }
+
+    if (TIMER.left <= 0) {
+      TIMER.left = TIMER.total;
+      TIMER.pausedLeft = TIMER.left;
+    }
+
+    TIMER.running = true;
+    TIMER.t0 = performance.now();
+
+    cancelAnimationFrame(TIMER.raf);
+    TIMER.raf = requestAnimationFrame(timerLoop);
+
+    renderTimerUIOnly();
+  }
+
+  function timerLoop() {
+    if (!TIMER.running) return;
+
+    const elapsed = (performance.now() - TIMER.t0) / 1000;
+    TIMER.left = Math.max(0, Math.floor(TIMER.pausedLeft - elapsed));
+
+    updateWheelTimerProgress();
+    renderTimerUIOnly(true);
+
+    if (TIMER.left <= 0) {
+      TIMER.running = false;
+      cancelAnimationFrame(TIMER.raf);
+      if (canVibrate) navigator.vibrate([20, 40, 20]);
+      updateWheelTimerProgress();
+      renderTimerUIOnly();
+      return;
+    }
+
+    TIMER.raf = requestAnimationFrame(timerLoop);
+  }
+
+  function renderTimerUIOnly(fromLoop = false) {
+    const tTime = $("tTime");
+    const tState = $("tState");
+    const tStartBtn = $("tStartBtn");
+    if (tTime) tTime.textContent = timerText();
+    if (tStartBtn) tStartBtn.textContent = TIMER.running ? "Paus" : "Start";
+
+    if (tState) {
+      if (!TIMER.running && TIMER.left === TIMER.total) tState.textContent = "Redo";
+      else if (TIMER.running && TIMER.left > 0) tState.textContent = "Fokus…";
+      else if (!TIMER.running && TIMER.left > 0) tState.textContent = "Pausad";
+      else tState.textContent = "KLAR";
+    }
+  }
+
+  function renderTimer() {
+    sheetTitle.textContent = "Timer";
+    sheetContent.innerHTML = `
+      <div class="card" style="padding:16px;">
+        <div style="display:flex; flex-direction:column; align-items:center; text-align:center;">
+          <div id="tTime" style="font-size:46px; font-weight:900;">${timerText()}</div>
+          <div id="tState" class="miniHint" style="margin-top:6px;">Redo</div>
+
+          <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; justify-content:center;">
+            <button class="miniBtn" id="tStartBtn">${TIMER.running ? "Paus" : "Start"}</button>
+            <button class="miniBtn" id="tResetBtn" style="background: rgba(255,255,255,.06);">Reset</button>
+          </div>
+
+          <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:12px;">
+            <button class="miniBtn" data-tmin="1"  style="background: rgba(255,255,255,.06);">1</button>
+            <button class="miniBtn" data-tmin="5"  style="background: rgba(255,255,255,.06);">5</button>
+            <button class="miniBtn" data-tmin="10" style="background: rgba(255,255,255,.06);">10</button>
+            <button class="miniBtn" data-tmin="15" style="background: rgba(255,255,255,.06);">15</button>
+            <button class="miniBtn" data-tmin="30" style="background: rgba(255,255,255,.06);">30</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    $("tStartBtn")?.addEventListener("click", startPauseTimer);
+    $("tResetBtn")?.addEventListener("click", resetTimer);
+    sheetContent.querySelectorAll("[data-tmin]").forEach(btn => {
+      btn.addEventListener("click", () => setTimerMinutes(btn.dataset.tmin));
+    });
+
+    updateWheelTimerProgress();
+    renderTimerUIOnly();
+  }
+
+  /* =========================
+     SWIPE (robust, not stuck)
   ========================= */
   function attachSwipe(li, onComplete) {
     const content = li.querySelector(".swipeContent");
     if (!content) return;
 
     let startX = 0;
+    let startY = 0;
     let curX = 0;
     let dragging = false;
+    let locked = false;
+    let mode = null; // "h" or "v"
+    let pid = null;
+
+    const setX = (x, animate) => {
+      curX = x;
+      content.style.transition = animate ? "transform 180ms ease" : "none";
+      content.style.transform = `translateX(${x}px)`;
+    };
+
+    const reset = () => setX(0, true);
 
     content.addEventListener("pointerdown", (e) => {
-      startX = e.clientX;
-      curX = 0;
       dragging = true;
-      content.style.transition = "none";
-      content.setPointerCapture?.(e.pointerId);
+      locked = false;
+      mode = null;
+      pid = e.pointerId;
+      startX = e.clientX;
+      startY = e.clientY;
+      setX(0, true);
+      content.setPointerCapture?.(pid);
     }, { passive: true });
 
     content.addEventListener("pointermove", (e) => {
-      if (!dragging) return;
-      const dx = e.clientX - startX;
-      if (dx < 0) {
-        curX = dx;
-        content.style.transform = `translateX(${dx}px)`;
-      }
-    }, { passive: true });
+      if (!dragging || e.pointerId !== pid) return;
 
-    content.addEventListener("pointerup", () => {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+
+      if (!locked) {
+        if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+          locked = true;
+          mode = Math.abs(dx) >= Math.abs(dy) ? "h" : "v";
+          if (mode === "v") {
+            dragging = false;
+            pid = null;
+            reset();
+            return;
+          }
+        } else return;
+      }
+
+      if (mode !== "h") return;
+      if (dx > 0) return;
+
+      e.preventDefault();
+      const max = -Math.min(280, li.clientWidth * 0.92);
+      setX(Math.max(dx, max), false);
+    }, { passive: false });
+
+    const finish = (e) => {
+      if (!dragging || e.pointerId !== pid) return;
       dragging = false;
+
+      const abs = Math.abs(curX);
       const need = Math.max(90, li.clientWidth * 0.35);
 
-      content.style.transition = "transform 180ms ease";
-      if (Math.abs(curX) >= need) {
-        content.style.transform = "translateX(-120%)";
+      if (abs >= need) {
+        setX(-li.clientWidth, true);
         setTimeout(() => onComplete?.(), 140);
       } else {
-        content.style.transform = "translateX(0)";
+        reset();
       }
-      curX = 0;
-    }, { passive: true });
 
+      pid = null;
+      mode = null;
+    };
+
+    content.addEventListener("pointerup", finish, { passive: true });
     content.addEventListener("pointercancel", () => {
       dragging = false;
-      content.style.transition = "transform 180ms ease";
-      content.style.transform = "translateX(0)";
-      curX = 0;
+      pid = null;
+      mode = null;
+      reset();
+    }, { passive: true });
+
+    content.addEventListener("lostpointercapture", () => {
+      dragging = false;
+      pid = null;
+      mode = null;
+      reset();
     }, { passive: true });
   }
 
@@ -279,22 +522,38 @@
     const content = document.createElement("div");
     content.className = "swipeContent";
 
-    content.innerHTML = `
-      <div class="swipeLeft"><div class="swipeText"></div></div>
-      <div class="swipeRight"><div class="miniMeta"></div></div>
-    `;
-    content.querySelector(".swipeText").textContent = text;
-    content.querySelector(".miniMeta").textContent = meta || "";
+    const left = document.createElement("div");
+    left.className = "swipeLeft";
+
+    const t = document.createElement("div");
+    t.className = "swipeText";
+    t.textContent = text;
+
+    left.appendChild(t);
+
+    const right = document.createElement("div");
+    right.className = "swipeRight";
+
+    const m = document.createElement("div");
+    m.className = "miniMeta";
+    m.textContent = meta || "";
+
+    right.appendChild(m);
+
+    content.appendChild(left);
+    content.appendChild(right);
 
     li.appendChild(content);
+
     attachSwipe(li, onComplete);
 
     if (onClick) content.addEventListener("click", onClick);
+
     return li;
   }
 
   /* =========================
-     MODAL (prio notes)
+     MODAL (prio notes only)
   ========================= */
   function openModal(item) {
     const wrap = document.createElement("div");
@@ -348,7 +607,7 @@
   }
 
   /* =========================
-     LISTS + ENTER to add (restored)
+     LIST RENDER + ENTER to add
   ========================= */
   function renderList(type, label, allowModal) {
     setSheetTitleWithDone(label);
@@ -368,6 +627,7 @@
     const add = () => {
       const t = (input.value || "").trim();
       if (!t) return;
+
       const obj = { id: uid(), text: t, createdAt: Date.now() };
       store[type].unshift(obj);
       saveStore();
@@ -378,7 +638,7 @@
 
     addBtn.addEventListener("click", add);
 
-    // ✅ ENTER to add
+    // ✅ Enter adds item
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") add();
     });
@@ -386,6 +646,7 @@
     function complete(id) {
       const i = store[type].findIndex((x) => x.id === id);
       if (i === -1) return;
+
       const item = store[type].splice(i, 1)[0];
       store.done.unshift({ ...item, origin: type, doneAt: Date.now() });
       saveStore();
@@ -428,8 +689,7 @@
   }
 
   /* =========================
-     CALENDAR (FIX: real embed URL restored)
-     (your earlier working CAL_SRC style)
+     CALENDAR (restored working CAL_SRC)
   ========================= */
   const CAL_SRC =
     "https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0";
@@ -447,8 +707,7 @@
   }
 
   /* =========================
-     WEATHER (keep your compact + more data version later)
-     For now: basic but reliable
+     WEATHER (compact)
   ========================= */
   async function renderWeather() {
     sheetTitle.textContent = "Väder";
@@ -470,12 +729,11 @@
     const r = await fetch(url, { cache: "no-store" });
     const data = await r.json();
 
-    const nowHtml = `
+    $("wNow").innerHTML = `
       <div>${Math.round(data.current.temperature_2m)}°</div>
       <div>${Math.round(data.current.wind_speed_10m)} m/s</div>
       <div>${Math.round(data.current.relative_humidity_2m)}%</div>
     `;
-    $("wNow").innerHTML = nowHtml;
 
     const temps = data.hourly.temperature_2m.slice(0, 6);
     const pop = data.hourly.precipitation_probability.slice(0, 6);
@@ -490,140 +748,23 @@
   }
 
   /* =========================
-     TIMER (RESTORED, no "kommer snart")
+     NEWS placeholder
   ========================= */
-  const TIMER = {
-    total: 5 * 60,
-    left: 5 * 60,
-    running: false,
-    t0: 0,
-    pausedLeft: 5 * 60,
-    raf: 0
-  };
-  const canVibrate = !!navigator.vibrate;
-
-  function timerText() {
-    const safe = Math.max(0, TIMER.left);
-    const mm = Math.floor(safe / 60);
-    const ss = safe % 60;
-    return `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
-  }
-
-  function setTimerMinutes(min) {
-    const m = Number(min);
-    if (!Number.isFinite(m) || m <= 0) return;
-    TIMER.running = false;
-    cancelAnimationFrame(TIMER.raf);
-    TIMER.total = Math.round(m * 60);
-    TIMER.left = TIMER.total;
-    TIMER.pausedLeft = TIMER.left;
-    renderTimerUIOnly();
-  }
-
-  function resetTimer() {
-    TIMER.running = false;
-    cancelAnimationFrame(TIMER.raf);
-    TIMER.left = TIMER.total;
-    TIMER.pausedLeft = TIMER.left;
-    renderTimerUIOnly();
-  }
-
-  function startPauseTimer() {
-    if (TIMER.running) {
-      TIMER.running = false;
-      TIMER.pausedLeft = TIMER.left;
-      cancelAnimationFrame(TIMER.raf);
-      renderTimerUIOnly();
-      return;
-    }
-    if (TIMER.left <= 0) {
-      TIMER.left = TIMER.total;
-      TIMER.pausedLeft = TIMER.left;
-    }
-    TIMER.running = true;
-    TIMER.t0 = performance.now();
-    cancelAnimationFrame(TIMER.raf);
-    TIMER.raf = requestAnimationFrame(timerLoop);
-    renderTimerUIOnly();
-  }
-
-  function timerLoop() {
-    if (!TIMER.running) return;
-
-    const elapsed = (performance.now() - TIMER.t0) / 1000;
-    TIMER.left = Math.max(0, Math.floor(TIMER.pausedLeft - elapsed));
-
-    renderTimerUIOnly(true);
-
-    if (TIMER.left <= 0) {
-      TIMER.running = false;
-      cancelAnimationFrame(TIMER.raf);
-      if (canVibrate) navigator.vibrate([20, 40, 20]);
-      renderTimerUIOnly();
-      return;
-    }
-    TIMER.raf = requestAnimationFrame(timerLoop);
-  }
-
-  function renderTimerUIOnly(fromLoop = false) {
-    const tTime = $("tTime");
-    const tState = $("tState");
-    const tStartBtn = $("tStartBtn");
-    if (tTime) tTime.textContent = timerText();
-    if (tStartBtn) tStartBtn.textContent = TIMER.running ? "Paus" : "Start";
-    if (tState) {
-      if (!TIMER.running && TIMER.left === TIMER.total) tState.textContent = "Redo";
-      else if (TIMER.running && TIMER.left > 0) tState.textContent = "Fokus…";
-      else if (!TIMER.running && TIMER.left > 0) tState.textContent = "Pausad";
-      else tState.textContent = "KLAR";
-    }
-  }
-
-  function renderTimer() {
-    sheetTitle.textContent = "Timer";
-    sheetContent.innerHTML = `
-      <div class="card" style="padding:16px;">
-        <div style="display:flex; flex-direction:column; align-items:center; text-align:center;">
-          <div id="tTime" style="font-size:46px; font-weight:900;">${timerText()}</div>
-          <div id="tState" class="miniHint" style="margin-top:6px;">Redo</div>
-
-          <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; justify-content:center;">
-            <button class="miniBtn" id="tStartBtn">${TIMER.running ? "Paus" : "Start"}</button>
-            <button class="miniBtn" id="tResetBtn" style="background: rgba(255,255,255,.06);">Reset</button>
-          </div>
-
-          <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:12px;">
-            <button class="miniBtn" data-tmin="1"  style="background: rgba(255,255,255,.06);">1</button>
-            <button class="miniBtn" data-tmin="5"  style="background: rgba(255,255,255,.06);">5</button>
-            <button class="miniBtn" data-tmin="10" style="background: rgba(255,255,255,.06);">10</button>
-            <button class="miniBtn" data-tmin="15" style="background: rgba(255,255,255,.06);">15</button>
-            <button class="miniBtn" data-tmin="30" style="background: rgba(255,255,255,.06);">30</button>
-          </div>
-        </div>
-      </div>
-    `;
-
-    $("tStartBtn")?.addEventListener("click", startPauseTimer);
-    $("tResetBtn")?.addEventListener("click", resetTimer);
-    sheetContent.querySelectorAll("[data-tmin]").forEach(btn => {
-      btn.addEventListener("click", () => setTimerMinutes(btn.dataset.tmin));
-    });
+  function renderNews() {
+    sheetTitle.textContent = "Nyheter";
+    sheetContent.innerHTML = `<div class="miniHint">Kommer snart.</div>`;
   }
 
   /* =========================
      VIEW SWITCH
   ========================= */
   function renderView(id) {
+    if (id === "calendar") return renderCalendar();
     if (id === "prio") return renderList("prio", "Aktiv prio", true);
+    if (id === "weather") return renderWeather();
+    if (id === "news") return renderNews();
     if (id === "todo") return renderList("todo", "Att göra", false);
     if (id === "ideas") return renderList("ideas", "Idéer", false);
-    if (id === "calendar") return renderCalendar();
-    if (id === "weather") return renderWeather();
-    if (id === "news") {
-      sheetTitle.textContent = "Nyheter";
-      sheetContent.innerHTML = `<div class="miniHint">Kommer snart.</div>`;
-      return;
-    }
     if (id === "timer") return renderTimer();
   }
 
@@ -632,6 +773,5 @@
   ========================= */
   setRotation(0);
   setPreview(0);
-  // Ensure center label is visible in start view
-  if (centerLabelEl) centerLabelEl.style.opacity = "1";
+  updateWheelTimerProgress(); // show timer ring immediately (even if not running)
 })();

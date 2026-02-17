@@ -593,10 +593,10 @@ body{
 .centerLabel{
   position:absolute;
   left:50%;
-  top: 38%;
+  top: 32%;
   transform: translate(-50%,-50%);
   z-index: 22;
-  font-size: 60px;
+  font-size: 75px;
   font-weight: 400;          /* inte fet */
   letter-spacing: .8px;
   opacity: .75;

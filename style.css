@@ -75,6 +75,45 @@ body{
   overflow:hidden;
 }
 
+/* Start overlay */
+.startInfo{
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  pointer-events: none;
+}
+.startSpacer{ height: 18px; }
+.startPrio{
+  font-size: 20px;
+  font-weight: 900;
+  opacity: .95;
+}
+
+/* Center label synced with wheel */
+.centerLabel{
+  position:absolute;
+  left:50%;
+  top: 34%;
+  transform: translate(-50%,-50%);
+  z-index: 22;
+
+  font-size: clamp(28px, 9vw, 72px); /* ✅ Responsiv */
+  font-weight: 400;
+  letter-spacing: .8px;
+  opacity: .75;
+  text-align:center;
+
+  width: 92vw;
+  max-width: 720px;
+  line-height: 1.05;
+
+  pointer-events:none;
+  transition: opacity 180ms ease;
+}
+.centerLabel::before{ content:none !important; }
+
 /* ================= WHEEL ================= */
 .wheelWrap{
   position:fixed;
@@ -139,17 +178,12 @@ body{
   z-index:4;
   transform: rotate(-90deg);
 }
-
 #wheelTimerBg,
 #wheelTimerProg{
   fill:none;
   stroke-width: 3;
 }
-
-#wheelTimerBg{
-  stroke: rgba(255,255,255,.10);
-}
-
+#wheelTimerBg{ stroke: rgba(255,255,255,.10); }
 #wheelTimerProg{
   stroke: rgba(0,209,255,.90);
   stroke-linecap: round;
@@ -169,7 +203,6 @@ body{
   position:absolute;
   left:50%;
   width: min(720px, 94vw);
-
   top: 30px;
   bottom: 140px;
 
@@ -188,7 +221,6 @@ body{
   opacity: 0;
   transform: translateX(-50%) translateY(18px);
 }
-
 .sheetWrap.open .sheet{
   opacity: 1;
   transform: translateX(-50%) translateY(0px);
@@ -212,20 +244,6 @@ body{
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
 }
-
-/* (städad) Drag handle - om du vill använda senare */
-.sheetHandle{
-  display:none;
-  position:absolute;
-  left:50%;
-  transform: translateX(-50%);
-  bottom: 10px;
-  width: 62px;
-  height: 6px;
-  border-radius:999px;
-  background: rgba(255,255,255,.22);
-}
-.sheetWrap.open .sheetHandle{ display:block; }
 
 /* ================= UI ELEMENTS ================= */
 .card{
@@ -333,7 +351,7 @@ body{
   background:#0b1118;
 }
 
-/* ================= Modal (glass) ================= */
+/* Modal */
 .modalWrap{
   position:fixed;
   inset:0;
@@ -342,10 +360,8 @@ body{
   opacity:0;
   transition: opacity 180ms ease;
 }
-.modalWrap.open{
-  pointer-events:auto;
-  opacity:1;
-}
+.modalWrap.open{ pointer-events:auto; opacity:1; }
+
 .modalBackdrop{
   position:absolute;
   inset:0;
@@ -353,6 +369,7 @@ body{
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
 }
+
 .modalCard{
   position:absolute;
   left:50%;
@@ -367,6 +384,7 @@ body{
   box-shadow: 0 30px 80px rgba(0,0,0,.65);
   overflow:hidden;
 }
+
 .modalHeader{
   display:flex;
   align-items:center;
@@ -374,10 +392,9 @@ body{
   padding: 12px 14px;
   border-bottom: 1px solid rgba(255,255,255,.10);
 }
-.modalTitle{
-  font-weight:900;
-  font-size:14px;
-}
+
+.modalTitle{ font-weight:900; font-size:14px; }
+
 .modalClose{
   border:1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
@@ -388,7 +405,9 @@ body{
   font-weight:900;
   cursor:pointer;
 }
+
 .modalBody{ padding: 14px; }
+
 .modalMainText{
   font-weight:900;
   font-size:16px;
@@ -396,6 +415,7 @@ body{
   margin-bottom:10px;
   white-space:pre-wrap;
 }
+
 .modalTextArea{
   width:100%;
   min-height: 160px;
@@ -409,6 +429,7 @@ body{
   font-size:16px;
   line-height:1.3;
 }
+
 .modalFooter{
   padding: 12px 14px 14px;
   display:flex;
@@ -416,7 +437,7 @@ body{
   gap:10px;
 }
 
-/* Header “Visa slutförda” */
+/* Done header */
 .doneHeaderBtn{
   display:inline-flex;
   align-items:center;
@@ -445,55 +466,9 @@ body{
   opacity:.8;
 }
 
-/* Start overlay */
-.startInfo{
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
-  pointer-events: none;
-}
-.startLine{
-  font-size: 18px;
-  font-weight: 900;
-  line-height: 1.2;
-  opacity: .9;
-}
-.startSpacer{ height: 18px; }
-.startPrio{
-  font-size: 20px;
-  font-weight: 900;
-  opacity: .95;
-}
-/* Center label synced with wheel */
-.centerLabel{
-  position:absolute;
-  left:50%;
-  top: 34%;
-  transform: translate(-50%,-50%);
-  z-index: 22;
-
-  font-size: clamp(28px, 9vw, 72px);  /* ✅ Responsiv */
-  font-weight: 400;
-  letter-spacing: .8px;
-  opacity: .75;
-  text-align:center;
-
-  width: 92vw;          /* ✅ Förhindrar att texten klipper */
-  max-width: 720px;
-  line-height: 1.05;
-
-  pointer-events:none;
-  transition: opacity 180ms ease;
-}
-
-.centerLabel::before{
-  content:none !important;
-}
 /* =========================
    CHECKBOX LIST ROWS
-   ========================= */
+========================= */
 .checkItem{
   border-radius: 14px;
   overflow:hidden;
@@ -536,45 +511,16 @@ body{
   gap:10px;
 }
 
+/* Fade-out when completing */
 .checkItem.isCompleting{
   opacity: 0;
   transform: translateX(-18px);
   transition: opacity 180ms ease, transform 180ms ease;
 }
 
-/* Small phones */
-@media (max-width: 390px){
-  .sheet{ top: 20px; bottom: 130px; }
-  .wheel{ width: min(92vw, 330px); }
-  .modalCard{ top: 14%; }
-}
-
 /* =========================
-   PREMIUM – wheel when sheet open
-   ========================= */
-body.sheetOpen .wheelWrap{
-  transform: translateX(-50%) translateY(14px) scale(.86);
-}
-
-body.sheetOpen .wheel::before{
-  background: rgba(255,255,255,.14);
-  border-color: rgba(255,255,255,.25);
-  backdrop-filter: blur(32px) saturate(1.4);
-  -webkit-backdrop-filter: blur(32px) saturate(1.4);
-  box-shadow: 0 25px 70px rgba(0,0,0,.65);
-}
-
-body.sheetOpen .wheelRing{
-  opacity: .96;
-  filter: drop-shadow(0 0 12px rgba(0,209,255,.22));
-}
-
-body.sheetOpen .wheelIcon{
-  opacity: 1;
-  filter: drop-shadow(0 0 16px rgba(0,209,255,.28));
-}
-
-body.sheetOpen #wheelTimerProg{ opacity: .90; }
+   NEWS
+========================= */
 .newsList{ display:flex; flex-direction:column; gap:10px; }
 
 .newsItem{
@@ -599,3 +545,33 @@ body.sheetOpen #wheelTimerProg{ opacity: .90; }
   font-size:12px;
   color: rgba(255,255,255,.55);
 }
+
+/* Small phones */
+@media (max-width: 390px){
+  .sheet{ top: 20px; bottom: 130px; }
+  .wheel{ width: min(92vw, 330px); }
+  .modalCard{ top: 14%; }
+}
+
+/* =========================
+   PREMIUM – wheel when sheet open
+========================= */
+body.sheetOpen .wheelWrap{
+  transform: translateX(-50%) translateY(14px) scale(.86);
+}
+body.sheetOpen .wheel::before{
+  background: rgba(255,255,255,.14);
+  border-color: rgba(255,255,255,.25);
+  backdrop-filter: blur(32px) saturate(1.4);
+  -webkit-backdrop-filter: blur(32px) saturate(1.4);
+  box-shadow: 0 25px 70px rgba(0,0,0,.65);
+}
+body.sheetOpen .wheelRing{
+  opacity: .96;
+  filter: drop-shadow(0 0 12px rgba(0,209,255,.22));
+}
+body.sheetOpen .wheelIcon{
+  opacity: 1;
+  filter: drop-shadow(0 0 16px rgba(0,209,255,.28));
+}
+body.sheetOpen #wheelTimerProg{ opacity: .90; }

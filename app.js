@@ -298,24 +298,26 @@
     if(id==="ideas") return renderList("ideas","Idéer");
     if(id==="calendar") return renderCalendar();
     if(id==="weather") return renderWeather();
-    if(id==="news") return;
-    if(id==="timer") return;
+    if(id==="news") return;   // TODO senare
+    if(id==="timer") return;  // TODO senare
+  }  // ✅ VIKTIG: denna saknades hos dig
+
+  // --- INIT + OPEN SHEET ---
+  const wheel = document.getElementById("wheel");
+  const sheetWrap = document.getElementById("sheetWrap");
+
+  function openSheet(){
+    sheetWrap.classList.add("open");
+    renderView(VIEWS[activeIndex]);
   }
-// --- INIT + OPEN SHEET ---
-const wheel = document.getElementById("wheel");
-const sheetWrap = document.getElementById("sheetWrap");
 
-function openSheet(){
-  sheetWrap.classList.add("open");
-  renderView(VIEWS[activeIndex]);
-}
+  function closeSheet(){
+    sheetWrap.classList.remove("open");
+  }
 
-function closeSheet(){
-  sheetWrap.classList.remove("open");
-}
+  wheel?.addEventListener("click", openSheet);
 
-wheel?.addEventListener("click", openSheet);
+  // (valfritt) Rendera inget direkt. Låt det ske när sheet öppnas.
+  // renderView("calendar");
 
-// Starta på kalender så du ser att det funkar direkt
-renderView("calendar");
 })();

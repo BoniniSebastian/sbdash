@@ -662,70 +662,88 @@
      NEWS (RSS)
   ========================= */
   async function renderNews() {
-    sheetTitle.textContent = "Nyheter";
-    sheetContent.innerHTML = `
-      <div class="card" style="padding:14px;">
-        <div class="miniHint" id="newsStatus">Laddar…</div>
-        <div id="newsList" class="newsList" style="margin-top:10px;"></div>
-      </div>
-    `;
+  sheetTitle.textContent = "Nyheter";
+  sheetContent.innerHTML = `
+    <div class="card" style="padding:14px;">
+      <div class="miniHint" id="newsStatus">Laddar…</div>
+      <div id="newsList" class="newsList" style="margin-top:10px;"></div>
+    </div>
+  `;
 
-    const feeds = [
-      { name: "SVT Nyheter", url: "https://www.svt.se/nyheter/rss.xml" },
-      { name: "DN",         url: "https://www.dn.se/rss/" },
-    ];
+  // Tips: börja med SVT + en till. DN kan ibland strula via proxy.
+  const feeds = [
+    { name: "SVT Nyheter", url: "https://www.svt.se/nyheter/rss.xml" },
+    { name: "Omni",        url: "https://omni.se/rss" }, // om den skulle strula, byt senare
+  ];
 
-    const proxy = (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
+  // Flera proxies (om en dör, testar nästa)
+  const proxies = [
+    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    (u) => `https://thingproxy.freeboard.io/fetch/${u}`,
+    (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+  ];
 
-    function parseRss(xmlText, sourceName) {
-      const doc = new DOMParser().parseFromString(xmlText, "text/xml");
-      const items = [...doc.querySelectorAll("item")].slice(0, 12);
-      return items.map((it) => ({
-        source: sourceName,
-        title: (it.querySelector("title")?.textContent || "").trim(),
-        link:  (it.querySelector("link")?.textContent  || "").trim(),
-        date:  new Date(it.querySelector("pubDate")?.textContent || Date.now()),
-      })).filter(x => x.title && x.link);
-    }
-
-    try {
-      const results = await Promise.allSettled(
-        feeds.map(async f => {
-          const r = await fetch(proxy(f.url), { cache: "no-store" });
-          const txt = await r.text();
-          return parseRss(txt, f.name);
-        })
-      );
-
-      const merged = results
-        .filter(x => x.status === "fulfilled")
-        .flatMap(x => x.value)
-        .sort((a,b) => b.date - a.date)
-        .slice(0, 18);
-
-      const status = $("newsStatus");
-      const listEl = $("newsList");
-
-      if (!merged.length) {
-        if (status) status.textContent = "Kunde inte läsa RSS just nu.";
-        return;
+  async function fetchViaProxies(url) {
+    let lastErr = null;
+    for (const p of proxies) {
+      try {
+        const r = await fetch(p(url), { cache: "no-store" });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return await r.text();
+      } catch (e) {
+        lastErr = e;
       }
-
-      if (status) status.textContent = `Senaste: ${merged.length} artiklar`;
-      if (listEl) {
-        listEl.innerHTML = merged.map(n => `
-          <a class="newsItem" href="${n.link}" target="_blank" rel="noopener">
-            <div class="newsTitle">${n.title}</div>
-            <div class="newsMeta">${n.source} • ${n.date.toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit", day:"2-digit", month:"2-digit" })}</div>
-          </a>
-        `).join("");
-      }
-    } catch (e) {
-      const status = $("newsStatus");
-      if (status) status.textContent = "Fel vid hämtning av nyheter.";
     }
+    throw lastErr || new Error("Proxy failed");
   }
 
+  function parseRss(xmlText, sourceName) {
+    const doc = new DOMParser().parseFromString(xmlText, "text/xml");
+    const items = [...doc.querySelectorAll("item")].slice(0, 12);
+    return items.map((it) => ({
+      source: sourceName,
+      title: (it.querySelector("title")?.textContent || "").trim(),
+      link:  (it.querySelector("link")?.textContent  || "").trim(),
+      date:  new Date(it.querySelector("pubDate")?.textContent || Date.now()),
+    })).filter(x => x.title && x.link);
+  }
+
+  const statusEl = $("newsStatus");
+  const listEl = $("newsList");
+
+  try {
+    const results = await Promise.allSettled(
+      feeds.map(async f => {
+        const txt = await fetchViaProxies(f.url);
+        return parseRss(txt, f.name);
+      })
+    );
+
+    const okCount = results.filter(r => r.status === "fulfilled" && r.value.length).length;
+    const merged = results
+      .filter(r => r.status === "fulfilled")
+      .flatMap(r => r.value)
+      .sort((a,b) => b.date - a.date)
+      .slice(0, 18);
+
+    if (!merged.length) {
+      if (statusEl) statusEl.textContent = `Kan inte läsa nyheter just nu (0/${feeds.length} källor).`;
+      return;
+    }
+
+    if (statusEl) statusEl.textContent = `Senaste: ${merged.length} artiklar (${okCount}/${feeds.length} källor)`;
+
+    if (listEl) {
+      listEl.innerHTML = merged.map(n => `
+        <a class="newsItem" href="${n.link}" target="_blank" rel="noopener">
+          <div class="newsTitle">${n.title}</div>
+          <div class="newsMeta">${n.source} • ${n.date.toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit", day:"2-digit", month:"2-digit" })}</div>
+        </a>
+      `).join("");
+    }
+  } catch (e) {
+    if (statusEl) statusEl.textContent = "Kan inte läsa nyheter (proxy/CORS).";
+  }
   /* =========================
      VIEW SWITCH
   ========================= */

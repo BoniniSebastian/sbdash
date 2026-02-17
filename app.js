@@ -653,9 +653,70 @@
     `).join("");
   }
 
-  function renderNews() {
-    sheetTitle.textContent = "Nyheter";
-    sheetContent.innerHTML = `<div class="miniHint">Kommer snart.</div>`;
+  async function renderNews() {
+  sheetTitle.textContent = "Nyheter";
+  sheetContent.innerHTML = `
+    <div class="card" style="padding:14px;">
+      <div class="miniHint" id="newsStatus">Laddar…</div>
+      <div id="newsList" class="newsList" style="margin-top:10px;"></div>
+    </div>
+  `;
+
+  const feeds = [
+    { name: "SVT Nyheter", url: "https://www.svt.se/nyheter/rss.xml" },
+    { name: "DN",         url: "https://www.dn.se/rss/" },
+  ];
+
+  const proxy = (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
+
+  function parseRss(xmlText, sourceName) {
+    const doc = new DOMParser().parseFromString(xmlText, "text/xml");
+    const items = [...doc.querySelectorAll("item")].slice(0, 12);
+    return items.map((it) => ({
+      source: sourceName,
+      title: (it.querySelector("title")?.textContent || "").trim(),
+      link:  (it.querySelector("link")?.textContent  || "").trim(),
+      date:  new Date(it.querySelector("pubDate")?.textContent || Date.now()),
+    })).filter(x => x.title && x.link);
+  }
+
+  try {
+    const results = await Promise.allSettled(
+      feeds.map(async f => {
+        const r = await fetch(proxy(f.url), { cache: "no-store" });
+        const txt = await r.text();
+        return parseRss(txt, f.name);
+      })
+    );
+
+    const merged = results
+      .filter(x => x.status === "fulfilled")
+      .flatMap(x => x.value)
+      .sort((a,b) => b.date - a.date)
+      .slice(0, 18);
+
+    const status = $("newsStatus");
+    const listEl = $("newsList");
+
+    if (!merged.length) {
+      if (status) status.textContent = "Kunde inte läsa RSS just nu.";
+      return;
+    }
+
+    if (status) status.textContent = `Senaste: ${merged.length} artiklar`;
+    if (listEl) {
+      listEl.innerHTML = merged.map(n => `
+        <a class="newsItem" href="${n.link}" target="_blank" rel="noopener">
+          <div class="newsTop">
+            <div class="newsTitle">${n.title}</div>
+          </div>
+          <div class="newsMeta">${n.source} • ${n.date.toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit", day:"2-digit", month:"2-digit" })}</div>
+        </a>
+      `).join("");
+    }
+  } catch (e) {
+    const status = $("newsStatus");
+    if (status) status.textContent = "Fel vid hämtning av nyheter.";
   }
 
   /* =========================

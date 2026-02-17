@@ -493,3 +493,34 @@ body{
     top: 14%;
   }
 }
+.doneHeaderBtn{
+  float:right;
+  font-size:12px;
+  font-weight:900;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  opacity:.7;
+  cursor:pointer;
+}
+.doneHeaderBtn img{
+  width:14px;
+  height:14px;
+}
+
+.weatherCard{
+  padding:14px;
+}
+.weatherNow{
+  display:flex;
+  justify-content:space-between;
+  font-size:22px;
+  font-weight:900;
+  margin-bottom:14px;
+}
+.weatherForecast{
+  display:flex;
+  justify-content:space-between;
+  font-size:12px;
+  opacity:.8;
+}

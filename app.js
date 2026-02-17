@@ -105,10 +105,17 @@
   }
 
   function setRotation(deg) {
-    rotationDeg = deg;
-    if (wheelRing) wheelRing.style.transform = `rotate(${deg}deg)`;
-    setPreview(sectorFromDeg(deg));
+  rotationDeg = deg;
+  if (wheelRing) wheelRing.style.transform = `rotate(${deg}deg)`;
+
+  const idx = sectorFromDeg(deg);
+  setPreview(idx);
+
+  // 🔥 Om sheet är öppen → byt view direkt
+  if (sheetWrap?.classList.contains("open")) {
+    renderView(VIEW_DEFS[idx].id);
   }
+}
 
   /* =========================
      SHEET OPEN/CLOSE (premium wheel toggle)

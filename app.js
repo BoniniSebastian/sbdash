@@ -8,7 +8,9 @@
    ========================================================= */
 
 (() => {
-   alert("JS loaded OK");
+   document.body.style.outline = "6px solid lime";
+console.log("SB Dash: app.js running");
+
 
   const $ = (id) => document.getElementById(id);
 

@@ -21,12 +21,10 @@ body{
   inset:0;
   width:100%;
   height:100%;
-
   background:
     radial-gradient(1200px 600px at 35% 0%, rgba(0,209,255,.08), transparent 60%),
     radial-gradient(900px 500px at 80% 20%, rgba(0,209,255,.05), transparent 55%),
     var(--bg);
-
   color:var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
 }
@@ -44,6 +42,7 @@ body{
   border-bottom:1px solid var(--line);
   background: rgba(7,10,15,.78);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .brand{display:flex; align-items:center; gap:10px}
@@ -98,17 +97,14 @@ body{
   top: 34%;
   transform: translate(-50%,-50%);
   z-index: 22;
-
-  font-size: clamp(28px, 9vw, 72px); /* ✅ Responsiv */
+  font-size: clamp(28px, 9vw, 72px);
   font-weight: 400;
   letter-spacing: .8px;
   opacity: .75;
   text-align:center;
-
   width: 92vw;
   max-width: 720px;
   line-height: 1.05;
-
   pointer-events:none;
   transition: opacity 180ms ease;
 }
@@ -182,7 +178,7 @@ body{
 #wheelTimerBg,
 #wheelTimerProg{
   fill:none;
-  stroke-width: 3;
+  stroke-width: 4; /* lite tjockare */
 }
 
 #wheelTimerBg{
@@ -193,13 +189,12 @@ body{
 #wheelTimerProg{
   stroke: rgba(0,209,255,.90);
   stroke-linecap: round;
-
-  /* Glow */
   filter:
-    drop-shadow(0 0 6px rgba(0,209,255,.55))
-    drop-shadow(0 0 14px rgba(0,209,255,.35))
-    drop-shadow(0 0 26px rgba(0,209,255,.22));
+    drop-shadow(0 0 8px rgba(0,209,255,.65))
+    drop-shadow(0 0 18px rgba(0,209,255,.38))
+    drop-shadow(0 0 34px rgba(0,209,255,.22));
 }
+
 /* ================= SHEET OVERLAY ================= */
 .sheetWrap{
   position:fixed;
@@ -237,7 +232,6 @@ body{
   transform: translateX(-50%) translateY(0px);
 }
 
-/* Header */
 .sheetHeader{
   padding: 14px 16px 10px;
   border-bottom:1px solid rgba(255,255,255,.08);
@@ -247,7 +241,6 @@ body{
   font-weight:900;
 }
 
-/* Content */
 .sheetContent{
   flex:1;
   padding: 14px 16px 24px;
@@ -311,31 +304,6 @@ body{
   gap:10px;
 }
 
-.itemRow{
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
-  padding: 12px 12px;
-  border-radius: 14px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-}
-
-.itemText{
-  font-weight:900;
-  font-size:14px;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.itemMeta{
-  color: rgba(255,255,255,.55);
-  font-weight:900;
-  font-size:12px;
-  flex:0 0 auto;
-}
-
 .miniHint{
   color: rgba(255,255,255,.55);
   font-size: 12px;
@@ -348,119 +316,21 @@ body{
   font-weight: 900;
 }
 
-/* Calendar iframe scale */
+/* Calendar */
 .calScale{
   width:100%;
-  height: 420px;   /* justera höjd här istället */
-  
-  border-radius: 18px;   /* ← rundare */
-  overflow: hidden;      /* ← viktigt */
+  height: 420px;              /* ✅ storlek */
+  border-radius:18px;         /* ✅ rundare */
+  overflow:hidden;            /* ✅ klipper iframe */
+  background:#0b1118;         /* ✅ samma som iframe */
 }
 .calFrame{
   width:100%;
   height:100%;
   border:0;
   background:#0b1118;
+  display:block;              /* ✅ tar bort “kant under” */
 }
-
-/* Modal */
-.modalWrap{
-  position:fixed;
-  inset:0;
-  z-index:5000;
-  pointer-events:none;
-  opacity:0;
-  transition: opacity 180ms ease;
-}
-.modalWrap.open{ pointer-events:auto; opacity:1; }
-
-.modalBackdrop{
-  position:absolute;
-  inset:0;
-  background: rgba(0,0,0,.55);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-}
-
-.modalCard{
-  position:absolute;
-  left:50%;
-  top: 18%;
-  transform: translateX(-50%);
-  width: min(680px, 92vw);
-  border-radius: 22px;
-  background: rgba(255,255,255,.08);
-  border:1px solid rgba(255,255,255,.14);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  box-shadow: 0 30px 80px rgba(0,0,0,.65);
-  overflow:hidden;
-}
-
-.modalHeader{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255,255,255,.10);
-}
-
-.modalTitle{ font-weight:900; font-size:14px; }
-
-.modalClose{
-  border:1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  color: var(--text);
-  width:40px;
-  height:40px;
-  border-radius: 12px;
-  font-weight:900;
-  cursor:pointer;
-}
-
-.modalBody{ padding: 14px; }
-
-.modalMainText{
-  font-weight:900;
-  font-size:16px;
-  line-height:1.25;
-  margin-bottom:10px;
-  white-space:pre-wrap;
-}
-
-.modalTextArea{
-  width:100%;
-  min-height: 160px;
-  resize:none;
-  background: rgba(0,0,0,.20);
-  border:1px solid rgba(255,255,255,.14);
-  border-radius: 14px;
-  padding: 12px 12px;
-  color: var(--text);
-  outline:none;
-  font-size:16px;
-  line-height:1.3;
-}
-
-.modalFooter{
-  padding: 12px 14px 14px;
-  display:flex;
-  justify-content:flex-end;
-  gap:10px;
-}
-
-/* Done header */
-.doneHeaderBtn{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  font-size:12px;
-  font-weight:900;
-  opacity:.75;
-  margin-left:10px;
-  cursor:pointer;
-}
-.doneHeaderIcon{ width:14px; height:14px; }
 
 /* Weather */
 .weatherCard{ padding:14px; }
@@ -478,16 +348,26 @@ body{
   opacity:.8;
 }
 
-/* =========================
-   CHECKBOX LIST ROWS
-========================= */
+/* Done header */
+.doneHeaderBtn{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+  font-weight:900;
+  opacity:.75;
+  margin-left:10px;
+  cursor:pointer;
+}
+.doneHeaderIcon{ width:14px; height:14px; }
+
+/* Checkbox rows */
 .checkItem{
   border-radius: 14px;
   overflow:hidden;
   border:1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.03);
 }
-
 .checkRow{
   display:flex;
   align-items:center;
@@ -495,19 +375,13 @@ body{
   padding:12px 12px;
   cursor:pointer;
 }
-
 .checkBox{
   width:20px;
   height:20px;
   accent-color: rgba(0,209,255,.9);
   flex:0 0 auto;
 }
-
-.checkMid{
-  min-width:0;
-  flex:1 1 auto;
-}
-
+.checkMid{ min-width:0; flex:1 1 auto; }
 .checkText{
   font-weight:900;
   font-size:14px;
@@ -515,26 +389,15 @@ body{
   text-overflow:ellipsis;
   white-space:nowrap;
 }
-
-.checkRight{
-  flex:0 0 auto;
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-
-/* Fade-out when completing */
+.checkRight{ flex:0 0 auto; display:flex; align-items:center; gap:10px; }
 .checkItem.isCompleting{
   opacity: 0;
   transform: translateX(-18px);
   transition: opacity 180ms ease, transform 180ms ease;
 }
 
-/* =========================
-   NEWS
-========================= */
+/* News */
 .newsList{ display:flex; flex-direction:column; gap:10px; }
-
 .newsItem{
   display:block;
   text-decoration:none;
@@ -544,13 +407,11 @@ body{
   border-radius:14px;
   padding:12px 12px;
 }
-
 .newsTitle{
   font-weight:900;
   font-size:14px;
   line-height:1.2;
 }
-
 .newsMeta{
   margin-top:6px;
   font-weight:900;
@@ -562,12 +423,9 @@ body{
 @media (max-width: 390px){
   .sheet{ top: 20px; bottom: 130px; }
   .wheel{ width: min(92vw, 330px); }
-  .modalCard{ top: 14%; }
 }
 
-/* =========================
-   PREMIUM – wheel when sheet open
-========================= */
+/* PREMIUM – wheel when sheet open */
 body.sheetOpen .wheelWrap{
   transform: translateX(-50%) translateY(14px) scale(.86);
 }

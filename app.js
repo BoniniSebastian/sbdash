@@ -135,24 +135,24 @@
     dragStartY = null;
   }, { passive: true });
 
-  // ---------- Wheel interaction (drag rotate + tap open) ----------
+    // ---------- Wheel interaction (drag rotate + tap open) ----------
   let isDragging = false;
   let startAngle = 0;
 
   // tap detection
-  let tapStartX = 0, tapStartY = 0, tapMoved = false;
+  let tapStartX = 0, tapStartY = 0;
+  let didDrag = false; // <- ny: blir true först när vi verkligen drar
 
   function angle(cx, cy, x, y) {
     return Math.atan2(y - cy, x - cx) * (180 / Math.PI);
   }
 
   wheel?.addEventListener("pointerdown", (e) => {
-    // DO NOT preventDefault here (iOS tap-kill)
     isDragging = true;
+    didDrag = false;
 
     tapStartX = e.clientX;
     tapStartY = e.clientY;
-    tapMoved = false;
 
     const r = wheel.getBoundingClientRect();
     const cx = r.left + r.width / 2;
@@ -167,17 +167,21 @@
 
     const dx = e.clientX - tapStartX;
     const dy = e.clientY - tapStartY;
-    if (Math.hypot(dx, dy) > 10) tapMoved = true;
 
-    const r = wheel.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
+    // ✅ Högre tröskel så "tap" inte råkar bli drag på iPad
+    if (!didDrag && Math.hypot(dx, dy) > 18) didDrag = true;
 
-    const deg = angle(cx, cy, e.clientX, e.clientY) - startAngle;
-    setRotation(deg, { silent: true });
+    // ✅ Bara när vi faktiskt drar: rotera + preventDefault
+    if (didDrag) {
+      const r = wheel.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
 
-    // allow smooth feel
-    e.preventDefault();
+      const deg = angle(cx, cy, e.clientX, e.clientY) - startAngle;
+      setRotation(deg, { silent: true });
+
+      e.preventDefault();
+    }
   }, { passive: false });
 
   wheel?.addEventListener("pointerup", (e) => {
@@ -191,19 +195,20 @@
     setRotation(snapped, { silent: true });
     setPreview(idx, { silent: true });
 
-    // TAP -> open
-    if (!tapMoved) openSheet();
+    // ✅ Om det INTE var en riktig drag: öppna
+    if (!didDrag) openSheet();
   }, { passive: true });
 
   wheel?.addEventListener("pointercancel", () => {
     isDragging = false;
   }, { passive: true });
 
-  // Click fallback (desktop + some iOS cases)
-  wheel?.addEventListener("click", (e) => {
-    e.stopPropagation();
+  // ✅ Extra fallback: öppna även på dubbelklick / mouse
+  wheel?.addEventListener("dblclick", (e) => {
+    e.preventDefault();
     openSheet();
   });
+
 
   // Desktop wheel scroll (mouse wheel)
   wheel?.addEventListener("wheel", (e) => {

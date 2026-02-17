@@ -1,17 +1,14 @@
 /* =========================================================
    SB Dash (Wheel + Sheet) — app.js (full)
-   - Wheel rotate: preview icon changes live
-   - Tap wheel: open sheet
-   - Slide down sheet: close
-   - Views: Calendar, Prio, Weather, News, Todo, Ideas, Done, Timer
-   - Storage for prio/todo/ideas/done
+   Updates:
+   - Swipe complete (robust drag detection + snap + complete)
+   - Prio item tap -> glass modal (read + edit notes)
+   - "+" icon buttons instead of "+ Lägg"
+   - Remove duplicate titles (no blockTitle inside content)
+   - Timer progress = thin border around the timer card
    ========================================================= */
 
 (() => {
-   document.body.style.outline = "6px solid lime";
-console.log("SB Dash: app.js running");
-
-
   const $ = (id) => document.getElementById(id);
 
   // ---------- Elements ----------
@@ -52,7 +49,6 @@ console.log("SB Dash: app.js running");
   ];
 
   let activeIndex = 0;
-
   const STEP = 360 / VIEWS.length;
   let rotationDeg = 0;
 
@@ -73,7 +69,6 @@ console.log("SB Dash: app.js running");
     rotationDeg = deg;
     if (wheelRing) wheelRing.style.transform = `rotate(${deg}deg)`;
 
-    // sector -> view
     const idx = sectorFromDeg(deg);
     setPreview(idx, { silent });
   }
@@ -93,6 +88,69 @@ console.log("SB Dash: app.js running");
     sheetWrap?.classList.remove("open");
   }
 
+  // ---------- Modal (glass) ----------
+  const modalWrap = document.createElement("div");
+  modalWrap.id = "modalWrap";
+  modalWrap.className = "modalWrap";
+  modalWrap.innerHTML = `
+    <div class="modalBackdrop" data-close="1"></div>
+    <div class="modalCard" role="dialog" aria-modal="true" aria-label="Editor">
+      <div class="modalHeader">
+        <div class="modalTitle" id="modalTitle">Detalj</div>
+        <button class="modalClose" id="modalCloseBtn" aria-label="Stäng">✕</button>
+      </div>
+      <div class="modalBody">
+        <div class="modalMainText" id="modalMainText"></div>
+        <textarea class="modalTextArea" id="modalTextArea" placeholder="Skriv mer…"></textarea>
+      </div>
+      <div class="modalFooter">
+        <button class="miniBtn" id="modalSaveBtn">Spara</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modalWrap);
+
+  const modalTitleEl = $("modalTitle");
+  const modalMainTextEl = $("modalMainText");
+  const modalTextAreaEl = $("modalTextArea");
+  const modalCloseBtn = $("modalCloseBtn");
+  const modalSaveBtn = $("modalSaveBtn");
+
+  let modalOnSave = null;
+
+  function openModal({ title, mainText, notes, onSave }) {
+    if (modalTitleEl) modalTitleEl.textContent = title || "Detalj";
+    if (modalMainTextEl) modalMainTextEl.textContent = mainText || "";
+    if (modalTextAreaEl) {
+      modalTextAreaEl.value = notes || "";
+      // focus efter paint
+      setTimeout(() => modalTextAreaEl.focus(), 50);
+    }
+    modalOnSave = typeof onSave === "function" ? onSave : null;
+    modalWrap.classList.add("open");
+    tick(10);
+  }
+
+  function closeModal() {
+    modalWrap.classList.remove("open");
+    modalOnSave = null;
+    tick(6);
+  }
+
+  modalWrap.addEventListener("click", (e) => {
+    const t = e.target;
+    if (t?.dataset?.close) closeModal();
+  });
+  modalCloseBtn?.addEventListener("click", closeModal);
+  modalSaveBtn?.addEventListener("click", () => {
+    const val = modalTextAreaEl ? modalTextAreaEl.value : "";
+    modalOnSave?.(val);
+    closeModal();
+  });
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modalWrap.classList.contains("open")) closeModal();
+  });
+
   // ---------- Sheet drag-to-close ----------
   let dragStartY = null;
 
@@ -106,9 +164,7 @@ console.log("SB Dash: app.js running");
     if (dragStartY == null) return;
     const delta = e.clientY - dragStartY;
 
-    // only pull down
     if (delta > 0) {
-      // keep X translate, add Y translate
       sheet.style.transform = `translateX(-50%) translateY(${delta}px)`;
       e.preventDefault?.();
     }
@@ -137,13 +193,12 @@ console.log("SB Dash: app.js running");
     dragStartY = null;
   }, { passive: true });
 
-    // ---------- Wheel interaction (drag rotate + tap open) ----------
+  // ---------- Wheel interaction (drag rotate + tap open) ----------
   let isDragging = false;
   let startAngle = 0;
 
-  // tap detection
   let tapStartX = 0, tapStartY = 0;
-  let didDrag = false; // <- ny: blir true först när vi verkligen drar
+  let didDrag = false;
 
   function angle(cx, cy, x, y) {
     return Math.atan2(y - cy, x - cx) * (180 / Math.PI);
@@ -170,10 +225,8 @@ console.log("SB Dash: app.js running");
     const dx = e.clientX - tapStartX;
     const dy = e.clientY - tapStartY;
 
-    // ✅ Högre tröskel så "tap" inte råkar bli drag på iPad
     if (!didDrag && Math.hypot(dx, dy) > 18) didDrag = true;
 
-    // ✅ Bara när vi faktiskt drar: rotera + preventDefault
     if (didDrag) {
       const r = wheel.getBoundingClientRect();
       const cx = r.left + r.width / 2;
@@ -191,13 +244,11 @@ console.log("SB Dash: app.js running");
     isDragging = false;
     wheel.releasePointerCapture?.(e.pointerId);
 
-    // snap to nearest sector
     const idx = sectorFromDeg(rotationDeg);
     const snapped = idx * STEP;
     setRotation(snapped, { silent: true });
     setPreview(idx, { silent: true });
 
-    // ✅ Om det INTE var en riktig drag: öppna
     if (!didDrag) openSheet();
   }, { passive: true });
 
@@ -205,14 +256,6 @@ console.log("SB Dash: app.js running");
     isDragging = false;
   }, { passive: true });
 
-  // ✅ Extra fallback: öppna även på dubbelklick / mouse
-  wheel?.addEventListener("dblclick", (e) => {
-    e.preventDefault();
-    openSheet();
-  });
-
-
-  // Desktop wheel scroll (mouse wheel)
   wheel?.addEventListener("wheel", (e) => {
     e.preventDefault();
     const dir = e.deltaY > 0 ? 1 : -1;
@@ -221,7 +264,7 @@ console.log("SB Dash: app.js running");
   }, { passive: false });
 
   // ---------- Storage ----------
-  const LS_KEY = "sbdash_wheel_store_v1";
+  const LS_KEY = "sbdash_wheel_store_v2";
   function loadStore() {
     try {
       const raw = localStorage.getItem(LS_KEY);
@@ -243,7 +286,7 @@ console.log("SB Dash: app.js running");
   const fmt = (ts) =>
     new Date(ts).toLocaleString("sv-SE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
-  // ---------- Swipe helper (optional, used in lists) ----------
+  // ---------- Swipe helper (improved) ----------
   function attachSwipe(li, onComplete) {
     const content = li.querySelector(".swipeContent");
     if (!content) return;
@@ -253,6 +296,7 @@ console.log("SB Dash: app.js running");
     let startX = 0, startY = 0;
     let curX = 0;
     let locked = false;
+    let mode = null; // "h" or "v"
 
     const setX = (x, animate) => {
       curX = x;
@@ -260,9 +304,12 @@ console.log("SB Dash: app.js running");
       content.style.transform = `translateX(${x}px)`;
     };
 
-    li.addEventListener("pointerdown", (e) => {
+    const reset = () => setX(0, true);
+
+    content.addEventListener("pointerdown", (e) => {
       dragging = true;
       locked = false;
+      mode = null;
       pointerId = e.pointerId;
       startX = e.clientX;
       startY = e.clientY;
@@ -270,7 +317,7 @@ console.log("SB Dash: app.js running");
       content.setPointerCapture?.(pointerId);
     }, { passive: true });
 
-    li.addEventListener("pointermove", (e) => {
+    content.addEventListener("pointermove", (e) => {
       if (!dragging || e.pointerId !== pointerId) return;
 
       const dx = e.clientX - startX;
@@ -279,19 +326,27 @@ console.log("SB Dash: app.js running");
       if (!locked) {
         if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
           locked = true;
-          if (Math.abs(dy) > Math.abs(dx)) {
+          mode = Math.abs(dx) >= Math.abs(dy) ? "h" : "v";
+          if (mode === "v") {
+            // allow vertical scroll in list
             dragging = false;
             pointerId = null;
-            setX(0, true);
+            reset();
             return;
           }
-        } else return;
+        } else {
+          return;
+        }
       }
 
-      if (dx > 0) return; // only right->left
+      if (mode !== "h") return;
+
+      // only allow left swipe to complete
+      if (dx > 0) return;
+
       e.preventDefault();
 
-      const max = -Math.min(220, li.clientWidth * 0.9);
+      const max = -Math.min(260, li.clientWidth * 0.92);
       setX(Math.max(dx, max), false);
     }, { passive: false });
 
@@ -300,20 +355,21 @@ console.log("SB Dash: app.js running");
       dragging = false;
 
       const abs = Math.abs(curX);
-      const need = li.clientWidth * 0.55;
+      const need = li.clientWidth * 0.45;
 
       if (abs >= need) {
         setX(-li.clientWidth, true);
         setTimeout(() => onComplete?.(), 140);
       } else {
-        setX(0, true);
+        reset();
       }
 
       pointerId = null;
+      mode = null;
     };
 
-    li.addEventListener("pointerup", finish, { passive: true });
-    li.addEventListener("pointercancel", finish, { passive: true });
+    content.addEventListener("pointerup", finish, { passive: true });
+    content.addEventListener("pointercancel", finish, { passive: true });
   }
 
   function mkSwipeItem({ text, meta }, onComplete, onClick) {
@@ -322,6 +378,7 @@ console.log("SB Dash: app.js running");
 
     const under = document.createElement("div");
     under.className = "swipeUnder";
+    under.textContent = "Slutför";
 
     const content = document.createElement("div");
     content.className = "swipeContent";
@@ -366,9 +423,7 @@ console.log("SB Dash: app.js running");
 
   function renderCalendar() {
     sheetTitle.textContent = "Kalender";
-
     sheetContent.innerHTML = `
-      <div class="blockTitle">Kalender</div>
       <div class="card">
         <div class="calScale">
           <iframe class="calFrame" src="${CAL_SRC}" frameborder="0" scrolling="no"></iframe>
@@ -384,13 +439,12 @@ console.log("SB Dash: app.js running");
     sheetTitle.textContent = "Aktiv prio";
 
     sheetContent.innerHTML = `
-      <div class="blockTitle">Aktiv prio</div>
       <div class="miniForm">
         <input id="prioInput" class="miniInput" type="text" placeholder="Lägg till superprio…" maxlength="160">
-        <button id="prioAddBtn" class="miniBtn">+ Lägg</button>
+        <button id="prioAddBtn" class="miniBtn miniBtnIcon" aria-label="Lägg till">+</button>
       </div>
       <ul id="prioList" class="miniList"></ul>
-      <div class="miniHint">Swipe höger→vänster = slutför</div>
+      <div class="miniHint">Swipe vänster = slutför</div>
     `;
 
     const prioInput = $("prioInput");
@@ -400,7 +454,7 @@ console.log("SB Dash: app.js running");
     const add = () => {
       const t = (prioInput.value || "").trim();
       if (!t) return;
-      store.prio.unshift({ id: uid(), text: t, createdAt: Date.now() });
+      store.prio.unshift({ id: uid(), text: t, notes: "", createdAt: Date.now() });
       saveStore();
       prioInput.value = "";
       draw();
@@ -415,6 +469,21 @@ console.log("SB Dash: app.js running");
       draw();
     };
 
+    const editById = (id) => {
+      const item = store.prio.find(x => x.id === id);
+      if (!item) return;
+
+      openModal({
+        title: "Aktiv prio",
+        mainText: item.text,
+        notes: item.notes || "",
+        onSave: (val) => {
+          item.notes = val || "";
+          saveStore();
+        }
+      });
+    };
+
     const draw = () => {
       prioList.innerHTML = "";
       if (!store.prio.length) {
@@ -423,7 +492,11 @@ console.log("SB Dash: app.js running");
       }
       for (const item of store.prio) {
         prioList.appendChild(
-          mkSwipeItem({ text: item.text, meta: fmt(item.createdAt) }, () => completeById(item.id), null)
+          mkSwipeItem(
+            { text: item.text, meta: fmt(item.createdAt) },
+            () => completeById(item.id),
+            () => editById(item.id)
+          )
         );
       }
     };
@@ -436,7 +509,6 @@ console.log("SB Dash: app.js running");
 
   // ---- Weather ----
   async function loadWeather() {
-    // Stockholm fallback
     const lat = 59.3293, lon = 18.0686;
 
     const url =
@@ -479,9 +551,8 @@ console.log("SB Dash: app.js running");
   function renderWeather() {
     sheetTitle.textContent = "Väder";
     sheetContent.innerHTML = `
-      <div class="blockTitle">Väder</div>
       <div class="card" style="padding:14px;">
-        <div id="wRow" style="display:flex; gap:12px; align-items:center;">
+        <div style="display:flex; gap:12px; align-items:center;">
           <div id="wIcon" style="font-size:34px;">⛅️</div>
           <div>
             <div id="wTemp" style="font-size:34px; font-weight:900;">—°</div>
@@ -574,7 +645,6 @@ console.log("SB Dash: app.js running");
   function renderNews() {
     sheetTitle.textContent = "Nyheter";
     sheetContent.innerHTML = `
-      <div class="blockTitle">Nyheter</div>
       <div class="miniHint" id="newsMeta">Laddar…</div>
       <ul class="miniList" id="newsList" style="margin-top:12px;"></ul>
       <div class="miniActions">
@@ -658,13 +728,12 @@ console.log("SB Dash: app.js running");
     sheetTitle.textContent = "Todo";
 
     sheetContent.innerHTML = `
-      <div class="blockTitle">Todo</div>
       <div class="miniForm">
         <input id="todoInput" class="miniInput" type="text" placeholder="Skriv en uppgift…" maxlength="120">
-        <button id="todoAddBtn" class="miniBtn">+ Lägg</button>
+        <button id="todoAddBtn" class="miniBtn miniBtnIcon" aria-label="Lägg till">+</button>
       </div>
       <ul id="todoList" class="miniList"></ul>
-      <div class="miniHint">Swipe höger→vänster = slutför</div>
+      <div class="miniHint">Swipe vänster = slutför</div>
     `;
 
     const todoInput = $("todoInput");
@@ -712,13 +781,12 @@ console.log("SB Dash: app.js running");
     sheetTitle.textContent = "Idéer";
 
     sheetContent.innerHTML = `
-      <div class="blockTitle">Idéer</div>
       <div class="miniForm">
         <input id="ideaInput" class="miniInput" type="text" placeholder="Skriv en idé…" maxlength="160">
-        <button id="ideaAddBtn" class="miniBtn">+ Spara</button>
+        <button id="ideaAddBtn" class="miniBtn miniBtnIcon" aria-label="Spara">+</button>
       </div>
       <ul id="ideasList" class="miniList"></ul>
-      <div class="miniHint">Swipe höger→vänster = arkivera (till Slutförda)</div>
+      <div class="miniHint">Swipe vänster = arkivera (till Slutförda)</div>
     `;
 
     const ideaInput = $("ideaInput");
@@ -766,7 +834,6 @@ console.log("SB Dash: app.js running");
     sheetTitle.textContent = "Slutförda";
 
     sheetContent.innerHTML = `
-      <div class="blockTitle">Slutförda</div>
       <ul id="doneList" class="miniList"></ul>
       <div class="miniActions">
         <button id="doneClearBtn" class="miniBtn">Rensa slutförda</button>
@@ -783,6 +850,7 @@ console.log("SB Dash: app.js running");
       const item = store.done.splice(i, 1)[0];
       const origin = item.origin || "todo";
       const restored = { id: item.id, text: item.text, createdAt: item.createdAt || Date.now() };
+      if (origin === "prio") restored.notes = item.notes || "";
 
       if (origin === "prio") store.prio.unshift(restored);
       else if (origin === "ideas") store.ideas.unshift(restored);
@@ -841,70 +909,56 @@ console.log("SB Dash: app.js running");
     draw();
   }
 
-  // ---- Timer (Pomodoro-like ring) ----
+  // ---- Timer (border progress around card) ----
   function renderTimer() {
     sheetTitle.textContent = "Timer";
 
     sheetContent.innerHTML = `
-      <div class="blockTitle">Timer</div>
+      <div class="card timerCard" id="timerCard">
+        <svg class="timerBorder" id="tSvg" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <rect id="tBg" x="2.5" y="2.5" width="95" height="95" rx="10" ry="10"></rect>
+          <rect id="tProg" x="2.5" y="2.5" width="95" height="95" rx="10" ry="10"></rect>
+        </svg>
 
-      <div class="card" style="padding:16px;">
-        <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
-          <div style="position:relative; width:240px; height:240px;">
-            <svg id="tSvg" viewBox="0 0 240 240" style="width:100%; height:100%;">
-              <defs>
-                <filter id="tGlow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="4" result="blur"/>
-                  <feMerge>
-                    <feMergeNode in="blur"/>
-                    <feMergeNode in="SourceGraphic"/>
-                  </feMerge>
-                </filter>
-              </defs>
-              <circle cx="120" cy="120" r="92"
-                      fill="none" stroke="rgba(255,255,255,.10)" stroke-width="16"
-                      transform="rotate(-90 120 120)"></circle>
-              <circle id="tProg" cx="120" cy="120" r="92"
-                      fill="none" stroke="rgba(0,209,255,.88)" stroke-width="16"
-                      stroke-linecap="round" filter="url(#tGlow)"
-                      transform="rotate(-90 120 120)"></circle>
-            </svg>
+        <div class="timerInner">
+          <div class="timerTime" id="tTime">05:00</div>
+          <div class="miniHint" id="tSub" style="margin-top:6px;">Redo</div>
 
-            <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column;">
-              <div id="tTime" style="font-size:42px; font-weight:900;">05:00</div>
-              <div id="tSub" class="miniHint" style="margin-top:6px;">Redo</div>
-            </div>
-          </div>
-
-          <div style="display:flex; flex-direction:column; gap:10px; min-width: 160px;">
+          <div class="timerBtns">
             <button class="miniBtn" id="tStart">Start</button>
             <button class="miniBtn" id="tReset" style="background: rgba(255,255,255,.06);">Reset</button>
-            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
-              <button class="miniBtn" data-tmin="5"  style="background: rgba(255,255,255,.06);">5</button>
-              <button class="miniBtn" data-tmin="10" style="background: rgba(255,255,255,.06);">10</button>
-              <button class="miniBtn" data-tmin="15" style="background: rgba(255,255,255,.06);">15</button>
-              <button class="miniBtn" data-tmin="25" style="background: rgba(255,255,255,.06);">25</button>
-            </div>
           </div>
-        </div>
 
-        <div class="miniHint" style="margin-top:12px;">Ring: cyan → orange → röd när tiden går ner</div>
+          <div class="timerPresets">
+            <button class="miniBtn" data-tmin="5"  style="background: rgba(255,255,255,.06);">5</button>
+            <button class="miniBtn" data-tmin="10" style="background: rgba(255,255,255,.06);">10</button>
+            <button class="miniBtn" data-tmin="15" style="background: rgba(255,255,255,.06);">15</button>
+            <button class="miniBtn" data-tmin="25" style="background: rgba(255,255,255,.06);">25</button>
+          </div>
+
+          <div class="miniHint" style="margin-top:12px;">Kantlinje: cyan → orange → röd</div>
+        </div>
       </div>
     `;
 
     const tProg = $("tProg");
+    const tBg = $("tBg");
     const tTime = $("tTime");
     const tSub  = $("tSub");
     const tStart = $("tStart");
     const tReset = $("tReset");
     const tBtns = sheetContent.querySelectorAll("[data-tmin]");
 
-    const R = 92;
-    const C = 2 * Math.PI * R;
-
-    if (tProg) {
-      tProg.style.strokeDasharray = String(C);
+    // Prepare stroke
+    let L = 0;
+    if (tProg && typeof tProg.getTotalLength === "function") {
+      L = tProg.getTotalLength();
+      tProg.style.strokeDasharray = String(L);
       tProg.style.strokeDashoffset = "0";
+      tProg.style.strokeLinecap = "round";
+    }
+    if (tBg) {
+      tBg.style.strokeDasharray = "none";
     }
 
     let total = 5 * 60;
@@ -915,10 +969,10 @@ console.log("SB Dash: app.js running");
     let raf = 0;
 
     function setStroke(pct) {
-      if (!tProg) return;
+      if (!tProg || !L) return;
       const p = clamp01(pct);
-      // drain from full to empty
-      tProg.style.strokeDashoffset = String(C * (1 - p));
+      // full -> empty
+      tProg.style.strokeDashoffset = String(L * (1 - p));
     }
 
     function setColor(pct) {
@@ -1018,7 +1072,6 @@ console.log("SB Dash: app.js running");
   function renderView(id) {
     if (!sheetTitle || !sheetContent) return;
 
-    // Always ensure sheet open when rendering (safe)
     sheetWrap?.classList.add("open");
 
     switch (id) {
@@ -1037,7 +1090,6 @@ console.log("SB Dash: app.js running");
   }
 
   // ---------- Init ----------
-  // Start: sheet stängd, men preview synlig
   setRotation(0, { silent: true });
   setPreview(0, { silent: true });
   closeSheet();

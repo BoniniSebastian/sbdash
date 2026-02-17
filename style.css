@@ -10,18 +10,24 @@
 
 *{ box-sizing:border-box; }
 
-html,body{
+html, body{
   height:100%;
   overflow:hidden;           /* app-känsla */
-  overscroll-behavior: none; /* stop bounce */
+  overscroll-behavior:none;  /* stop bounce */
 }
 
 body{
   margin:0;
+  position:fixed;            /* ✅ låser viewport på iOS */
+  inset:0;
+  width:100%;
+  height:100%;
+
   background:
     radial-gradient(1200px 600px at 35% 0%, rgba(0,209,255,.08), transparent 60%),
     radial-gradient(900px 500px at 80% 20%, rgba(0,209,255,.05), transparent 55%),
     var(--bg);
+
   color:var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
 }
@@ -30,7 +36,7 @@ body{
 .topbar{
   position:sticky;
   top:0;
-  z-index:50;
+  z-index:200;
   display:grid;
   grid-template-columns: 1fr auto 1fr;
   align-items:center;
@@ -62,7 +68,8 @@ body{
 /* ================= SHELL ================= */
 .shell{
   position:relative;
-  height: calc(100vh - 54px);
+  height: calc(100svh - 54px); /* fallback */
+  height: calc(100dvh - 54px); /* ✅ iOS dynamic viewport */
   overflow:hidden;
 }
 
@@ -72,7 +79,7 @@ body{
   left:50%;
   transform: translateX(-50%);
   bottom: max(6px, env(safe-area-inset-bottom));
-  z-index:20;
+  z-index:100;               /* ✅ alltid över sheetWrap */
   pointer-events:auto;
 }
 
@@ -119,14 +126,14 @@ body{
 
 /* ================= SHEET OVERLAY ================= */
 .sheetWrap{
-  position:absolute;
-  inset:0;
+  position:fixed;            /* ✅ följer alltid viewport */
+  inset: 54px 0 0 0;         /* ✅ under topbar */
   z-index:40;
-  pointer-events:none; /* låter hjulet funka bakom när stängd */
+  pointer-events:none;       /* stängd = klick går till hjulet */
 }
 
 .sheetWrap.open{
-  pointer-events:auto; /* aktiverar sheet när öppen */
+  pointer-events:auto;       /* öppen = sheet interaktiv */
 }
 
 /* Sheet */
@@ -136,8 +143,7 @@ body{
   left:50%;
   width: min(720px, 94vw);
 
-  /* Rutan går mindre högt upp (mer plats överst) */
-  top: 84px;
+  top: 30px;
   bottom: 140px; /* lämna “fönster” där hjulet syns bakom */
 
   border-radius: 26px;
@@ -150,7 +156,6 @@ body{
   display:flex;
   flex-direction:column;
 
-  /* Slide animation */
   transition: transform 260ms ease, opacity 260ms ease;
   opacity: 0;
   transform: translateX(-50%) translateY(18px);
@@ -360,10 +365,10 @@ body{
 /* Small phones */
 @media (max-width: 390px){
   .sheet{
-    top: 74px;
+    top: 20px;
     bottom: 130px;
   }
   .wheel{
     width: min(92vw, 330px);
   }
-
+}

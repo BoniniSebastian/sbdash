@@ -530,5 +530,24 @@ body{
   }
   .modalCard{
     top: 14%;
-  }
 }
+.wheelTimerSvg{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  transform: rotate(-90deg);
+}
+
+#wheelTimerBg,
+#wheelTimerProg{
+  fill:none;
+  stroke-width:3;
+}
+#wheelTimerBg{
+  stroke: rgba(255,255,255,.10);
+}
+#wheelTimerProg{
+  stroke: rgba(0,209,255,.9);
+  stroke-linecap:round;
+}
+

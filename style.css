@@ -336,21 +336,23 @@ body{
   background:#0b1118;
 }
 
-/* ================= Swipe rows ================= */
-/* Under-layer finns kvar som "yta" men utan text */
+/* =========================
+   SWIPE ROWS (stable iOS)
+   ========================= */
+
 .swipeItem{
   position:relative;
   border-radius: 14px;
   overflow:hidden;
   border:1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.03);
-  touch-action: pan-y;
+  touch-action: pan-y;              /* ✅ allow vertical scroll */
 }
 
 .swipeUnder{
   position:absolute;
   inset:0;
-  background: rgba(0,0,0,.22);
+  background: rgba(0,0,0,.18);
   pointer-events:none;
 }
 
@@ -363,6 +365,10 @@ body{
   padding:12px 12px;
   transform: translateX(0px);
   will-change: transform;
+
+  touch-action: pan-y;              /* ✅ crucial on iOS */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .swipeLeft{
@@ -386,6 +392,13 @@ body{
   align-items:center;
   gap:10px;
 }
+
+.miniMeta{
+  color: rgba(255,255,255,.55);
+  font-size: 12px;
+  font-weight: 900;
+}
+
 
 /* ================= Modal (glass) ================= */
 .modalWrap{

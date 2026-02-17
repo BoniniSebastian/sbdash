@@ -75,7 +75,7 @@
   ========================= */
   const VIEW_DEFS = [
     { id: "calendar", label: "KALENDER",   icon: "assets/ui/icon-calendar.svg" },
-    { id: "prio",     label: "AKTIV PRIO", icon: "assets/ui/icon-prio.svg" },
+    { id: "prio",     label: "PRIOS", icon: "assets/ui/icon-prio.svg" },
     { id: "weather",  label: "VÄDER",      icon: "assets/ui/icon-weather.svg" },
     { id: "news",     label: "NYHETER",    icon: "assets/ui/icon-news.svg" },
     { id: "todo",     label: "TODO",       icon: "assets/ui/icon-todo.svg" },

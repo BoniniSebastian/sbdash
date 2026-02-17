@@ -3,12 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport"
-        content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+        content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>SB Dash</title>
-  <link rel="stylesheet" href="style.css?v=901" />
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
+
   <!-- ================= TOPBAR ================= -->
   <header class="topbar">
     <div class="brand">
@@ -20,7 +23,6 @@
     </div>
 
     <div class="topDate" id="topDate"></div>
-
     <div class="topRight">—</div>
   </header>
 
@@ -41,7 +43,6 @@
           <!-- JS renderar content här -->
         </div>
 
-        <!-- Drag handle -->
         <div class="sheetHandle"></div>
 
       </div>
@@ -49,27 +50,24 @@
 
     <!-- ===== WHEEL ===== -->
     <div class="wheelWrap">
-
       <div class="wheel" id="wheel">
 
-        <!-- Ring -->
         <img src="assets/ui/knob-ring.svg"
              class="wheelRing"
              alt="ring" />
 
-        <!-- Icon -->
         <img id="wheelIcon"
              class="wheelIcon"
              src="assets/ui/icon-calendar.svg"
              alt="icon" />
 
       </div>
-
     </div>
 
   </div>
 
- <script src="app.js?v=905" defer></script>
+  <!-- JS -->
+  <script src="app.js" defer></script>
 
 </body>
 </html>

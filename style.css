@@ -524,3 +524,51 @@ body{
   font-size:12px;
   opacity:.8;
 }
+.startInfo{
+  position:absolute;
+  top: 14px;
+  left: 16px;
+  z-index: 10;
+  text-align:left;
+  transition: opacity 180ms ease;
+}
+.startLine{
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.2;
+  opacity: .9;
+}
+.startSpacer{ height: 18px; }
+.startPrio{
+  font-size: 20px;
+  font-weight: 900;
+  opacity: .95;
+}
+
+.centerLabel{
+  position:absolute;
+  left:50%;
+  top: 44%;
+  transform: translate(-50%,-50%);
+  z-index: 12;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: .8px;
+  opacity: .75;
+  text-align:center;
+  transition: opacity 180ms ease;
+  pointer-events:none;
+}
+
+.doneHeaderBtn{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+  font-weight:900;
+  opacity:.75;
+  margin-left:10px;
+}
+.doneHeaderIcon{
+  width:14px; height:14px;
+}

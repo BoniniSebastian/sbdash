@@ -572,3 +572,36 @@ body{
 .doneHeaderIcon{
   width:14px; height:14px;
 }
+/* Start overlay */
+.startInfo{
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  pointer-events: none;
+}
+
+.startPrioTop{
+  font-size: 18px;
+  font-weight: 900;
+  opacity: .92;
+  text-align:center;
+}
+
+/* Center label synced with wheel */
+.centerLabel{
+  position:absolute;
+  left:50%;
+  top: 44%;
+  transform: translate(-50%,-50%);
+  z-index: 22;
+  font-size: 16px;
+  font-weight: 400;          /* inte fet */
+  letter-spacing: .8px;
+  opacity: .75;
+  text-align:center;
+  pointer-events:none;
+  transition: opacity 180ms ease;
+}
+

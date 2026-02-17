@@ -73,7 +73,7 @@
   ========================= */
   const VIEW_DEFS = [
     { id: "calendar", label: "KALENDER", icon: "assets/ui/icon-calendar.svg" },
-    { id: "prio",     label: "PRIOS", icon: "assets/ui/icon-prio.svg" },
+    { id: "prio",     label: "AKTIV PRIO", icon: "assets/ui/icon-prio.svg" },
     { id: "weather",  label: "VÄDER", icon: "assets/ui/icon-weather.svg" },
     { id: "news",     label: "NYHETER", icon: "assets/ui/icon-news.svg" },
     { id: "todo",     label: "TODO", icon: "assets/ui/icon-todo.svg" },
@@ -213,9 +213,7 @@
     }
   }, { passive: true });
 
-  wheel?.addEventListener("pointercancel", () => {
-    dragging = false;
-  }, { passive: true });
+  wheel?.addEventListener("pointercancel", () => { dragging = false; }, { passive: true });
 
   wheel?.addEventListener("wheel", (e) => {
     e.preventDefault();
@@ -230,7 +228,7 @@
   });
 
   /* =========================
-     TIMER (global) + wheel ring SVG
+     TIMER + wheel ring SVG
   ========================= */
   const TIMER = {
     total: 5 * 60,
@@ -298,11 +296,9 @@
 
     TIMER.running = false;
     cancelAnimationFrame(TIMER.raf);
-
     TIMER.total = Math.round(m * 60);
     TIMER.left = TIMER.total;
     TIMER.pausedLeft = TIMER.left;
-
     updateWheelTimerProgress();
     renderTimerUIOnly();
   }
@@ -310,10 +306,8 @@
   function resetTimer() {
     TIMER.running = false;
     cancelAnimationFrame(TIMER.raf);
-
     TIMER.left = TIMER.total;
     TIMER.pausedLeft = TIMER.left;
-
     updateWheelTimerProgress();
     renderTimerUIOnly();
   }
@@ -336,7 +330,6 @@
     TIMER.t0 = performance.now();
     cancelAnimationFrame(TIMER.raf);
     TIMER.raf = requestAnimationFrame(timerLoop);
-
     renderTimerUIOnly();
   }
 
@@ -357,7 +350,6 @@
       renderTimerUIOnly();
       return;
     }
-
     TIMER.raf = requestAnimationFrame(timerLoop);
   }
 
@@ -412,105 +404,7 @@
   }
 
   /* =========================
-     SWIPE (bind on swipeContent)
-  ========================= */
-  function attachSwipe(contentEl, li, onComplete) {
-    if (!contentEl || !li) return;
-
-    let startX = 0, startY = 0;
-    let curX = 0;
-    let dragging = false;
-    let locked = false;
-    let mode = null; // "h" | "v"
-    let pid = null;
-
-    const setX = (x, animate) => {
-      curX = x;
-      contentEl.style.transition = animate ? "transform 180ms ease" : "none";
-      contentEl.style.transform = `translateX(${x}px)`;
-    };
-    const reset = () => setX(0, true);
-
-    contentEl.addEventListener("pointerdown", (e) => {
-      dragging = true;
-      locked = false;
-      mode = null;
-      pid = e.pointerId;
-      startX = e.clientX;
-      startY = e.clientY;
-      setX(0, true);
-      contentEl.setPointerCapture?.(pid);
-    }, { passive: true });
-
-    contentEl.addEventListener("pointermove", (e) => {
-      if (!dragging || e.pointerId !== pid) return;
-
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-
-      if (!locked) {
-        if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-          locked = true;
-          mode = Math.abs(dx) >= Math.abs(dy) ? "h" : "v";
-          if (mode === "v") { dragging = false; pid = null; reset(); return; }
-        } else return;
-      }
-
-      if (mode !== "h") return;
-      if (dx > 0) return;
-
-      e.preventDefault();
-      const max = -Math.min(280, li.clientWidth * 0.92);
-      setX(Math.max(dx, max), false);
-    }, { passive: false });
-
-    const finish = (e) => {
-      if (!dragging || e.pointerId !== pid) return;
-      dragging = false;
-
-      const abs = Math.abs(curX);
-      const need = Math.max(90, li.clientWidth * 0.35);
-
-      if (abs >= need) {
-        setX(-li.clientWidth, true);
-        setTimeout(() => onComplete?.(), 140);
-      } else {
-        reset();
-      }
-
-      pid = null;
-      mode = null;
-    };
-
-    contentEl.addEventListener("pointerup", finish, { passive: true });
-    contentEl.addEventListener("pointercancel", () => { dragging = false; pid = null; mode = null; reset(); }, { passive: true });
-    contentEl.addEventListener("lostpointercapture", () => { dragging = false; pid = null; mode = null; reset(); }, { passive: true });
-  }
-
-  function mkSwipeItem({ text, meta }, onComplete, onClick) {
-    const li = document.createElement("li");
-    li.className = "swipeItem";
-
-    const content = document.createElement("div");
-    content.className = "swipeContent";
-
-    content.innerHTML = `
-      <div class="swipeLeft"><div class="swipeText"></div></div>
-      <div class="swipeRight"><div class="miniMeta"></div></div>
-    `;
-    content.querySelector(".swipeText").textContent = text;
-    content.querySelector(".miniMeta").textContent = meta || "";
-
-    li.appendChild(content);
-
-    attachSwipe(content, li, onComplete);
-
-    if (onClick) content.addEventListener("click", onClick);
-    return li;
-  }
-
-  /* =========================
-     MODAL (for prio notes)
+     MODAL (prio notes)
   ========================= */
   function openModal(item) {
     const wrap = document.createElement("div");
@@ -564,7 +458,66 @@
   }
 
   /* =========================
-     LISTS + ENTER
+     CHECKBOX ROW ITEM (with fade-out)
+  ========================= */
+  function mkCheckItem({ text, meta }, onComplete, onClick) {
+    const li = document.createElement("li");
+    li.className = "checkItem";
+
+    const label = document.createElement("label");
+    label.className = "checkRow";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.className = "checkBox";
+
+    const mid = document.createElement("div");
+    mid.className = "checkMid";
+
+    const t = document.createElement("div");
+    t.className = "checkText";
+    t.textContent = text;
+
+    mid.appendChild(t);
+
+    const right = document.createElement("div");
+    right.className = "checkRight";
+
+    const m = document.createElement("div");
+    m.className = "miniMeta";
+    m.textContent = meta || "";
+
+    right.appendChild(m);
+
+    label.appendChild(cb);
+    label.appendChild(mid);
+    label.appendChild(right);
+
+    li.appendChild(label);
+
+    cb.addEventListener("change", () => {
+      if (!cb.checked) return;
+
+      cb.disabled = true; // lock during anim
+      li.classList.add("isCompleting");
+
+      setTimeout(() => {
+        onComplete?.();
+      }, 190);
+    });
+
+    if (onClick) {
+      label.addEventListener("click", (e) => {
+        if (e.target === cb) return;
+        onClick();
+      });
+    }
+
+    return li;
+  }
+
+  /* =========================
+     LISTS (prio/todo/ideas)
   ========================= */
   function renderList(type, label, allowModal) {
     setSheetTitleWithDone(label);
@@ -610,7 +563,7 @@
       list.innerHTML = "";
       store[type].forEach((item) => {
         list.appendChild(
-          mkSwipeItem(
+          mkCheckItem(
             { text: item.text, meta: fmt(item.createdAt) },
             () => complete(item.id),
             allowModal ? () => openModal(item) : null
@@ -712,7 +665,7 @@
     if (id === "prio") return renderList("prio", "Aktiv prio", true);
     if (id === "weather") return renderWeather();
     if (id === "news") return renderNews();
-    if (id === "todo") return renderList("todo", "Att göra", false);
+    if (id === "todo") return renderList("todo", "TODO", false);
     if (id === "ideas") return renderList("ideas", "Idéer", false);
     if (id === "timer") return renderTimer();
   }

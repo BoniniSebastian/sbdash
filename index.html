@@ -2,16 +2,12 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
   <title>SB Dash</title>
-
-  <!-- CSS -->
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=1" />
 </head>
 
 <body>
-
   <!-- ================= TOPBAR ================= -->
   <header class="topbar">
     <div class="brand">
@@ -23,28 +19,35 @@
     </div>
 
     <div class="topDate" id="topDate"></div>
-    <div class="topRight">—</div>
+    <div class="topRight"> </div>
   </header>
 
   <!-- ================= APP SHELL ================= -->
   <div class="shell">
 
+    <!-- ===== START VIEW INFO (when sheet closed) ===== -->
+    <div class="startInfo" id="startInfo">
+      <div class="startLine" id="startTime">—</div>
+      <div class="startLine" id="startDay">—</div>
+      <div class="startLine" id="startDate">—</div>
+
+      <div class="startSpacer"></div>
+
+      <div class="startPrio" id="startPrioCount">Aktiva prios: 0</div>
+    </div>
+
+    <!-- ===== CENTER LABEL (sync with wheel icon) ===== -->
+    <div class="centerLabel" id="centerLabel">KALENDER</div>
+
     <!-- ===== SHEET WRAP (overlay) ===== -->
     <div class="sheetWrap" id="sheetWrap">
-
-      <!-- ===== SHEET ===== -->
       <div class="sheet" id="sheet">
-
         <div class="sheetHeader">
           <div class="sheetTitle" id="sheetTitle">Preview</div>
         </div>
 
-        <div class="sheetContent" id="sheetContent">
-          <!-- JS renderar content här -->
-        </div>
-
+        <div class="sheetContent" id="sheetContent"></div>
         <div class="sheetHandle"></div>
-
       </div>
     </div>
 
@@ -52,22 +55,15 @@
     <div class="wheelWrap">
       <div class="wheel" id="wheel">
 
-        <img src="assets/ui/knob-ring.svg"
-             class="wheelRing"
-             alt="ring" />
+        <img src="assets/ui/knob-ring.svg" class="wheelRing" alt="ring" />
 
-        <img id="wheelIcon"
-             class="wheelIcon"
-             src="assets/ui/icon-calendar.svg"
-             alt="icon" />
+        <img id="wheelIcon" class="wheelIcon" src="assets/ui/icon-calendar.svg" alt="icon" />
 
       </div>
     </div>
 
   </div>
 
-  <!-- JS -->
-  <script src="app.js" defer></script>
-
+  <script src="app.js?v=1" defer></script>
 </body>
 </html>

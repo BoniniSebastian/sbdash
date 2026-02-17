@@ -352,9 +352,7 @@ body{
 .calScale{
   width:100%;
   height: 420px;   /* justera höjd här istället */
-  border-radius:18px;
-  overflow:hidden;
-}
+  
   border-radius: 18px;   /* ← rundare */
   overflow: hidden;      /* ← viktigt */
 }

@@ -604,4 +604,8 @@ body{
   pointer-events:none;
   transition: opacity 180ms ease;
 }
+.centerLabel::before{
+  content:none !important;
+}
+
 

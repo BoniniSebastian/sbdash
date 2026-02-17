@@ -178,17 +178,28 @@ body{
   z-index:4;
   transform: rotate(-90deg);
 }
+
 #wheelTimerBg,
 #wheelTimerProg{
   fill:none;
   stroke-width: 3;
 }
-#wheelTimerBg{ stroke: rgba(255,255,255,.10); }
+
+#wheelTimerBg{
+  stroke: rgba(255,255,255,.10);
+  filter: drop-shadow(0 0 10px rgba(255,255,255,.06));
+}
+
 #wheelTimerProg{
   stroke: rgba(0,209,255,.90);
   stroke-linecap: round;
-}
 
+  /* Glow */
+  filter:
+    drop-shadow(0 0 6px rgba(0,209,255,.55))
+    drop-shadow(0 0 14px rgba(0,209,255,.35))
+    drop-shadow(0 0 26px rgba(0,209,255,.22));
+}
 /* ================= SHEET OVERLAY ================= */
 .sheetWrap{
   position:fixed;

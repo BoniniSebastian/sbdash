@@ -466,7 +466,6 @@ body{
   font-weight: 900;
   opacity: .95;
 }
-
 /* Center label synced with wheel */
 .centerLabel{
   position:absolute;
@@ -474,16 +473,24 @@ body{
   top: 34%;
   transform: translate(-50%,-50%);
   z-index: 22;
-  font-size: 70px;
+
+  font-size: clamp(28px, 9vw, 72px);  /* ✅ Responsiv */
   font-weight: 400;
   letter-spacing: .8px;
   opacity: .75;
   text-align:center;
+
+  width: 92vw;          /* ✅ Förhindrar att texten klipper */
+  max-width: 720px;
+  line-height: 1.05;
+
   pointer-events:none;
   transition: opacity 180ms ease;
 }
-.centerLabel::before{ content:none !important; }
 
+.centerLabel::before{
+  content:none !important;
+}
 /* =========================
    CHECKBOX LIST ROWS
    ========================= */

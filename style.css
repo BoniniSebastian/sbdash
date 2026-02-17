@@ -18,7 +18,7 @@ html, body{
 
 body{
   margin:0;
-  position:fixed;            /* ✅ låser viewport på iOS */
+  position:fixed;            /* låser viewport på iOS */
   inset:0;
   width:100%;
   height:100%;
@@ -69,7 +69,7 @@ body{
 .shell{
   position:relative;
   height: calc(100svh - 54px); /* fallback */
-  height: calc(100dvh - 54px); /* ✅ iOS dynamic viewport */
+  height: calc(100dvh - 54px); /* iOS dynamic viewport */
   overflow:hidden;
 }
 
@@ -79,7 +79,7 @@ body{
   left:50%;
   transform: translateX(-50%);
   bottom: max(6px, env(safe-area-inset-bottom));
-  z-index:100;               /* ✅ alltid över sheetWrap */
+  z-index:100;
   pointer-events:auto;
 }
 
@@ -126,15 +126,12 @@ body{
 
 /* ================= SHEET OVERLAY ================= */
 .sheetWrap{
-  position:fixed;            /* ✅ följer alltid viewport */
-  inset: 54px 0 0 0;         /* ✅ under topbar */
+  position:fixed;
+  inset: 54px 0 0 0;   /* under topbar */
   z-index:40;
-  pointer-events:none;       /* stängd = klick går till hjulet */
+  pointer-events:none;
 }
-
-.sheetWrap.open{
-  pointer-events:auto;       /* öppen = sheet interaktiv */
-}
+.sheetWrap.open{ pointer-events:auto; }
 
 /* Sheet */
 .sheet{
@@ -144,7 +141,7 @@ body{
   width: min(720px, 94vw);
 
   top: 30px;
-  bottom: 140px; /* lämna “fönster” där hjulet syns bakom */
+  bottom: 140px;
 
   border-radius: 26px;
   background: var(--glass);
@@ -161,7 +158,6 @@ body{
   transform: translateX(-50%) translateY(18px);
 }
 
-/* Öppen */
 .sheetWrap.open .sheet{
   opacity: 1;
   transform: translateX(-50%) translateY(0px);
@@ -172,7 +168,6 @@ body{
   padding: 14px 16px 10px;
   border-bottom:1px solid rgba(255,255,255,.08);
 }
-
 .sheetTitle{
   font-size:16px;
   font-weight:900;
@@ -188,7 +183,7 @@ body{
   touch-action: pan-y;
 }
 
-/* Drag handle (visuell) */
+/* Drag handle */
 .sheetHandle{
   position:absolute;
   left:50%;
@@ -201,12 +196,6 @@ body{
 }
 
 /* ================= UI ELEMENTS ================= */
-.blockTitle{
-  font-size:18px;
-  font-weight:900;
-  margin: 0 0 10px;
-}
-
 .card{
   border-radius: 18px;
   border:1px solid rgba(255,255,255,.12);
@@ -229,7 +218,7 @@ body{
   padding: 11px 12px;
   color: var(--text);
   outline:none;
-  font-size: 16px; /* iOS: hindrar zoom */
+  font-size: 16px;
 }
 
 .miniBtn{
@@ -241,6 +230,15 @@ body{
   cursor:pointer;
   font-weight:900;
   font-size:14px;
+}
+
+.miniBtnIcon{
+  width:44px;
+  min-width:44px;
+  text-align:center;
+  padding: 11px 0;
+  font-size:20px;
+  line-height:1;
 }
 
 .miniList{
@@ -277,22 +275,6 @@ body{
   flex:0 0 auto;
 }
 
-/* Calendar iframe scale */
-.calScale{
-  width:118%;
-  height: 220px;
-  transform: scale(.86);
-  transform-origin: top left;
-}
-
-.calFrame{
-  width:100%;
-  height:100%;
-  border:0;
-  background:#0b1118;
-}
-
-/* Missing pieces (needed by app.js) */
 .miniHint{
   color: rgba(255,255,255,.55);
   font-size: 12px;
@@ -312,7 +294,21 @@ body{
   margin-top:12px;
 }
 
-/* Swipe rows */
+/* Calendar iframe scale */
+.calScale{
+  width:118%;
+  height: 220px;
+  transform: scale(.86);
+  transform-origin: top left;
+}
+.calFrame{
+  width:100%;
+  height:100%;
+  border:0;
+  background:#0b1118;
+}
+
+/* ================= Swipe rows ================= */
 .swipeItem{
   position:relative;
   border-radius: 14px;
@@ -325,7 +321,15 @@ body{
 .swipeUnder{
   position:absolute;
   inset:0;
-  background: rgba(0,0,0,.18);
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  padding-right:14px;
+  background: rgba(0,0,0,.22);
+  color: rgba(255,255,255,.70);
+  font-weight:900;
+  font-size:12px;
+  letter-spacing:.2px;
   pointer-events:none;
 }
 
@@ -362,6 +366,159 @@ body{
   gap:10px;
 }
 
+/* ================= Modal (glass) ================= */
+.modalWrap{
+  position:fixed;
+  inset:0;
+  z-index:5000;
+  pointer-events:none;
+  opacity:0;
+  transition: opacity 180ms ease;
+}
+
+.modalWrap.open{
+  pointer-events:auto;
+  opacity:1;
+}
+
+.modalBackdrop{
+  position:absolute;
+  inset:0;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(2px);
+}
+
+.modalCard{
+  position:absolute;
+  left:50%;
+  top: 18%;
+  transform: translateX(-50%);
+  width: min(680px, 92vw);
+  border-radius: 22px;
+  background: rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.14);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 30px 80px rgba(0,0,0,.65);
+  overflow:hidden;
+}
+
+.modalHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+}
+
+.modalTitle{
+  font-weight:900;
+  font-size:14px;
+}
+
+.modalClose{
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+  width:40px;
+  height:40px;
+  border-radius: 12px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.modalBody{
+  padding: 14px;
+}
+
+.modalMainText{
+  font-weight:900;
+  font-size:16px;
+  line-height:1.25;
+  margin-bottom:10px;
+  white-space:pre-wrap;
+}
+
+.modalTextArea{
+  width:100%;
+  min-height: 160px;
+  resize:none;
+  background: rgba(0,0,0,.20);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius: 14px;
+  padding: 12px 12px;
+  color: var(--text);
+  outline:none;
+  font-size:16px;
+  line-height:1.3;
+}
+
+.modalFooter{
+  padding: 12px 14px 14px;
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+
+/* ================= Timer (border progress) ================= */
+.timerCard{
+  position:relative;
+  padding: 0;
+}
+
+.timerInner{
+  position:relative;
+  padding: 18px 16px 16px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+}
+
+.timerTime{
+  font-size:46px;
+  font-weight:900;
+  letter-spacing:.5px;
+}
+
+.timerBtns{
+  display:flex;
+  gap:10px;
+  margin-top:12px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+
+.timerPresets{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:center;
+  margin-top:10px;
+}
+
+.timerBorder{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+}
+
+.timerBorder rect{
+  fill:none;
+}
+
+#tBg{
+  stroke: rgba(255,255,255,.10);
+  stroke-width: 1.5; /* tunn */
+}
+
+#tProg{
+  stroke: rgba(0,209,255,.88);
+  stroke-width: 1.5; /* tunn */
+  stroke-linecap: round;
+}
+
 /* Small phones */
 @media (max-width: 390px){
   .sheet{
@@ -370,5 +527,8 @@ body{
   }
   .wheel{
     width: min(92vw, 330px);
+  }
+  .modalCard{
+    top: 14%;
   }
 }

@@ -2,27 +2,30 @@
   const $ = (id) => document.getElementById(id);
 
   /* =========================
-     START VIEW ELEMENTS
+     ELEMENTS
   ========================= */
-  const startInfo = $("startInfo");
-  const startTimeEl = $("startTime");
-  const startDayEl = $("startDay");
-  const startDateEl = $("startDate");
+  const wheel = $("wheel");
+  const wheelRing = document.querySelector(".wheelRing");
+  const wheelIcon = $("wheelIcon");
+
+  const sheetWrap = $("sheetWrap");
+  const sheet = $("sheet");
+  const sheetTitle = $("sheetTitle");
+  const sheetContent = $("sheetContent");
+
+  const topDate = $("topDate");
+  const topRight = document.querySelector(".topRight");
+
+  // Start overlay (only prio count now)
   const startPrioCountEl = $("startPrioCount");
   const centerLabelEl = $("centerLabel");
 
-  /* =========================
-     TOP ELEMENTS
-  ========================= */
-  const topDate = $("topDate");
-  const topRight = document.querySelector(".topRight");
-  if (topRight) topRight.textContent = ""; // remove Preview
+  if (topRight) topRight.textContent = "";
 
   /* =========================
      STORAGE
   ========================= */
   const LS_KEY = "sbdash_store_v3";
-
   function loadStore() {
     try {
       const raw = localStorage.getItem(LS_KEY);
@@ -31,21 +34,14 @@
       return { prio: [], todo: [], ideas: [], done: [] };
     }
   }
-
   const store = loadStore();
   const saveStore = () => localStorage.setItem(LS_KEY, JSON.stringify(store));
-  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now() + "");
-
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
   const fmt = (ts) =>
-    new Date(ts).toLocaleString("sv-SE", {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    new Date(ts).toLocaleString("sv-SE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
   /* =========================
-     DATE/TIME UPDATES
+     TOP DATE (keep)
   ========================= */
   function updateTopDate() {
     if (!topDate) return;
@@ -54,45 +50,30 @@
     const date = now.toLocaleDateString("sv-SE", { day: "2-digit", month: "long", year: "numeric" });
     topDate.textContent = `${weekday} ${date}`;
   }
-
-  function updateStartInfo() {
-    const now = new Date();
-
-    if (startTimeEl) startTimeEl.textContent = now.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
-    if (startDayEl) startDayEl.textContent = now.toLocaleDateString("sv-SE", { weekday: "long" });
-    if (startDateEl) startDateEl.textContent = now.toLocaleDateString("sv-SE", { day: "2-digit", month: "long", year: "numeric" });
-
-    if (startPrioCountEl) {
-      const c = Array.isArray(store.prio) ? store.prio.length : 0;
-      startPrioCountEl.textContent = `Aktiva prios: ${c}`;
-    }
-  }
-
   updateTopDate();
-  updateStartInfo();
-  setInterval(updateStartInfo, 1000 * 15); // var 15:e sekund räcker
-  setInterval(updateTopDate, 1000 * 60);  // var minut
+  setInterval(updateTopDate, 60_000);
 
   /* =========================
-     WHEEL + SHEET
+     START PRIO COUNT (centered under topbar)
   ========================= */
-  const wheel = $("wheel");
-  const wheelRing = document.querySelector(".wheelRing");
-  const wheelIcon = $("wheelIcon");
+  function updateStartPrioCount() {
+    if (!startPrioCountEl) return;
+    const c = Array.isArray(store.prio) ? store.prio.length : 0;
+    startPrioCountEl.textContent = `Aktiva prios: ${c}`;
+  }
+  updateStartPrioCount();
 
-  const sheetWrap = $("sheetWrap");
-  const sheetTitle = $("sheetTitle");
-  const sheetContent = $("sheetContent");
-
-  // Views (DONE removed from wheel)
+  /* =========================
+     VIEWS (DONE removed from wheel)
+  ========================= */
   const VIEW_DEFS = [
-    { id: "calendar", title: "KALENDER", icon: "assets/ui/icon-calendar.svg" },
-    { id: "prio", title: "AKTIV PRIO", icon: "assets/ui/icon-prio.svg" },
-    { id: "weather", title: "VÄDER", icon: "assets/ui/icon-weather.svg" },
-    { id: "news", title: "NYHETER", icon: "assets/ui/icon-news.svg" },
-    { id: "todo", title: "ATT GÖRA", icon: "assets/ui/icon-todo.svg" },
-    { id: "ideas", title: "IDÉER", icon: "assets/ui/icon-ideas.svg" },
-    { id: "timer", title: "TIMER", icon: "assets/ui/icon-pomodoro.svg" },
+    { id: "calendar", label: "KALENDER", icon: "assets/ui/icon-calendar.svg" },
+    { id: "prio",     label: "AKTIV PRIO", icon: "assets/ui/icon-prio.svg" },
+    { id: "weather",  label: "VÄDER", icon: "assets/ui/icon-weather.svg" },
+    { id: "news",     label: "NYHETER", icon: "assets/ui/icon-news.svg" },
+    { id: "todo",     label: "ATT GÖRA", icon: "assets/ui/icon-todo.svg" },
+    { id: "ideas",    label: "IDÉER", icon: "assets/ui/icon-ideas.svg" },
+    { id: "timer",    label: "TIMER", icon: "assets/ui/icon-pomodoro.svg" },
   ];
 
   let activeIndex = 0;
@@ -104,48 +85,77 @@
     centerLabelEl.textContent = text || "";
   }
 
-  function setPreview(index, { silent = false } = {}) {
-    activeIndex = (index + VIEW_DEFS.length) % VIEW_DEFS.length;
-    const v = VIEW_DEFS[activeIndex];
-
-    if (wheelIcon) wheelIcon.src = v.icon;
-    setCenterLabel(v.title);
-  }
-
   function sectorFromDeg(deg) {
     const raw = Math.round(deg / STEP);
     const idx = ((raw % VIEW_DEFS.length) + VIEW_DEFS.length) % VIEW_DEFS.length;
     return idx;
   }
 
+  function setPreview(index) {
+    activeIndex = (index + VIEW_DEFS.length) % VIEW_DEFS.length;
+    const v = VIEW_DEFS[activeIndex];
+    if (wheelIcon) wheelIcon.src = v.icon;
+    setCenterLabel(v.label);
+  }
+
   function setRotation(deg) {
     rotationDeg = deg;
     if (wheelRing) wheelRing.style.transform = `rotate(${deg}deg)`;
-    const idx = sectorFromDeg(deg);
-    setPreview(idx, { silent: true });
+    setPreview(sectorFromDeg(deg));
   }
 
+  /* =========================
+     SHEET OPEN/CLOSE + swipe-to-close restore
+  ========================= */
   function openSheet() {
     sheetWrap?.classList.add("open");
-    if (startInfo) startInfo.style.opacity = "0";
-    if (centerLabelEl) centerLabelEl.style.opacity = "0";
-    renderView(VIEW_DEFS[activeIndex].id);
   }
-
   function closeSheet() {
     sheetWrap?.classList.remove("open");
-    if (startInfo) startInfo.style.opacity = "1";
+    // show center label always in start view
     if (centerLabelEl) centerLabelEl.style.opacity = "1";
   }
 
-  // click to open
-  wheel?.addEventListener("click", openSheet);
+  // Drag down to close (restored)
+  let sheetDragStartY = null;
+  sheet?.addEventListener("pointerdown", (e) => {
+    sheetDragStartY = e.clientY;
+    sheet.classList.add("dragging");
+    sheet.setPointerCapture?.(e.pointerId);
+  }, { passive: true });
 
-  // drag rotate (simple)
+  sheet?.addEventListener("pointermove", (e) => {
+    if (sheetDragStartY == null) return;
+    const delta = e.clientY - sheetDragStartY;
+    if (delta > 0) {
+      sheet.style.transform = `translateX(-50%) translateY(${delta}px)`;
+      e.preventDefault?.();
+    }
+  }, { passive: false });
+
+  sheet?.addEventListener("pointerup", (e) => {
+    if (sheetDragStartY == null) return;
+    const delta = e.clientY - sheetDragStartY;
+
+    if (delta > 120) closeSheet();
+
+    sheet.style.transform = "";
+    sheet.classList.remove("dragging");
+    sheetDragStartY = null;
+  }, { passive: true });
+
+  sheet?.addEventListener("pointercancel", () => {
+    sheet.style.transform = "";
+    sheet.classList.remove("dragging");
+    sheetDragStartY = null;
+  }, { passive: true });
+
+  /* =========================
+     WHEEL interaction
+  ========================= */
   let dragging = false;
   let startAngle = 0;
-  let startX = 0;
-  let startY = 0;
+  let tapStartX = 0, tapStartY = 0;
   let didDrag = false;
 
   function angle(cx, cy, x, y) {
@@ -155,8 +165,8 @@
   wheel?.addEventListener("pointerdown", (e) => {
     dragging = true;
     didDrag = false;
-    startX = e.clientX;
-    startY = e.clientY;
+    tapStartX = e.clientX;
+    tapStartY = e.clientY;
 
     const r = wheel.getBoundingClientRect();
     const cx = r.left + r.width / 2;
@@ -169,8 +179,8 @@
   wheel?.addEventListener("pointermove", (e) => {
     if (!dragging) return;
 
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
+    const dx = e.clientX - tapStartX;
+    const dy = e.clientY - tapStartY;
     if (!didDrag && Math.hypot(dx, dy) > 18) didDrag = true;
 
     if (didDrag) {
@@ -187,15 +197,33 @@
     if (!dragging) return;
     dragging = false;
 
-    // snap
     const idx = sectorFromDeg(rotationDeg);
     setRotation(idx * STEP);
 
-    if (!didDrag) openSheet();
+    // tap => open sheet
+    if (!didDrag) {
+      openSheet();
+      renderView(VIEW_DEFS[activeIndex].id);
+      if (centerLabelEl) centerLabelEl.style.opacity = "0";
+    }
   }, { passive: true });
 
+  wheel?.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const dir = e.deltaY > 0 ? 1 : -1;
+    const next = (activeIndex + dir + VIEW_DEFS.length) % VIEW_DEFS.length;
+    setRotation(next * STEP);
+  }, { passive: false });
+
+  // Click fallback
+  wheel?.addEventListener("click", () => {
+    openSheet();
+    renderView(VIEW_DEFS[activeIndex].id);
+    if (centerLabelEl) centerLabelEl.style.opacity = "0";
+  });
+
   /* =========================
-     SWIPE (stable)
+     SWIPE (you said it works now)
   ========================= */
   function attachSwipe(li, onComplete) {
     const content = li.querySelector(".swipeContent");
@@ -227,7 +255,6 @@
       const need = Math.max(90, li.clientWidth * 0.35);
 
       content.style.transition = "transform 180ms ease";
-
       if (Math.abs(curX) >= need) {
         content.style.transform = "translateX(-120%)";
         setTimeout(() => onComplete?.(), 140);
@@ -252,33 +279,17 @@
     const content = document.createElement("div");
     content.className = "swipeContent";
 
-    const left = document.createElement("div");
-    left.className = "swipeLeft";
-
-    const t = document.createElement("div");
-    t.className = "swipeText";
-    t.textContent = text;
-
-    left.appendChild(t);
-
-    const right = document.createElement("div");
-    right.className = "swipeRight";
-
-    const m = document.createElement("div");
-    m.className = "miniMeta";
-    m.textContent = meta || "";
-
-    right.appendChild(m);
-
-    content.appendChild(left);
-    content.appendChild(right);
+    content.innerHTML = `
+      <div class="swipeLeft"><div class="swipeText"></div></div>
+      <div class="swipeRight"><div class="miniMeta"></div></div>
+    `;
+    content.querySelector(".swipeText").textContent = text;
+    content.querySelector(".miniMeta").textContent = meta || "";
 
     li.appendChild(content);
-
     attachSwipe(li, onComplete);
 
     if (onClick) content.addEventListener("click", onClick);
-
     return li;
   }
 
@@ -323,10 +334,9 @@
   }
 
   /* =========================
-     HEADER RIGHT: "Visa slutförda" + icon
+     HEADER "Visa slutförda"
   ========================= */
   function setSheetTitleWithDone(label) {
-    if (!sheetTitle) return;
     sheetTitle.innerHTML = `
       <span>${label}</span>
       <span class="doneHeaderBtn" id="openDone">
@@ -338,9 +348,9 @@
   }
 
   /* =========================
-     LISTS
+     LISTS + ENTER to add (restored)
   ========================= */
-  function renderList(type, label) {
+  function renderList(type, label, allowModal) {
     setSheetTitleWithDone(label);
 
     sheetContent.innerHTML = `
@@ -352,18 +362,26 @@
     `;
 
     const input = $("input");
-    const add = $("add");
+    const addBtn = $("add");
     const list = $("list");
 
-    add.onclick = () => {
+    const add = () => {
       const t = (input.value || "").trim();
       if (!t) return;
-      store[type].unshift({ id: uid(), text: t, createdAt: Date.now() });
+      const obj = { id: uid(), text: t, createdAt: Date.now() };
+      store[type].unshift(obj);
       saveStore();
       input.value = "";
-      updateStartInfo();
+      updateStartPrioCount();
       draw();
     };
+
+    addBtn.addEventListener("click", add);
+
+    // ✅ ENTER to add
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") add();
+    });
 
     function complete(id) {
       const i = store[type].findIndex((x) => x.id === id);
@@ -371,7 +389,7 @@
       const item = store[type].splice(i, 1)[0];
       store.done.unshift({ ...item, origin: type, doneAt: Date.now() });
       saveStore();
-      updateStartInfo();
+      updateStartPrioCount();
       draw();
     }
 
@@ -382,7 +400,7 @@
           mkSwipeItem(
             { text: item.text, meta: fmt(item.createdAt) },
             () => complete(item.id),
-            () => openModal(item)
+            allowModal ? () => openModal(item) : null
           )
         );
       });
@@ -392,7 +410,7 @@
   }
 
   function renderDone() {
-    if (sheetTitle) sheetTitle.textContent = "Slutförda";
+    sheetTitle.textContent = "Slutförda";
     sheetContent.innerHTML = `<ul id="doneList" class="miniList"></ul>`;
     const list = $("doneList");
 
@@ -400,34 +418,40 @@
       const li = document.createElement("li");
       li.className = "itemRow";
       li.innerHTML = `
-        <div class="itemText">${item.text}</div>
-        <div class="itemMeta">${fmt(item.doneAt)}</div>
+        <div class="itemText"></div>
+        <div class="itemMeta"></div>
       `;
+      li.querySelector(".itemText").textContent = item.text;
+      li.querySelector(".itemMeta").textContent = fmt(item.doneAt);
       list.appendChild(li);
     });
   }
 
   /* =========================
-     CALENDAR (taller)
+     CALENDAR (FIX: real embed URL restored)
+     (your earlier working CAL_SRC style)
   ========================= */
+  const CAL_SRC =
+    "https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0";
+
   function renderCalendar() {
-    if (sheetTitle) sheetTitle.textContent = "Kalender";
+    sheetTitle.textContent = "Kalender";
     sheetContent.innerHTML = `
       <div class="card">
         <div class="calScale">
-          <iframe class="calFrame"
-            src="https://calendar.google.com/calendar/embed?mode=AGENDA&ctz=Europe%2FStockholm&hl=sv"
-            frameborder="0"></iframe>
+          <iframe class="calFrame" src="${CAL_SRC}" frameborder="0" scrolling="no"></iframe>
         </div>
       </div>
+      <div class="miniHint" style="margin-top:10px;">(iPhone Safari kan kräva cookies för Google iframe.)</div>
     `;
   }
 
   /* =========================
-     WEATHER (compact + more)
+     WEATHER (keep your compact + more data version later)
+     For now: basic but reliable
   ========================= */
   async function renderWeather() {
-    if (sheetTitle) sheetTitle.textContent = "Väder";
+    sheetTitle.textContent = "Väder";
     sheetContent.innerHTML = `
       <div class="card weatherCard">
         <div class="weatherNow" id="wNow">Laddar…</div>
@@ -436,54 +460,178 @@
     `;
 
     const lat = 59.3293, lon = 18.0686;
-
     const url =
       `https://api.open-meteo.com/v1/forecast` +
       `?latitude=${lat}&longitude=${lon}` +
       `&current=temperature_2m,wind_speed_10m,relative_humidity_2m` +
-      `&hourly=temperature_2m,precipitation_probability,wind_speed_10m` +
+      `&hourly=temperature_2m,precipitation_probability` +
       `&timezone=Europe%2FStockholm`;
 
     const r = await fetch(url, { cache: "no-store" });
     const data = await r.json();
 
-    $("wNow").innerHTML = `
+    const nowHtml = `
       <div>${Math.round(data.current.temperature_2m)}°</div>
       <div>${Math.round(data.current.wind_speed_10m)} m/s</div>
       <div>${Math.round(data.current.relative_humidity_2m)}%</div>
     `;
+    $("wNow").innerHTML = nowHtml;
 
     const temps = data.hourly.temperature_2m.slice(0, 6);
     const pop = data.hourly.precipitation_probability.slice(0, 6);
 
-    $("wForecast").innerHTML = temps
-      .map((t, i) => {
-        return `
-          <div class="wxMini">
-            <div class="wxMiniTop">+${i}h</div>
-            <div class="wxMiniTemp">${Math.round(t)}°</div>
-            <div class="wxMiniPop">${pop[i]}%</div>
+    $("wForecast").innerHTML = temps.map((t, i) => `
+      <div class="wxMini">
+        <div class="wxMiniTop">+${i}h</div>
+        <div class="wxMiniTemp">${Math.round(t)}°</div>
+        <div class="wxMiniPop">${pop[i]}%</div>
+      </div>
+    `).join("");
+  }
+
+  /* =========================
+     TIMER (RESTORED, no "kommer snart")
+  ========================= */
+  const TIMER = {
+    total: 5 * 60,
+    left: 5 * 60,
+    running: false,
+    t0: 0,
+    pausedLeft: 5 * 60,
+    raf: 0
+  };
+  const canVibrate = !!navigator.vibrate;
+
+  function timerText() {
+    const safe = Math.max(0, TIMER.left);
+    const mm = Math.floor(safe / 60);
+    const ss = safe % 60;
+    return `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+  }
+
+  function setTimerMinutes(min) {
+    const m = Number(min);
+    if (!Number.isFinite(m) || m <= 0) return;
+    TIMER.running = false;
+    cancelAnimationFrame(TIMER.raf);
+    TIMER.total = Math.round(m * 60);
+    TIMER.left = TIMER.total;
+    TIMER.pausedLeft = TIMER.left;
+    renderTimerUIOnly();
+  }
+
+  function resetTimer() {
+    TIMER.running = false;
+    cancelAnimationFrame(TIMER.raf);
+    TIMER.left = TIMER.total;
+    TIMER.pausedLeft = TIMER.left;
+    renderTimerUIOnly();
+  }
+
+  function startPauseTimer() {
+    if (TIMER.running) {
+      TIMER.running = false;
+      TIMER.pausedLeft = TIMER.left;
+      cancelAnimationFrame(TIMER.raf);
+      renderTimerUIOnly();
+      return;
+    }
+    if (TIMER.left <= 0) {
+      TIMER.left = TIMER.total;
+      TIMER.pausedLeft = TIMER.left;
+    }
+    TIMER.running = true;
+    TIMER.t0 = performance.now();
+    cancelAnimationFrame(TIMER.raf);
+    TIMER.raf = requestAnimationFrame(timerLoop);
+    renderTimerUIOnly();
+  }
+
+  function timerLoop() {
+    if (!TIMER.running) return;
+
+    const elapsed = (performance.now() - TIMER.t0) / 1000;
+    TIMER.left = Math.max(0, Math.floor(TIMER.pausedLeft - elapsed));
+
+    renderTimerUIOnly(true);
+
+    if (TIMER.left <= 0) {
+      TIMER.running = false;
+      cancelAnimationFrame(TIMER.raf);
+      if (canVibrate) navigator.vibrate([20, 40, 20]);
+      renderTimerUIOnly();
+      return;
+    }
+    TIMER.raf = requestAnimationFrame(timerLoop);
+  }
+
+  function renderTimerUIOnly(fromLoop = false) {
+    const tTime = $("tTime");
+    const tState = $("tState");
+    const tStartBtn = $("tStartBtn");
+    if (tTime) tTime.textContent = timerText();
+    if (tStartBtn) tStartBtn.textContent = TIMER.running ? "Paus" : "Start";
+    if (tState) {
+      if (!TIMER.running && TIMER.left === TIMER.total) tState.textContent = "Redo";
+      else if (TIMER.running && TIMER.left > 0) tState.textContent = "Fokus…";
+      else if (!TIMER.running && TIMER.left > 0) tState.textContent = "Pausad";
+      else tState.textContent = "KLAR";
+    }
+  }
+
+  function renderTimer() {
+    sheetTitle.textContent = "Timer";
+    sheetContent.innerHTML = `
+      <div class="card" style="padding:16px;">
+        <div style="display:flex; flex-direction:column; align-items:center; text-align:center;">
+          <div id="tTime" style="font-size:46px; font-weight:900;">${timerText()}</div>
+          <div id="tState" class="miniHint" style="margin-top:6px;">Redo</div>
+
+          <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; justify-content:center;">
+            <button class="miniBtn" id="tStartBtn">${TIMER.running ? "Paus" : "Start"}</button>
+            <button class="miniBtn" id="tResetBtn" style="background: rgba(255,255,255,.06);">Reset</button>
           </div>
-        `;
-      })
-      .join("");
+
+          <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:12px;">
+            <button class="miniBtn" data-tmin="1"  style="background: rgba(255,255,255,.06);">1</button>
+            <button class="miniBtn" data-tmin="5"  style="background: rgba(255,255,255,.06);">5</button>
+            <button class="miniBtn" data-tmin="10" style="background: rgba(255,255,255,.06);">10</button>
+            <button class="miniBtn" data-tmin="15" style="background: rgba(255,255,255,.06);">15</button>
+            <button class="miniBtn" data-tmin="30" style="background: rgba(255,255,255,.06);">30</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    $("tStartBtn")?.addEventListener("click", startPauseTimer);
+    $("tResetBtn")?.addEventListener("click", resetTimer);
+    sheetContent.querySelectorAll("[data-tmin]").forEach(btn => {
+      btn.addEventListener("click", () => setTimerMinutes(btn.dataset.tmin));
+    });
   }
 
   /* =========================
      VIEW SWITCH
   ========================= */
   function renderView(id) {
-    if (id === "prio") return renderList("prio", "Aktiv prio");
-    if (id === "todo") return renderList("todo", "Att göra");
-    if (id === "ideas") return renderList("ideas", "Idéer");
+    if (id === "prio") return renderList("prio", "Aktiv prio", true);
+    if (id === "todo") return renderList("todo", "Att göra", false);
+    if (id === "ideas") return renderList("ideas", "Idéer", false);
     if (id === "calendar") return renderCalendar();
     if (id === "weather") return renderWeather();
-    if (id === "news") { if (sheetTitle) sheetTitle.textContent = "Nyheter"; sheetContent.innerHTML = `<div class="miniHint">Kommer snart.</div>`; return; }
-    if (id === "timer") { if (sheetTitle) sheetTitle.textContent = "Timer"; sheetContent.innerHTML = `<div class="miniHint">Kommer snart.</div>`; return; }
+    if (id === "news") {
+      sheetTitle.textContent = "Nyheter";
+      sheetContent.innerHTML = `<div class="miniHint">Kommer snart.</div>`;
+      return;
+    }
+    if (id === "timer") return renderTimer();
   }
 
-  // init wheel preview
+  /* =========================
+     INIT
+  ========================= */
   setRotation(0);
   setPreview(0);
-
+  // Ensure center label is visible in start view
+  if (centerLabelEl) centerLabelEl.style.opacity = "1";
 })();

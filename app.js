@@ -301,5 +301,21 @@
     if(id==="news") return;
     if(id==="timer") return;
   }
+// --- INIT + OPEN SHEET ---
+const wheel = document.getElementById("wheel");
+const sheetWrap = document.getElementById("sheetWrap");
 
+function openSheet(){
+  sheetWrap.classList.add("open");
+  renderView(VIEWS[activeIndex]);
+}
+
+function closeSheet(){
+  sheetWrap.classList.remove("open");
+}
+
+wheel?.addEventListener("click", openSheet);
+
+// Starta på kalender så du ser att det funkar direkt
+renderView("calendar");
 })();

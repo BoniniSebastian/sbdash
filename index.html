@@ -25,7 +25,7 @@
   <!-- ================= APP SHELL ================= -->
   <div class="shell">
 
-    <!-- ===== START VIEW INFO (when sheet closed) ===== -->
+    <!-- ===== START INFO (sheet closed) ===== -->
     <div class="startInfo" id="startInfo">
       <div class="startSpacer"></div>
       <div class="startPrio" id="startPrioCount">Aktiva prios: 0</div>
@@ -33,6 +33,14 @@
 
     <!-- ===== CENTER LABEL (sync with wheel) ===== -->
     <div class="centerLabel" id="centerLabel">KALENDER</div>
+
+    <!-- ===== PREVIEW (behind wheel when sheet closed) ===== -->
+    <div class="previewWrap" id="previewWrap" aria-hidden="true">
+      <div class="previewCard">
+        <div class="previewTitle" id="previewTitle">Preview</div>
+        <div class="previewBody" id="previewBody"></div>
+      </div>
+    </div>
 
     <!-- ===== SHEET WRAP (overlay) ===== -->
     <div class="sheetWrap" id="sheetWrap">
@@ -49,6 +57,7 @@
       <div class="wheel" id="wheel">
         <img src="assets/ui/knob-ring.svg" class="wheelRing" alt="ring" />
         <img id="wheelIcon" class="wheelIcon" src="assets/ui/icon-calendar.svg" alt="icon" />
+        <!-- timer pulse is injected by JS -->
       </div>
     </div>
 

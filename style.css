@@ -4,7 +4,6 @@
   --muted:#aab6d1;
   --line:rgba(255,255,255,.10);
   --glass: rgba(255,255,255,.06);
-  --radius:24px;
 }
 
 *{ box-sizing:border-box; }
@@ -97,21 +96,62 @@ body{
   top: 34%;
   transform: translate(-50%,-50%);
   z-index: 22;
-
   font-size: clamp(28px, 9vw, 72px);
   font-weight: 400;
   letter-spacing: .8px;
   opacity: .75;
   text-align:center;
-
   width: 92vw;
   max-width: 720px;
   line-height: 1.05;
-
   pointer-events:none;
   transition: opacity 180ms ease;
 }
 .centerLabel::before{ content:none !important; }
+
+/* ================= PREVIEW (behind wheel when sheet closed) ================= */
+.previewWrap{
+  position: absolute;
+  left: 50%;
+  top: 94px;
+  transform: translateX(-50%);
+  width: min(720px, 94vw);
+  z-index: 30; /* under wheel (100), over background */
+  pointer-events: none;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.previewCard{
+  border-radius: 26px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.10);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: 0 30px 80px rgba(0,0,0,.55);
+
+  opacity: .58;
+  filter: saturate(.9);
+  padding: 14px 16px;
+  min-height: 110px;
+}
+
+.previewTitle{
+  font-size: 16px;
+  font-weight: 900;
+  opacity: .92;
+}
+.previewBody{
+  margin-top: 10px;
+  color: rgba(255,255,255,.78);
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+body.sheetOpen .previewWrap{
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+}
 
 /* ================= WHEEL ================= */
 .wheelWrap{
@@ -186,26 +226,45 @@ body{
 
 #wheelTimerBg{
   stroke: rgba(255,255,255,.10);
-  filter: drop-shadow(0 0 12px rgba(255,255,255,.08));
+  filter: drop-shadow(0 0 12px rgba(255,255,255,.06));
 }
 
 #wheelTimerProg{
+  stroke: rgba(0,209,255,.92);
   stroke-linecap: round;
   filter:
-    drop-shadow(0 0 10px rgba(0,209,255,.70))
-    drop-shadow(0 0 24px rgba(0,209,255,.35))
-    drop-shadow(0 0 44px rgba(0,209,255,.18));
+    drop-shadow(0 0 10px rgba(0,209,255,.80))
+    drop-shadow(0 0 22px rgba(0,209,255,.40))
+    drop-shadow(0 0 44px rgba(0,209,255,.22));
+  opacity: .95;
 }
 
-/* TIMER – neon pulse på wheel när timer går (JS togglar .timerPulse på .wheel) */
-@keyframes neonPulse {
-  0%   { filter: drop-shadow(0 0 10px rgba(0,209,255,.20)) drop-shadow(0 0 22px rgba(0,209,255,.12)); }
-  50%  { filter: drop-shadow(0 0 18px rgba(0,209,255,.55)) drop-shadow(0 0 40px rgba(0,209,255,.22)); }
-  100% { filter: drop-shadow(0 0 10px rgba(0,209,255,.20)) drop-shadow(0 0 22px rgba(0,209,255,.12)); }
+.timerPulse{
+  position:absolute;
+  inset: 26px;
+  border-radius:999px;
+  pointer-events:none;
+  z-index:1;
+  opacity: 0;
+  transition: opacity 200ms ease;
+  background:
+    radial-gradient(circle at 50% 50%,
+      rgba(0,209,255,.10),
+      rgba(0,209,255,.04) 45%,
+      rgba(0,0,0,0) 70%);
+  filter:
+    drop-shadow(0 0 18px rgba(0,209,255,.35))
+    drop-shadow(0 0 36px rgba(0,209,255,.18));
 }
-.wheel.timerPulse .wheelRing{ animation: neonPulse 1.25s ease-in-out infinite; }
-.wheel.timerPulse .wheelIcon{ animation: neonPulse 1.25s ease-in-out infinite; }
-.wheel.timerPulse #wheelTimerProg{ animation: neonPulse 1.25s ease-in-out infinite; }
+body.timerRunning .timerPulse{
+  opacity: 1;
+  animation: pulseNeon 1.1s ease-in-out infinite;
+}
+@keyframes pulseNeon{
+  0%{ transform: scale(0.98); opacity: .65; }
+  50%{ transform: scale(1.02); opacity: 1; }
+  100%{ transform: scale(0.98); opacity: .65; }
+}
 
 /* ================= SHEET OVERLAY ================= */
 .sheetWrap{
@@ -261,7 +320,7 @@ body{
   touch-action: pan-y;
 }
 
-/* ================= UI ELEMENTS ================= */
+/* ================= UI ================= */
 .card{
   border-radius: 18px;
   border:1px solid rgba(255,255,255,.12);
@@ -269,11 +328,16 @@ body{
   overflow:hidden;
 }
 
+.miniHint{
+  color: rgba(255,255,255,.55);
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .miniForm{
   display:flex;
   gap:10px;
   margin: 8px 0 12px;
-  flex-wrap:nowrap;
   align-items:center;
 }
 
@@ -292,7 +356,7 @@ body{
   border:1px solid rgba(255,255,255,.14);
   background: rgba(0,209,255,.16);
   color: var(--text);
-  padding: 12px 12px;
+  padding: 12px 14px;
   border-radius: 14px;
   cursor:pointer;
   font-weight:900;
@@ -300,32 +364,36 @@ body{
 }
 
 .miniBtnIcon{
-  width:52px;
-  height:52px;
-  min-width:52px;
+  width:56px;
+  height:46px;
+  min-width:56px;
+  padding:0;
   display:grid;
   place-items:center;
-  padding:0;
   font-size:22px;
-  line-height:1;
+  border-radius: 14px;
 }
 
-/* Timer “quick buttons” */
-.tQuick{
-  width: 54px;
-  height: 54px;
-  padding: 0 !important;
-  border-radius: 18px;
-  display: inline-grid;
-  place-items: center;
-  font-size: 16px;
-}
-#tResetBtn{
-  height: 54px;
-  border-radius: 18px;
-  padding: 0 16px;
+.miniMeta{
+  color: rgba(255,255,255,.55);
+  font-size: 12px;
+  font-weight: 900;
 }
 
+/* Header “Visa slutförda” */
+.doneHeaderBtn{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+  font-weight:900;
+  opacity:.78;
+  margin-left:10px;
+  cursor:pointer;
+}
+.doneHeaderIcon{ width:14px; height:14px; }
+
+/* LIST */
 .miniList{
   list-style:none;
   margin:0;
@@ -335,24 +403,60 @@ body{
   gap:10px;
 }
 
-.miniHint{
-  color: rgba(255,255,255,.55);
-  font-size: 12px;
-  font-weight: 900;
+.checkItem{
+  border-radius: 16px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
 }
 
-.miniMeta{
-  color: rgba(255,255,255,.55);
-  font-size: 12px;
-  font-weight: 900;
+.checkRow{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 12px;
+  cursor:pointer;
 }
 
-/* =========================
-   CALENDAR
-========================= */
+.checkBox{
+  width:22px;
+  height:22px;
+  border-radius: 6px; /* mindre rund */
+  accent-color: rgba(0,209,255,.95);
+  flex:0 0 auto;
+}
+
+.checkMid{ min-width:0; flex:1 1 auto; }
+.checkText{
+  font-weight:900;
+  font-size:15px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.checkRight{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.checkStat{
+  font-weight:900;
+  font-size:12px;
+  color: rgba(255,255,255,.55);
+}
+
+.checkItem.isCompleting{
+  opacity: 0;
+  transform: translateX(-18px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+/* Calendar */
 .calScale{
   width:100%;
-  height: 460px;          /* storlek */
+  height: 460px;
   border-radius:18px;
   overflow:hidden;
   background:#0b1118;
@@ -362,152 +466,61 @@ body{
   height:100%;
   border:0;
   background:#0b1118;
-  display:block;          /* tar bort “kant under” */
+  display:block;
 }
 
-/* =========================
-   WEATHER
-========================= */
+/* Weather */
 .weatherCard{ padding:14px; }
 .weatherNow{
   display:flex;
   justify-content:space-between;
   font-size:22px;
   font-weight:900;
-  margin-bottom:14px;
+  margin-bottom:10px;
+}
+.weatherSub{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:12px;
+  font-weight:900;
+  color: rgba(255,255,255,.70);
+  font-size:12px;
 }
 .weatherForecast{
   display:flex;
   justify-content:space-between;
+  gap:8px;
   font-size:12px;
   opacity:.9;
-  gap: 10px;
 }
 .wxMini{
-  flex: 1 1 0;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
+  flex:1;
   border-radius: 14px;
-  padding: 10px 10px;
-  text-align: center;
-}
-.wxMiniTop{
-  font-weight: 900;
-  opacity: .85;
-  margin-bottom: 6px;
-}
-.wxMiniTemp{
-  font-weight: 900;
-  font-size: 14px;
-}
-.wxMiniPop{
-  margin-top: 4px;
-  font-weight: 900;
-  opacity: .65;
-}
-
-/* =========================
-   DONE HEADER
-========================= */
-.doneHeaderBtn{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  font-size:12px;
-  font-weight:900;
-  opacity:.75;
-  margin-left:10px;
-  cursor:pointer;
-}
-.doneHeaderIcon{ width:14px; height:14px; }
-
-/* =========================
-   CHECKBOX ROWS
-========================= */
-.checkItem{
-  border-radius: 14px;
-  overflow:hidden;
   border:1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.03);
+  padding:10px 8px;
+  text-align:center;
 }
-.checkRow{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:12px 12px;
-  cursor:pointer;
-}
-.checkBox{
-  width: 22px;
-  height: 22px;
-  border-radius: 6px; /* mindre rounded */
-  accent-color: rgba(0,209,255,.9);
-  flex:0 0 auto;
-}
+.wxMiniTop{ font-weight:900; opacity:.85; }
+.wxMiniTemp{ font-weight:900; font-size:14px; margin-top:6px; }
+.wxMiniPop{ font-weight:900; opacity:.7; margin-top:4px; }
 
-@supports (-webkit-appearance: none) {
-  .checkBox{
-    -webkit-appearance: none;
-    appearance: none;
-    border: 2px solid rgba(0,209,255,.45);
-    background: rgba(0,0,0,.15);
-    display: inline-grid;
-    place-items: center;
-  }
-  .checkBox:checked{
-    background: rgba(0,209,255,.22);
-    border-color: rgba(0,209,255,.9);
-  }
-  .checkBox:checked::after{
-    content: "✓";
-    font-weight: 900;
-    font-size: 16px;
-    line-height: 1;
-    color: rgba(0,209,255,.95);
-    transform: translateY(-1px);
-  }
-}
-
-.checkMid{ min-width:0; flex:1 1 auto; }
-.checkText{
-  font-weight:900;
-  font-size:14px;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.checkRight{
-  flex:0 0 auto;
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-
-/* Fade-out when completing */
-.checkItem.isCompleting{
-  opacity: 0;
-  transform: translateX(-18px);
-  transition: opacity 180ms ease, transform 180ms ease;
-}
-
-/* =========================
-   NEWS
-========================= */
+/* News */
 .newsList{ display:flex; flex-direction:column; gap:10px; }
-
 .newsItem{
   display:block;
   text-decoration:none;
   color: var(--text);
   border:1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.03);
-  border-radius:14px;
+  border-radius:16px;
   padding:12px 12px;
 }
 .newsTitle{
   font-weight:900;
   font-size:14px;
-  line-height:1.2;
+  line-height:1.25;
 }
 .newsMeta{
   margin-top:6px;
@@ -516,10 +529,167 @@ body{
   color: rgba(255,255,255,.55);
 }
 
+/* Timer UI */
+.timerBar{
+  border-radius: 18px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  padding: 14px;
+}
+.timerBtns{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.timerBtn{
+  flex:1 1 64px;
+  min-width:64px;
+  height: 44px;
+  border-radius: 16px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(0,209,255,.14);
+  color: var(--text);
+  font-weight: 900;
+  font-size: 16px;
+  cursor:pointer;
+  box-shadow:
+    0 0 0 rgba(0,0,0,0);
+}
+.timerBtn:active{ transform: scale(.98); }
+.timerBtnReset{
+  flex: 1 1 110px;
+  background: rgba(255,255,255,.06);
+}
+
+/* Modal */
+.modalWrap{
+  position:fixed;
+  inset:0;
+  z-index:5000;
+  pointer-events:none;
+  opacity:0;
+  transition: opacity 180ms ease;
+}
+.modalWrap.open{ pointer-events:auto; opacity:1; }
+
+.modalBackdrop{
+  position:absolute;
+  inset:0;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.modalCard{
+  position:absolute;
+  left:50%;
+  top: 12%;
+  transform: translateX(-50%);
+  width: min(680px, 92vw);
+  border-radius: 22px;
+  background: rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.14);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 30px 80px rgba(0,0,0,.65);
+  overflow:hidden;
+}
+
+.modalHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+}
+
+.modalTitle{ font-weight:900; font-size:14px; }
+
+.modalClose{
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+  width:40px;
+  height:40px;
+  border-radius: 12px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.modalBody{ padding: 14px; }
+.modalMainText{
+  font-weight:900;
+  font-size:16px;
+  line-height:1.25;
+  margin-bottom:10px;
+  white-space:pre-wrap;
+}
+.modalTextArea{
+  width:100%;
+  min-height: 110px;
+  resize:none;
+  background: rgba(0,0,0,.20);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius: 14px;
+  padding: 12px 12px;
+  color: var(--text);
+  outline:none;
+  font-size:16px;
+  line-height:1.3;
+}
+
+.subTaskHeader{
+  margin-top:14px;
+  font-weight: 900;
+  opacity:.9;
+}
+.subTaskForm{
+  display:flex;
+  gap:10px;
+  margin-top:10px;
+}
+.subTaskList{
+  list-style:none;
+  margin:12px 0 0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.subTaskRow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 10px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+}
+.subTaskRow.done{
+  opacity:.72;
+}
+.subTaskRow.done .subTaskText{
+  text-decoration: line-through;
+}
+.subTaskText{
+  font-weight: 900;
+  min-width:0;
+  flex:1;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.subTaskCb{
+  width:22px; height:22px;
+  border-radius: 6px;
+  accent-color: rgba(0,209,255,.95);
+}
+
 /* Small phones */
 @media (max-width: 390px){
   .sheet{ top: 20px; bottom: 130px; }
   .wheel{ width: min(92vw, 330px); }
+  .modalCard{ top: 10%; }
 }
 
 /* PREMIUM – wheel when sheet open */
@@ -541,4 +711,4 @@ body.sheetOpen .wheelIcon{
   opacity: 1;
   filter: drop-shadow(0 0 16px rgba(0,209,255,.28));
 }
-body.sheetOpen #wheelTimerProg{ opacity: .90; }
+body.sheetOpen #wheelTimerProg{ opacity: .95; }

@@ -17,25 +17,25 @@
   const startPrioCountEl = $("startPrioCount");
   const centerLabelEl = $("centerLabel");
 
-  // ✅ PREVIEW elements (nya)
+  // Preview (behind wheel when sheet closed)
   const previewWrap = $("previewWrap");
   const previewTitle = $("previewTitle");
   const previewBody = $("previewBody");
 
-  function clamp01(x){ return Math.max(0, Math.min(1,x)); }
-  function pad2(n){ return String(n).padStart(2,"0"); }
+  function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+  function pad2(n) { return String(n).padStart(2, "0"); }
 
   /* =========================
      STORAGE
   ========================= */
   const LS_KEY = "sbdash_store_v3";
 
-  function loadStore(){
-    try{
+  function loadStore() {
+    try {
       const raw = localStorage.getItem(LS_KEY);
-      return raw ? JSON.parse(raw) : { prio:[], todo:[], ideas:[], done:[] };
-    }catch{
-      return { prio:[], todo:[], ideas:[], done:[] };
+      return raw ? JSON.parse(raw) : { prio: [], todo: [], ideas: [], done: [] };
+    } catch {
+      return { prio: [], todo: [], ideas: [], done: [] };
     }
   }
 
@@ -44,24 +44,27 @@
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
 
   const fmt = (ts) =>
-    new Date(ts).toLocaleString("sv-SE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+    new Date(ts).toLocaleString("sv-SE", {
+      day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
+    });
 
   /* =========================
      DATE
   ========================= */
-  function updateTopDate(){
-    if(!topDate) return;
+  function updateTopDate() {
+    if (!topDate) return;
     const now = new Date();
-    const weekday = now.toLocaleDateString("sv-SE",{weekday:"long"});
-    const date = now.toLocaleDateString("sv-SE",{day:"2-digit",month:"long",year:"numeric"});
+    const weekday = now.toLocaleDateString("sv-SE", { weekday: "long" });
+    const date = now.toLocaleDateString("sv-SE", { day: "2-digit", month: "long", year: "numeric" });
     topDate.textContent = `${weekday} ${date}`;
   }
   updateTopDate();
-  setInterval(updateTopDate,60000);
+  setInterval(updateTopDate, 60_000);
 
-  function updateStartPrioCount(){
-    if(!startPrioCountEl) return;
-    startPrioCountEl.textContent = `Aktiva prios: ${Array.isArray(store.prio) ? store.prio.length : 0}`;
+  function updateStartPrioCount() {
+    if (!startPrioCountEl) return;
+    const c = Array.isArray(store.prio) ? store.prio.length : 0;
+    startPrioCountEl.textContent = `Aktiva prios: ${c}`;
   }
   updateStartPrioCount();
 
@@ -69,329 +72,339 @@
      VIEWS
   ========================= */
   const VIEW_DEFS = [
-    { id:"calendar", label:"KALENDER", icon:"assets/ui/icon-calendar.svg" },
-    { id:"prio",     label:"PRIOS",    icon:"assets/ui/icon-prio.svg" },
-    { id:"weather",  label:"VÄDER",    icon:"assets/ui/icon-weather.svg" },
-    { id:"news",     label:"NYHETER",  icon:"assets/ui/icon-news.svg" },
-    { id:"todo",     label:"TODO",     icon:"assets/ui/icon-todo.svg" },
-    { id:"ideas",    label:"IDÉER",    icon:"assets/ui/icon-ideas.svg" },
-    { id:"timer",    label:"TIMER",    icon:"assets/ui/icon-pomodoro.svg" },
+    { id: "calendar", label: "KALENDER", icon: "assets/ui/icon-calendar.svg" },
+    { id: "prio",     label: "PRIOS",    icon: "assets/ui/icon-prio.svg" },
+    { id: "weather",  label: "VÄDER",    icon: "assets/ui/icon-weather.svg" },
+    { id: "news",     label: "NYHETER",  icon: "assets/ui/icon-news.svg" },
+    { id: "todo",     label: "TODO",     icon: "assets/ui/icon-todo.svg" },
+    { id: "ideas",    label: "IDÉER",    icon: "assets/ui/icon-ideas.svg" },
+    { id: "timer",    label: "TIMER",    icon: "assets/ui/icon-pomodoro.svg" },
   ];
 
   let activeIndex = 0;
   const STEP = 360 / VIEW_DEFS.length;
   let rotationDeg = 0;
 
-  function setCenterLabel(text){
-    if(centerLabelEl) centerLabelEl.textContent = text || "";
+  function setCenterLabel(text) {
+    if (!centerLabelEl) return;
+    centerLabelEl.textContent = text || "";
   }
 
-  function sectorFromDeg(deg){
+  function sectorFromDeg(deg) {
     const raw = Math.round(deg / STEP);
-    return ((raw % VIEW_DEFS.length)+VIEW_DEFS.length)%VIEW_DEFS.length;
+    return ((raw % VIEW_DEFS.length) + VIEW_DEFS.length) % VIEW_DEFS.length;
+  }
+
+  function setPreview(index) {
+    activeIndex = (index + VIEW_DEFS.length) % VIEW_DEFS.length;
+    const v = VIEW_DEFS[activeIndex];
+    if (wheelIcon) wheelIcon.src = v.icon;
+    setCenterLabel(v.label);
   }
 
   /* =========================
-     PREVIEW (bakom hjulet)
+     PREVIEW CONTENT (start mode)
   ========================= */
   const cache = {
-    weather: null,   // { now: {t, wind, hum}, temps[], pop[] }
-    news: null,      // [{title, source, link, date}]
+    weather: null, // { temp, wind, rh, temps[], pop[] }
+    news: null     // [{title,source,date,link}]
   };
 
-  function setPreviewCard(title, html){
+  function isSheetOpen() {
+    return !!sheetWrap?.classList.contains("open");
+  }
+
+  function setPreviewCard(title, html) {
     if (!previewTitle || !previewBody) return;
     previewTitle.textContent = title || "";
     previewBody.innerHTML = html || "";
   }
 
-  function renderPreview(id){
-    if (!previewWrap) return;
+  function updatePreviewFor(id) {
+    if (!previewWrap || isSheetOpen()) return;
 
-    // Om sheet är öppen: göm preview (du kan göra den “frostig” via CSS senare)
-    if (sheetWrap?.classList.contains("open")) {
-      previewWrap.style.opacity = "0";
-      previewWrap.style.pointerEvents = "none";
-      return;
-    }
-
-    previewWrap.style.opacity = "1";
-    previewWrap.style.pointerEvents = "none";
-
-    if (id === "weather") {
-      if (cache.weather) {
-        const w = cache.weather;
-        setPreviewCard("Väder", `
-          <div style="display:flex;justify-content:space-between;font-weight:900;font-size:18px;">
-            <div>${w.now.t}°</div>
-            <div>${w.now.wind} m/s</div>
-            <div>${w.now.hum}%</div>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin-top:10px;opacity:.8;font-weight:900;font-size:12px;">
-            ${w.temps.map((t,i)=>`
-              <div style="text-align:center;min-width:38px;">
-                <div>+${i}h</div>
-                <div>${t}°</div>
-                <div>${w.pop[i]}%</div>
-              </div>
-            `).join("")}
-          </div>
-        `);
-      } else {
-        setPreviewCard("Väder", `<div class="miniHint">Vrid/tryck för att ladda väder…</div>`);
-      }
-      return;
-    }
-
-    if (id === "news") {
-      if (cache.news?.length) {
-        const top = cache.news.slice(0,3);
-        setPreviewCard("Nyheter", `
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            ${top.map(n => `
-              <div style="border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03);border-radius:14px;padding:10px;">
-                <div style="font-weight:900;font-size:13px;line-height:1.2;">${escapeHtml(n.title)}</div>
-                <div class="miniHint" style="margin-top:6px;">${escapeHtml(n.source)} • ${n.date.toLocaleString("sv-SE",{hour:"2-digit",minute:"2-digit"})}</div>
-              </div>
-            `).join("")}
-          </div>
-        `);
-      } else {
-        setPreviewCard("Nyheter", `<div class="miniHint">Vrid/tryck för att ladda nyheter…</div>`);
-      }
+    if (id === "calendar") {
+      setPreviewCard("Kalender", `
+        <div class="miniHint">Tryck på hjulet för agenda.</div>
+      `);
       return;
     }
 
     if (id === "prio") {
-      const c = Array.isArray(store.prio) ? store.prio.length : 0;
-      const first = store.prio?.[0]?.text ? escapeHtml(store.prio[0].text) : "Inga prios ännu";
+      const n = store.prio?.length || 0;
+      const top = store.prio?.[0]?.text || "";
       setPreviewCard("Prios", `
-        <div style="font-weight:900;font-size:16px;">Aktiva: ${c}</div>
-        <div class="miniHint" style="margin-top:8px;">${first}</div>
+        <div style="display:flex; justify-content:space-between; gap:12px;">
+          <div style="font-weight:900; font-size:22px;">${n}</div>
+          <div class="miniHint" style="text-align:right;">aktiva</div>
+        </div>
+        <div class="miniHint" style="margin-top:10px;">${top ? `Senast: <b>${escapeHtml(top)}</b>` : "Inga prios ännu"}</div>
       `);
       return;
     }
 
     if (id === "todo") {
-      const c = Array.isArray(store.todo) ? store.todo.length : 0;
-      const first = store.todo?.[0]?.text ? escapeHtml(store.todo[0].text) : "Inga TODO ännu";
+      const n = store.todo?.length || 0;
+      const top = store.todo?.[0]?.text || "";
       setPreviewCard("TODO", `
-        <div style="font-weight:900;font-size:16px;">Antal: ${c}</div>
-        <div class="miniHint" style="margin-top:8px;">${first}</div>
+        <div style="display:flex; justify-content:space-between; gap:12px;">
+          <div style="font-weight:900; font-size:22px;">${n}</div>
+          <div class="miniHint" style="text-align:right;">kvar</div>
+        </div>
+        <div class="miniHint" style="margin-top:10px;">${top ? `Nästa: <b>${escapeHtml(top)}</b>` : "Inget i TODO"}</div>
       `);
       return;
     }
 
     if (id === "ideas") {
-      const c = Array.isArray(store.ideas) ? store.ideas.length : 0;
-      const first = store.ideas?.[0]?.text ? escapeHtml(store.ideas[0].text) : "Inga idéer ännu";
+      const n = store.ideas?.length || 0;
+      const top = store.ideas?.[0]?.text || "";
       setPreviewCard("Idéer", `
-        <div style="font-weight:900;font-size:16px;">Antal: ${c}</div>
-        <div class="miniHint" style="margin-top:8px;">${first}</div>
+        <div style="display:flex; justify-content:space-between; gap:12px;">
+          <div style="font-weight:900; font-size:22px;">${n}</div>
+          <div class="miniHint" style="text-align:right;">sparade</div>
+        </div>
+        <div class="miniHint" style="margin-top:10px;">${top ? `Senast: <b>${escapeHtml(top)}</b>` : "Inga idéer ännu"}</div>
       `);
       return;
     }
 
     if (id === "timer") {
       setPreviewCard("Timer", `
-        <div style="font-weight:900;font-size:18px;">${timerText()}</div>
-        <div class="miniHint" style="margin-top:6px;">Tryck för att starta/pausa</div>
+        <div class="miniHint">Tryck för att starta fokus.</div>
+        <div class="miniHint" style="margin-top:8px;">Standard: 5 min</div>
       `);
       return;
     }
 
-    if (id === "calendar") {
-      setPreviewCard("Kalender", `<div class="miniHint">Tryck för att öppna kalender</div>`);
+    if (id === "weather") {
+      if (cache.weather) {
+        const w = cache.weather;
+        setPreviewCard("Väder", `
+          <div style="display:flex; justify-content:space-between; gap:10px; font-weight:900;">
+            <div style="font-size:22px;">${w.temp}°</div>
+            <div style="font-size:16px; opacity:.85;">${w.wind} m/s</div>
+            <div style="font-size:16px; opacity:.85;">${w.rh}%</div>
+          </div>
+          <div class="miniHint" style="margin-top:10px;">Tryck för detaljer.</div>
+        `);
+      } else {
+        setPreviewCard("Väder", `<div class="miniHint">Tryck för att ladda väder.</div>`);
+      }
       return;
     }
 
-    setPreviewCard("", "");
+    if (id === "news") {
+      if (cache.news?.length) {
+        const n = cache.news[0];
+        setPreviewCard("Nyheter", `
+          <div style="font-weight:900; font-size:14px; line-height:1.25;">
+            ${escapeHtml(n.title)}
+          </div>
+          <div class="miniHint" style="margin-top:8px;">${escapeHtml(n.source)} • ${n.date.toLocaleString("sv-SE",{hour:"2-digit",minute:"2-digit"})}</div>
+          <div class="miniHint" style="margin-top:8px;">Tryck för lista.</div>
+        `);
+      } else {
+        setPreviewCard("Nyheter", `<div class="miniHint">Tryck för att ladda nyheter.</div>`);
+      }
+      return;
+    }
+
+    setPreviewCard("Preview", `<div class="miniHint">Tryck på hjulet.</div>`);
   }
 
-  function escapeHtml(s){
-    return String(s ?? "")
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#39;");
+  function escapeHtml(s) {
+    return String(s || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
   }
 
-  function setPreview(index){
-    activeIndex = (index + VIEW_DEFS.length)%VIEW_DEFS.length;
-    const v = VIEW_DEFS[activeIndex];
-    if(wheelIcon) wheelIcon.src = v.icon;
-    setCenterLabel(v.label);
-
-    // ✅ uppdatera preview när du scrollar på startsidan
-    renderPreview(v.id);
-  }
-
-  function setRotation(deg){
+  /* =========================
+     ROTATION (core)
+  ========================= */
+  function setRotation(deg) {
     rotationDeg = deg;
-    if(wheelRing) wheelRing.style.transform = `rotate(${deg}deg)`;
+    if (wheelRing) wheelRing.style.transform = `rotate(${deg}deg)`;
 
     const idx = sectorFromDeg(deg);
     setPreview(idx);
 
-    // ✅ Om sheet är öppen → byt view direkt
-    if(sheetWrap?.classList.contains("open")){
-      renderView(VIEW_DEFS[idx].id);
+    const id = VIEW_DEFS[idx].id;
+
+    // Sheet open => switch view live
+    if (isSheetOpen()) {
+      renderView(id);
+    } else {
+      // Sheet closed => update preview behind wheel
+      updatePreviewFor(id);
     }
   }
 
   /* =========================
-     SHEET
+     SHEET OPEN / CLOSE
   ========================= */
-  function openSheet(){
+  function openSheet() {
     sheetWrap?.classList.add("open");
     document.body.classList.add("sheetOpen");
-    if(centerLabelEl) centerLabelEl.style.opacity="0";
 
-    // ✅ göm preview när sheet öppnas
-    renderPreview(VIEW_DEFS[activeIndex].id);
+    if (centerLabelEl) centerLabelEl.style.opacity = "0";
+    if (previewWrap) previewWrap.style.opacity = "0"; // safety
   }
 
-  function closeSheet(){
+  function closeSheet() {
     sheetWrap?.classList.remove("open");
     document.body.classList.remove("sheetOpen");
-    if(centerLabelEl) centerLabelEl.style.opacity="1";
 
-    // ✅ visa preview igen
-    renderPreview(VIEW_DEFS[activeIndex].id);
+    if (centerLabelEl) centerLabelEl.style.opacity = "1";
+    if (previewWrap) previewWrap.style.opacity = "1"; // safety
+
+    // refresh preview for current view
+    updatePreviewFor(VIEW_DEFS[activeIndex].id);
   }
 
-  // ✅ klick på “tom yta” i sheetWrap stänger
-  sheetWrap?.addEventListener("click", (e) => {
-    if (e.target === sheetWrap) closeSheet();
-  });
-
-  /* Drag-to-close */
+  /* =========================
+     SHEET drag-to-close
+  ========================= */
   let sheetDragStartY = null;
 
   sheet?.addEventListener("pointerdown", (e) => {
     sheetDragStartY = e.clientY;
+    sheet.classList.add("dragging");
     sheet.setPointerCapture?.(e.pointerId);
-  }, { passive:true });
+  }, { passive: true });
 
   sheet?.addEventListener("pointermove", (e) => {
     if (sheetDragStartY == null) return;
     const delta = e.clientY - sheetDragStartY;
     if (delta > 0) {
       sheet.style.transform = `translateX(-50%) translateY(${delta}px)`;
-      e.preventDefault();
+      e.preventDefault?.();
     }
-  }, { passive:false });
+  }, { passive: false });
 
   sheet?.addEventListener("pointerup", (e) => {
     if (sheetDragStartY == null) return;
     const delta = e.clientY - sheetDragStartY;
     if (delta > 120) closeSheet();
+
     sheet.style.transform = "";
+    sheet.classList.remove("dragging");
     sheetDragStartY = null;
-  }, { passive:true });
+  }, { passive: true });
 
   sheet?.addEventListener("pointercancel", () => {
     sheet.style.transform = "";
+    sheet.classList.remove("dragging");
     sheetDragStartY = null;
-  }, { passive:true });
+  }, { passive: true });
 
   /* =========================
-     WHEEL
+     WHEEL interaction
   ========================= */
-  let dragging=false;
-  let startAngle=0;
-  let tapStartX=0,tapStartY=0;
-  let didDrag=false;
+  let dragging = false;
+  let startAngle = 0;
+  let tapStartX = 0, tapStartY = 0;
+  let didDrag = false;
 
-  function angle(cx,cy,x,y){
-    return Math.atan2(y-cy,x-cx)*(180/Math.PI);
+  function angle(cx, cy, x, y) {
+    return Math.atan2(y - cy, x - cx) * (180 / Math.PI);
   }
 
-  wheel?.addEventListener("pointerdown",(e)=>{
-    dragging=true;
-    didDrag=false;
-    tapStartX=e.clientX;
-    tapStartY=e.clientY;
+  wheel?.addEventListener("pointerdown", (e) => {
+    dragging = true;
+    didDrag = false;
+    tapStartX = e.clientX;
+    tapStartY = e.clientY;
 
-    const r=wheel.getBoundingClientRect();
-    const cx=r.left+r.width/2;
-    const cy=r.top+r.height/2;
-    startAngle=angle(cx,cy,e.clientX,e.clientY)-rotationDeg;
+    const r = wheel.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    startAngle = angle(cx, cy, e.clientX, e.clientY) - rotationDeg;
 
     wheel.setPointerCapture?.(e.pointerId);
-  }, { passive:true });
+  }, { passive: true });
 
-  wheel?.addEventListener("pointermove",(e)=>{
-    if(!dragging) return;
+  wheel?.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
 
-    const dx=e.clientX-tapStartX;
-    const dy=e.clientY-tapStartY;
-    if(!didDrag && Math.hypot(dx,dy)>18) didDrag=true;
+    const dx = e.clientX - tapStartX;
+    const dy = e.clientY - tapStartY;
+    if (!didDrag && Math.hypot(dx, dy) > 18) didDrag = true;
 
-    if(didDrag){
-      const r=wheel.getBoundingClientRect();
-      const cx=r.left+r.width/2;
-      const cy=r.top+r.height/2;
-      const deg=angle(cx,cy,e.clientX,e.clientY)-startAngle;
+    if (didDrag) {
+      const r = wheel.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const deg = angle(cx, cy, e.clientX, e.clientY) - startAngle;
       setRotation(deg);
       e.preventDefault();
     }
-  }, { passive:false });
+  }, { passive: false });
 
-  wheel?.addEventListener("pointerup",()=>{
-    if(!dragging) return;
-    dragging=false;
+  wheel?.addEventListener("pointerup", () => {
+    if (!dragging) return;
+    dragging = false;
 
-    const idx=sectorFromDeg(rotationDeg);
-    setRotation(idx*STEP);
+    const idx = sectorFromDeg(rotationDeg);
+    setRotation(idx * STEP);
 
-    // Tap (utan drag) öppnar sheet
-    if(!didDrag){
+    // Tap => open sheet
+    if (!didDrag) {
       openSheet();
       renderView(VIEW_DEFS[activeIndex].id);
     }
-  }, { passive:true });
+  }, { passive: true });
 
-  wheel?.addEventListener("pointercancel",()=>{ dragging=false; }, { passive:true });
+  wheel?.addEventListener("pointercancel", () => { dragging = false; }, { passive: true });
 
-  wheel?.addEventListener("wheel",(e)=>{
+  wheel?.addEventListener("wheel", (e) => {
     e.preventDefault();
-    const dir=e.deltaY>0?1:-1;
-    const next=(activeIndex+dir+VIEW_DEFS.length)%VIEW_DEFS.length;
-    setRotation(next*STEP);
-  },{passive:false});
+    const dir = e.deltaY > 0 ? 1 : -1;
+    const next = (activeIndex + dir + VIEW_DEFS.length) % VIEW_DEFS.length;
+    setRotation(next * STEP);
+  }, { passive: false });
+
+  wheel?.addEventListener("click", () => {
+    // safety: tap/click always opens sheet
+    if (!isSheetOpen()) {
+      openSheet();
+      renderView(VIEW_DEFS[activeIndex].id);
+    }
+  });
 
   /* =========================
-     TIMER + RING
+     TIMER + wheel ring SVG
   ========================= */
-  const TIMER={
-    total:5*60,
-    left:5*60,
-    running:false,
-    t0:0,
-    pausedLeft:5*60,
-    raf:0
+  const TIMER = {
+    total: 5 * 60,
+    left: 5 * 60,
+    running: false,
+    t0: 0,
+    pausedLeft: 5 * 60,
+    raf: 0
   };
   const canVibrate = !!navigator.vibrate;
 
-  const wheelSvg = document.createElementNS("http://www.w3.org/2000/svg","svg");
-  wheelSvg.setAttribute("class","wheelTimerSvg");
+  const wheelSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  wheelSvg.setAttribute("class", "wheelTimerSvg");
   wheelSvg.innerHTML = `
     <circle id="wheelTimerBg"></circle>
     <circle id="wheelTimerProg"></circle>
   `;
   wheel?.appendChild(wheelSvg);
 
-  function updateWheelTimerProgress(){
+  function updateWheelTimerProgress() {
     const bg = document.getElementById("wheelTimerBg");
     const prog = document.getElementById("wheelTimerProg");
-    if(!wheel || !bg || !prog) return;
+    if (!wheel || !wheelSvg || !bg || !prog) return;
 
     const size = wheel.getBoundingClientRect().width;
-    const r = (size/2) - 6;
-    const cx = size/2;
-    const cy = size/2;
+    const r = (size / 2) - 6;
+    const cx = size / 2;
+    const cy = size / 2;
 
     wheelSvg.setAttribute("viewBox", `0 0 ${size} ${size}`);
 
@@ -403,7 +416,7 @@
     prog.setAttribute("cy", cy);
     prog.setAttribute("r", r);
 
-    const C = 2*Math.PI*r;
+    const C = 2 * Math.PI * r;
     bg.style.strokeDasharray = String(C);
     bg.style.strokeDashoffset = "0";
 
@@ -418,82 +431,79 @@
   }
   window.addEventListener("resize", updateWheelTimerProgress);
 
-  function timerText(){
-    const safe=Math.max(0,TIMER.left);
-    const mm=Math.floor(safe/60);
-    const ss=safe%60;
+  function timerText() {
+    const safe = Math.max(0, TIMER.left);
+    const mm = Math.floor(safe / 60);
+    const ss = safe % 60;
     return `${pad2(mm)}:${pad2(ss)}`;
   }
 
-  function setTimerMinutes(min){
+  function setTimerMinutes(min) {
     const m = Number(min);
-    if(!Number.isFinite(m) || m<=0) return;
-    TIMER.running=false;
+    if (!Number.isFinite(m) || m <= 0) return;
+
+    TIMER.running = false;
     cancelAnimationFrame(TIMER.raf);
-    TIMER.total=Math.round(m*60);
-    TIMER.left=TIMER.total;
-    TIMER.pausedLeft=TIMER.left;
+    TIMER.total = Math.round(m * 60);
+    TIMER.left = TIMER.total;
+    TIMER.pausedLeft = TIMER.left;
+
     updateWheelTimerProgress();
     renderTimerUIOnly();
-    renderPreview("timer");
   }
 
-  function resetTimer(){
-    TIMER.running=false;
+  function resetTimer() {
+    TIMER.running = false;
     cancelAnimationFrame(TIMER.raf);
-    TIMER.left=TIMER.total;
-    TIMER.pausedLeft=TIMER.left;
+    TIMER.left = TIMER.total;
+    TIMER.pausedLeft = TIMER.left;
+
     updateWheelTimerProgress();
     renderTimerUIOnly();
-    renderPreview("timer");
   }
 
-  function startPauseTimer(){
-    if(TIMER.running){
-      TIMER.running=false;
-      TIMER.pausedLeft=TIMER.left;
+  function startPauseTimer() {
+    if (TIMER.running) {
+      TIMER.running = false;
+      TIMER.pausedLeft = TIMER.left;
       cancelAnimationFrame(TIMER.raf);
       renderTimerUIOnly();
-      renderPreview("timer");
       return;
     }
 
-    if(TIMER.left<=0){
-      TIMER.left=TIMER.total;
-      TIMER.pausedLeft=TIMER.left;
+    if (TIMER.left <= 0) {
+      TIMER.left = TIMER.total;
+      TIMER.pausedLeft = TIMER.left;
     }
 
-    TIMER.running=true;
-    TIMER.t0=performance.now();
+    TIMER.running = true;
+    TIMER.t0 = performance.now();
     cancelAnimationFrame(TIMER.raf);
-    TIMER.raf=requestAnimationFrame(timerLoop);
+    TIMER.raf = requestAnimationFrame(timerLoop);
     renderTimerUIOnly();
-    renderPreview("timer");
   }
 
-  function timerLoop(){
-    if(!TIMER.running) return;
+  function timerLoop() {
+    if (!TIMER.running) return;
 
-    const elapsed=(performance.now()-TIMER.t0)/1000;
-    TIMER.left=Math.max(0, Math.floor(TIMER.pausedLeft - elapsed));
+    const elapsed = (performance.now() - TIMER.t0) / 1000;
+    TIMER.left = Math.max(0, Math.floor(TIMER.pausedLeft - elapsed));
 
     updateWheelTimerProgress();
     renderTimerUIOnly();
-    if (!sheetWrap?.classList.contains("open")) renderPreview("timer");
 
-    if(TIMER.left<=0){
-      TIMER.running=false;
+    if (TIMER.left <= 0) {
+      TIMER.running = false;
       cancelAnimationFrame(TIMER.raf);
-      if(canVibrate) navigator.vibrate([20,40,20]);
+      if (canVibrate) navigator.vibrate([20, 40, 20]);
       updateWheelTimerProgress();
       renderTimerUIOnly();
-      renderPreview("timer");
       return;
     }
-    TIMER.raf=requestAnimationFrame(timerLoop);
+    TIMER.raf = requestAnimationFrame(timerLoop);
   }
 
-  function renderTimerUIOnly(){
+  function renderTimerUIOnly() {
     const tTime = $("tTime");
     const tState = $("tState");
     const tStartBtn = $("tStartBtn");
@@ -501,7 +511,7 @@
     if (tTime) tTime.textContent = timerText();
     if (tStartBtn) tStartBtn.textContent = TIMER.running ? "Paus" : "Start";
 
-    if (tState){
+    if (tState) {
       if (!TIMER.running && TIMER.left === TIMER.total) tState.textContent = "Redo";
       else if (TIMER.running && TIMER.left > 0) tState.textContent = "Fokus…";
       else if (!TIMER.running && TIMER.left > 0) tState.textContent = "Pausad";
@@ -509,7 +519,7 @@
     }
   }
 
-  function renderTimer(){
+  function renderTimer() {
     sheetTitle.textContent = "Timer";
     sheetContent.innerHTML = `
       <div class="card" style="padding:16px;">
@@ -602,7 +612,7 @@
     $("openDone")?.addEventListener("click", renderDone);
   }
 
-  function renderList(type,label){
+  function renderList(type, label) {
     setSheetTitleWithDone(label);
 
     sheetContent.innerHTML = `
@@ -620,11 +630,12 @@
     const add = () => {
       const t = (input.value || "").trim();
       if (!t) return;
+
       store[type].unshift({ id: uid(), text: t, createdAt: Date.now() });
       saveStore();
       input.value = "";
+
       if (type === "prio") updateStartPrioCount();
-      renderPreview(type);
       draw();
     };
 
@@ -634,11 +645,12 @@
     function complete(id) {
       const i = store[type].findIndex((x) => x.id === id);
       if (i === -1) return;
+
       const item = store[type].splice(i, 1)[0];
       store.done.unshift({ ...item, origin: type, doneAt: Date.now() });
       saveStore();
+
       if (type === "prio") updateStartPrioCount();
-      renderPreview(type);
       draw();
     }
 
@@ -687,8 +699,8 @@
   const CAL_SRC =
     "https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0";
 
-  function renderCalendar(){
-    sheetTitle.textContent="Kalender";
+  function renderCalendar() {
+    sheetTitle.textContent = "Kalender";
     sheetContent.innerHTML = `
       <div class="card" style="padding:14px;">
         <div class="calScale">
@@ -702,7 +714,7 @@
   /* =========================
      WEATHER
   ========================= */
-  async function renderWeather(){
+  async function renderWeather() {
     sheetTitle.textContent = "Väder";
     sheetContent.innerHTML = `
       <div class="card weatherCard">
@@ -719,24 +731,21 @@
       `&hourly=temperature_2m,precipitation_probability` +
       `&timezone=Europe%2FStockholm`;
 
-    const r = await fetch(url, { cache:"no-store" });
+    const r = await fetch(url, { cache: "no-store" });
     const data = await r.json();
 
-    const nowObj = {
-      t: Math.round(data.current.temperature_2m),
-      wind: Math.round(data.current.wind_speed_10m),
-      hum: Math.round(data.current.relative_humidity_2m),
-    };
-    const temps = data.hourly.temperature_2m.slice(0, 6).map(x => Math.round(x));
-    const pop = data.hourly.precipitation_probability.slice(0, 6);
-
-    cache.weather = { now: nowObj, temps, pop };
+    const temp = Math.round(data.current.temperature_2m);
+    const wind = Math.round(data.current.wind_speed_10m);
+    const rh = Math.round(data.current.relative_humidity_2m);
 
     $("wNow").innerHTML = `
-      <div>${nowObj.t}°</div>
-      <div>${nowObj.wind} m/s</div>
-      <div>${nowObj.hum}%</div>
+      <div>${temp}°</div>
+      <div>${wind} m/s</div>
+      <div>${rh}%</div>
     `;
+
+    const temps = data.hourly.temperature_2m.slice(0, 6).map(t => Math.round(t));
+    const pop = data.hourly.precipitation_probability.slice(0, 6);
 
     $("wForecast").innerHTML = temps.map((t, i) => `
       <div class="wxMini">
@@ -746,14 +755,15 @@
       </div>
     `).join("");
 
-    // ✅ uppdatera preview om du går tillbaka till start
-    renderPreview("weather");
+    cache.weather = { temp, wind, rh, temps, pop };
+    // update preview if we're on weather and sheet got closed later
+    if (!isSheetOpen() && VIEW_DEFS[activeIndex].id === "weather") updatePreviewFor("weather");
   }
 
   /* =========================
      NEWS (RSS via proxies)
   ========================= */
-  async function renderNews(){
+  async function renderNews() {
     sheetTitle.textContent = "Nyheter";
     sheetContent.innerHTML = `
       <div class="card" style="padding:14px;">
@@ -773,21 +783,21 @@
       (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
     ];
 
-    async function fetchViaProxies(url){
+    async function fetchViaProxies(url) {
       let lastErr = null;
-      for (const p of proxies){
-        try{
-          const r = await fetch(p(url), { cache:"no-store" });
-          if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      for (const p of proxies) {
+        try {
+          const r = await fetch(p(url), { cache: "no-store" });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
           return await r.text();
-        }catch(e){
+        } catch (e) {
           lastErr = e;
         }
       }
       throw lastErr || new Error("Proxy failed");
     }
 
-    function parseRss(xmlText, sourceName){
+    function parseRss(xmlText, sourceName) {
       const doc = new DOMParser().parseFromString(xmlText, "text/xml");
       const items = [...doc.querySelectorAll("item")].slice(0, 12);
       return items.map((it) => ({
@@ -801,7 +811,7 @@
     const statusEl = $("newsStatus");
     const listEl = $("newsList");
 
-    try{
+    try {
       const results = await Promise.allSettled(
         feeds.map(async f => {
           const txt = await fetchViaProxies(f.url);
@@ -809,23 +819,21 @@
         })
       );
 
-      const okCount = results.filter(r => r.status==="fulfilled" && r.value.length).length;
+      const okCount = results.filter(r => r.status === "fulfilled" && r.value.length).length;
       const merged = results
-        .filter(r => r.status==="fulfilled")
+        .filter(r => r.status === "fulfilled")
         .flatMap(r => r.value)
-        .sort((a,b) => b.date - a.date)
+        .sort((a, b) => b.date - a.date)
         .slice(0, 18);
 
-      if(!merged.length){
-        if(statusEl) statusEl.textContent = `Kan inte läsa nyheter just nu (0/${feeds.length} källor).`;
+      if (!merged.length) {
+        if (statusEl) statusEl.textContent = `Kan inte läsa nyheter just nu (0/${feeds.length} källor).`;
         return;
       }
 
-      cache.news = merged;
+      if (statusEl) statusEl.textContent = `Senaste: ${merged.length} artiklar (${okCount}/${feeds.length} källor)`;
 
-      if(statusEl) statusEl.textContent = `Senaste: ${merged.length} artiklar (${okCount}/${feeds.length} källor)`;
-
-      if(listEl){
+      if (listEl) {
         listEl.innerHTML = merged.map(n => `
           <a class="newsItem" href="${n.link}" target="_blank" rel="noopener">
             <div class="newsTitle">${escapeHtml(n.title)}</div>
@@ -834,24 +842,24 @@
         `).join("");
       }
 
-      // ✅ uppdatera preview om du går tillbaka till start
-      renderPreview("news");
-    }catch(e){
-      if(statusEl) statusEl.textContent = "Kan inte läsa nyheter (proxy/CORS).";
+      cache.news = merged;
+      if (!isSheetOpen() && VIEW_DEFS[activeIndex].id === "news") updatePreviewFor("news");
+    } catch (e) {
+      if (statusEl) statusEl.textContent = "Kan inte läsa nyheter (proxy/CORS).";
     }
   }
 
   /* =========================
      VIEW SWITCH
   ========================= */
-  function renderView(id){
-    if(id==="calendar") return renderCalendar();
-    if(id==="prio")     return renderList("prio","Aktiv prio");
-    if(id==="weather")  return renderWeather();
-    if(id==="news")     return renderNews();
-    if(id==="todo")     return renderList("todo","TODO");
-    if(id==="ideas")    return renderList("ideas","Idéer");
-    if(id==="timer")    return renderTimer();
+  function renderView(id) {
+    if (id === "calendar") return renderCalendar();
+    if (id === "prio")     return renderList("prio", "Aktiv prio");
+    if (id === "weather")  return renderWeather();
+    if (id === "news")     return renderNews();
+    if (id === "todo")     return renderList("todo", "TODO");
+    if (id === "ideas")    return renderList("ideas", "Idéer");
+    if (id === "timer")    return renderTimer();
   }
 
   /* =========================
@@ -859,5 +867,5 @@
   ========================= */
   setRotation(0);
   updateWheelTimerProgress();
-  renderPreview(VIEW_DEFS[0].id);
+  updatePreviewFor(VIEW_DEFS[0].id);
 })();

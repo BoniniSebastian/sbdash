@@ -4,7 +4,6 @@
   --muted:#aab6d1;
   --line:rgba(255,255,255,.10);
   --glass: rgba(255,255,255,.06);
-  --radius:24px;
 }
 
 *{ box-sizing:border-box; }
@@ -21,10 +20,12 @@ body{
   inset:0;
   width:100%;
   height:100%;
+
   background:
     radial-gradient(1200px 600px at 35% 0%, rgba(0,209,255,.08), transparent 60%),
     radial-gradient(900px 500px at 80% 20%, rgba(0,209,255,.05), transparent 55%),
     var(--bg);
+
   color:var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
 }
@@ -51,7 +52,7 @@ body{
   background: linear-gradient(135deg, rgba(0,209,255,.95), rgba(0,209,255,.38));
   box-shadow: 0 0 14px rgba(0,209,255,.28);
 }
-.brandTitle{font-weight:900; font-size:14px}
+.brandTitle{font-weight:900; letter-spacing:.2px; font-size:14px}
 .brandSub{font-size:11px; color:var(--muted); margin-top:2px}
 
 .topDate{
@@ -59,8 +60,14 @@ body{
   color: rgba(255,255,255,.80);
   font-size:12px;
   font-weight:900;
+  letter-spacing:.2px;
+}
+.topRight{
+  justify-self:end;
+  opacity:.6;
 }
 
+/* ================= SHELL ================= */
 .shell{
   position:relative;
   height: calc(100svh - 54px);
@@ -68,7 +75,7 @@ body{
   overflow:hidden;
 }
 
-/* ================= START INFO ================= */
+/* Start overlay */
 .startInfo{
   position: absolute;
   top: 8px;
@@ -77,77 +84,53 @@ body{
   z-index: 20;
   pointer-events: none;
 }
+.startSpacer{ height: 18px; }
 .startPrio{
   font-size: 20px;
   font-weight: 900;
+  opacity: .95;
 }
 
-/* ================= CENTER LABEL ================= */
+/* Center label synced with wheel */
 .centerLabel{
   position:absolute;
   left:50%;
   top: 34%;
   transform: translate(-50%,-50%);
   z-index: 22;
+
   font-size: clamp(28px, 9vw, 72px);
   font-weight: 400;
-  opacity:.75;
+  letter-spacing: .8px;
+  opacity: .75;
   text-align:center;
-  width:92vw;
-  max-width:720px;
+
+  width: 92vw;
+  max-width: 720px;
+  line-height: 1.05;
+
+  pointer-events:none;
   transition: opacity 180ms ease;
 }
-
-/* ================= PREVIEW ================= */
-.previewWrap{
-  position:absolute;
-  left:50%;
-  top:18px;
-  transform:translateX(-50%);
-  width:min(720px,94vw);
-  z-index:30;
-  pointer-events:none;
-  transition:opacity 220ms ease, transform 220ms ease;
-}
-
-.previewCard{
-  min-height:180px;
-  border-radius:26px;
-  background: rgba(255,255,255,.06);
-  border:1px solid rgba(255,255,255,.10);
-  backdrop-filter: blur(18px) saturate(1.2);
-  -webkit-backdrop-filter: blur(18px) saturate(1.2);
-  box-shadow:0 30px 80px rgba(0,0,0,.55);
-  opacity:.55;
-  padding:14px 16px;
-}
-
-.previewTitle{
-  font-weight:900;
-  font-size:16px;
-}
-.previewBody{ margin-top:10px; }
-
-body.sheetOpen .previewWrap{
-  opacity:0;
-  transform:translateX(-50%) translateY(8px);
-}
+.centerLabel::before{ content:none !important; }
 
 /* ================= WHEEL ================= */
 .wheelWrap{
   position:fixed;
   left:50%;
-  bottom:max(6px, env(safe-area-inset-bottom));
-  transform:translateX(-50%) scale(1);
-  transform-origin:center bottom;
+  bottom: max(6px, env(safe-area-inset-bottom));
+  transform: translateX(-50%) translateY(0) scale(1);
+  transform-origin: center bottom;
   transition: transform 260ms ease;
   z-index:100;
+  pointer-events:auto;
 }
 
 .wheel{
+  pointer-events:auto;
   position:relative;
-  width:min(92vw,360px);
-  aspect-ratio:1/1;
+  width: min(92vw, 360px);
+  aspect-ratio: 1/1;
   display:grid;
   place-items:center;
   user-select:none;
@@ -159,107 +142,187 @@ body.sheetOpen .previewWrap{
   position:absolute;
   inset:0;
   border-radius:999px;
-  background:var(--glass);
+  background: var(--glass);
   border:1px solid rgba(255,255,255,.12);
-  backdrop-filter:blur(24px);
-  -webkit-backdrop-filter:blur(24px);
-  box-shadow:0 20px 60px rgba(0,0,0,.55);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 20px 60px rgba(0,0,0,.55);
 }
 
 .wheelRing{
   width:100%;
+  height:100%;
+  object-fit:contain;
   filter: drop-shadow(0 0 18px rgba(0,209,255,.25));
   transition: transform 70ms linear;
+  position:relative;
   z-index:2;
 }
 
 .wheelIcon{
   position:absolute;
-  width:28%;
+  width: 28%;
+  height: 28%;
+  object-fit:contain;
   filter: drop-shadow(0 0 14px rgba(0,209,255,.25));
   z-index:3;
 }
 
-/* TIMER RING */
+/* TIMER RING OVERLAY */
 .wheelTimerSvg{
   position:absolute;
-  inset:8px;
-  width:calc(100% - 16px);
-  height:calc(100% - 16px);
+  inset: 8px;
+  width: calc(100% - 16px);
+  height: calc(100% - 16px);
   pointer-events:none;
   z-index:4;
-  transform:rotate(-90deg);
+  transform: rotate(-90deg);
 }
 
 #wheelTimerBg,
 #wheelTimerProg{
   fill:none;
-  stroke-width:4;
+  stroke-width: 4;
 }
 
 #wheelTimerBg{
-  stroke:rgba(255,255,255,.10);
+  stroke: rgba(255,255,255,.10);
+  filter: drop-shadow(0 0 12px rgba(255,255,255,.08));
 }
 
 #wheelTimerProg{
-  stroke-linecap:round;
+  stroke: rgba(0,209,255,.92);
+  stroke-linecap: round;
   filter:
-    drop-shadow(0 0 8px rgba(0,209,255,.65))
-    drop-shadow(0 0 18px rgba(0,209,255,.38))
-    drop-shadow(0 0 34px rgba(0,209,255,.22));
+    drop-shadow(0 0 10px rgba(0,209,255,.75))
+    drop-shadow(0 0 22px rgba(0,209,255,.45))
+    drop-shadow(0 0 44px rgba(0,209,255,.25));
 }
 
-/* ================= SHEET ================= */
+/* ================= SHEET OVERLAY ================= */
 .sheetWrap{
   position:fixed;
-  inset:54px 0 0 0;
+  inset: 54px 0 0 0;
   z-index:40;
   pointer-events:none;
 }
 .sheetWrap.open{ pointer-events:auto; }
 
 .sheet{
+  pointer-events:auto;
   position:absolute;
   left:50%;
-  width:min(720px,94vw);
-  top:30px;
-  bottom:140px;
-  border-radius:26px;
-  background:var(--glass);
-  border:1px solid rgba(255,255,255,.12);
-  backdrop-filter:blur(18px);
-  -webkit-backdrop-filter:blur(18px);
-  box-shadow:0 30px 80px rgba(0,0,0,.60);
+  width: min(720px, 94vw);
+  top: 30px;
+  bottom: 140px;
+
+  border-radius: 26px;
+  background: var(--glass);
+  border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 30px 80px rgba(0,0,0,.60);
   overflow:hidden;
+
   display:flex;
   flex-direction:column;
-  opacity:0;
-  transform:translateX(-50%) translateY(18px);
+
   transition: transform 260ms ease, opacity 260ms ease;
+  opacity: 0;
+  transform: translateX(-50%) translateY(18px);
 }
 .sheetWrap.open .sheet{
-  opacity:1;
-  transform:translateX(-50%) translateY(0);
+  opacity: 1;
+  transform: translateX(-50%) translateY(0px);
 }
 
 .sheetHeader{
-  padding:14px 16px 10px;
+  padding: 14px 16px 10px;
   border-bottom:1px solid rgba(255,255,255,.08);
 }
 .sheetTitle{
-  font-weight:900;
   font-size:16px;
-}
-.sheetContent{
-  flex:1;
-  padding:14px 16px 24px;
-  overflow:auto;
+  font-weight:900;
 }
 
-/* ================= CALENDAR ================= */
+.sheetContent{
+  flex:1;
+  padding: 14px 16px 24px;
+  overflow:auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+/* ================= UI ELEMENTS ================= */
+.card{
+  border-radius: 18px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.12);
+  overflow:hidden;
+}
+
+.miniForm{
+  display:flex;
+  gap:8px;
+  margin: 8px 0 12px;
+  flex-wrap:wrap;
+}
+
+.miniInput{
+  flex: 1 1 180px;
+  background: rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius: 12px;
+  padding: 11px 12px;
+  color: var(--text);
+  outline:none;
+  font-size: 16px;
+}
+
+.miniBtn{
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(0,209,255,.16);
+  color: var(--text);
+  padding: 11px 12px;
+  border-radius: 12px;
+  cursor:pointer;
+  font-weight:900;
+  font-size:14px;
+}
+
+.miniBtnIcon{
+  width:44px;
+  min-width:44px;
+  text-align:center;
+  padding: 11px 0;
+  font-size:20px;
+  line-height:1;
+}
+
+.miniList{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.miniHint{
+  color: rgba(255,255,255,.55);
+  font-size: 12px;
+  font-weight: 900;
+}
+.miniMeta{
+  color: rgba(255,255,255,.55);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+/* Calendar */
 .calScale{
   width:100%;
-  height:420px;
+  height: 420px;
   border-radius:18px;
   overflow:hidden;
   background:#0b1118;
@@ -269,31 +332,126 @@ body.sheetOpen .previewWrap{
   height:100%;
   border:0;
   background:#0b1118;
-  display:block;
+  display:block; /* tar bort “kant under” */
 }
 
-/* ================= WEATHER ================= */
+/* Weather */
 .weatherCard{ padding:14px; }
 .weatherNow{
   display:flex;
   justify-content:space-between;
   font-size:22px;
   font-weight:900;
+  margin-bottom:14px;
 }
 .weatherForecast{
   display:flex;
   justify-content:space-between;
   font-size:12px;
-  opacity:.8;
+  opacity:.85;
+}
+.wxMini{
+  text-align:center;
+  min-width: 44px;
+}
+.wxMiniTop{ opacity:.85; font-weight:900; }
+.wxMiniTemp{ font-weight:900; margin-top:2px; }
+.wxMiniPop{ opacity:.65; font-weight:900; margin-top:2px; }
+
+/* Done header */
+.doneHeaderBtn{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+  font-weight:900;
+  opacity:.75;
+  margin-left:10px;
+  cursor:pointer;
+}
+.doneHeaderIcon{ width:14px; height:14px; }
+
+/* Checkbox rows */
+.checkItem{
+  border-radius: 14px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+}
+.checkRow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px 12px;
+  cursor:pointer;
+}
+.checkBox{
+  width:20px;
+  height:20px;
+  accent-color: rgba(0,209,255,.9);
+  flex:0 0 auto;
+}
+.checkMid{ min-width:0; flex:1 1 auto; }
+.checkText{
+  font-weight:900;
+  font-size:14px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.checkRight{ flex:0 0 auto; display:flex; align-items:center; gap:10px; }
+.checkItem.isCompleting{
+  opacity: 0;
+  transform: translateX(-18px);
+  transition: opacity 180ms ease, transform 180ms ease;
 }
 
-/* ================= PREMIUM ================= */
+/* News */
+.newsList{ display:flex; flex-direction:column; gap:10px; }
+.newsItem{
+  display:block;
+  text-decoration:none;
+  color: var(--text);
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  border-radius:14px;
+  padding:12px 12px;
+}
+.newsTitle{
+  font-weight:900;
+  font-size:14px;
+  line-height:1.2;
+}
+.newsMeta{
+  margin-top:6px;
+  font-weight:900;
+  font-size:12px;
+  color: rgba(255,255,255,.55);
+}
+
+/* Small phones */
+@media (max-width: 390px){
+  .sheet{ top: 20px; bottom: 130px; }
+  .wheel{ width: min(92vw, 330px); }
+}
+
+/* PREMIUM – wheel when sheet open */
 body.sheetOpen .wheelWrap{
-  transform:translateX(-50%) translateY(14px) scale(.86);
+  transform: translateX(-50%) translateY(14px) scale(.86);
 }
 body.sheetOpen .wheel::before{
-  background:rgba(255,255,255,.14);
-  border-color:rgba(255,255,255,.25);
-  backdrop-filter:blur(32px) saturate(1.4);
-  -webkit-backdrop-filter:blur(32px) saturate(1.4);
+  background: rgba(255,255,255,.14);
+  border-color: rgba(255,255,255,.25);
+  backdrop-filter: blur(32px) saturate(1.4);
+  -webkit-backdrop-filter: blur(32px) saturate(1.4);
+  box-shadow: 0 25px 70px rgba(0,0,0,.65);
 }
+body.sheetOpen .wheelRing{
+  opacity: .96;
+  filter: drop-shadow(0 0 12px rgba(0,209,255,.22));
+}
+body.sheetOpen .wheelIcon{
+  opacity: 1;
+  filter: drop-shadow(0 0 16px rgba(0,209,255,.28));
+}
+body.sheetOpen #wheelTimerProg{ opacity: .92; }

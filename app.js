@@ -17,65 +17,48 @@
   const startPrioCountEl = $("startPrioCount");
   const centerLabelEl = $("centerLabel");
 
-  // Optional (om du har preview i HTML/CSS – annars ignoreras)
   const previewWrap = $("previewWrap");
   const previewTitle = $("previewTitle");
   const previewBody = $("previewBody");
 
-  function clamp01(x) { return Math.max(0, Math.min(1, x)); }
-  function pad2(n) { return String(n).padStart(2, "0"); }
-  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+  function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+  function pad2(n){ return String(n).padStart(2, "0"); }
 
   /* =========================
      STORAGE
   ========================= */
   const LS_KEY = "sbdash_store_v4";
 
-  function loadStore() {
-    try {
+  function loadStore(){
+    try{
       const raw = localStorage.getItem(LS_KEY);
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch {
-      return null;
+      return raw ? JSON.parse(raw) : { prio:[], lists:[], ideas:[], done:[] };
+    }catch{
+      return { prio:[], lists:[], ideas:[], done:[] };
     }
   }
-
-  function defaultStore() {
-    return {
-      prio: [],
-      lists: [],      // (tidigare TODO)
-      ideas: [],
-      done: [],
-    };
-  }
-
-  const store = loadStore() || defaultStore();
+  const store = loadStore();
   const saveStore = () => localStorage.setItem(LS_KEY, JSON.stringify(store));
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
 
   const fmt = (ts) =>
-    new Date(ts).toLocaleString("sv-SE", {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    new Date(ts).toLocaleString("sv-SE", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" });
 
   /* =========================
-     TOP DATE
+     DATE
   ========================= */
-  function updateTopDate() {
-    if (!topDate) return;
+  function updateTopDate(){
+    if(!topDate) return;
     const now = new Date();
-    const weekday = now.toLocaleDateString("sv-SE", { weekday: "long" });
-    const date = now.toLocaleDateString("sv-SE", { day: "2-digit", month: "long", year: "numeric" });
+    const weekday = now.toLocaleDateString("sv-SE", { weekday:"long" });
+    const date = now.toLocaleDateString("sv-SE", { day:"2-digit", month:"long", year:"numeric" });
     topDate.textContent = `${weekday} ${date}`;
   }
   updateTopDate();
   setInterval(updateTopDate, 60_000);
 
-  function updateStartPrioCount() {
-    if (!startPrioCountEl) return;
+  function updateStartPrioCount(){
+    if(!startPrioCountEl) return;
     const c = Array.isArray(store.prio) ? store.prio.length : 0;
     startPrioCountEl.textContent = `Aktiva prios: ${c}`;
   }
@@ -85,113 +68,96 @@
      VIEWS
   ========================= */
   const VIEW_DEFS = [
-    { id: "calendar", label: "KALENDER", icon: "assets/ui/icon-calendar.svg" },
-    { id: "prio",     label: "PRIOS",    icon: "assets/ui/icon-prio.svg" },
-    { id: "weather",  label: "VÄDER",    icon: "assets/ui/icon-weather.svg" },
-    { id: "news",     label: "NYHETER",  icon: "assets/ui/icon-news.svg" },
-    { id: "lists",    label: "LISTOR",   icon: "assets/ui/icon-todo.svg" },   // TODO -> LISTOR
-    { id: "ideas",    label: "IDÉER",    icon: "assets/ui/icon-ideas.svg" },
-    { id: "timer",    label: "TIMER",    icon: "assets/ui/icon-pomodoro.svg" },
+    { id:"calendar", label:"KALENDER", icon:"assets/ui/icon-calendar.svg" },
+    { id:"prio",     label:"PRIOS",    icon:"assets/ui/icon-prio.svg" },
+    { id:"weather",  label:"VÄDER",    icon:"assets/ui/icon-weather.svg" },
+    { id:"news",     label:"NYHETER",  icon:"assets/ui/icon-news.svg" },
+    { id:"lists",    label:"LISTOR",   icon:"assets/ui/icon-todo.svg" },
+    { id:"ideas",    label:"IDÉER",    icon:"assets/ui/icon-ideas.svg" },
+    { id:"timer",    label:"TIMER",    icon:"assets/ui/icon-pomodoro.svg" },
   ];
 
   let activeIndex = 0;
   const STEP = 360 / VIEW_DEFS.length;
   let rotationDeg = 0;
 
-  function setCenterLabel(text) {
-    if (!centerLabelEl) return;
-    centerLabelEl.textContent = text || "";
+  function setCenterLabel(text){
+    if(centerLabelEl) centerLabelEl.textContent = text || "";
   }
 
-  function sectorFromDeg(deg) {
+  function sectorFromDeg(deg){
     const raw = Math.round(deg / STEP);
     return ((raw % VIEW_DEFS.length) + VIEW_DEFS.length) % VIEW_DEFS.length;
   }
 
-  function setPreview(index) {
+  function setPreview(index){
     activeIndex = (index + VIEW_DEFS.length) % VIEW_DEFS.length;
     const v = VIEW_DEFS[activeIndex];
-    if (wheelIcon) wheelIcon.src = v.icon;
+    if(wheelIcon) wheelIcon.src = v.icon;
     setCenterLabel(v.label);
-
-    // Optional preview (om du kör previewWrap)
-    if (previewWrap && previewTitle && previewBody && !sheetWrap?.classList.contains("open")) {
-      previewTitle.textContent = v.label;
-      previewBody.innerHTML = previewSnippet(v.id);
-    }
+    renderPreview(v.id);
   }
 
-  // Om sheet är öppet -> byt view LIVE när hjulet vrids
-  function setRotation(deg) {
-    rotationDeg = deg;
-    if (wheelRing) wheelRing.style.transform = `rotate(${deg}deg)`;
+  // throttle render when sheet open and wheel rotates a lot
+  let renderT = 0;
+  function renderIfOpenThrottled(id){
+    if(!sheetWrap?.classList.contains("open")) return;
+    clearTimeout(renderT);
+    renderT = setTimeout(() => renderView(id), 90);
+  }
 
+  function setRotation(deg){
+    rotationDeg = deg;
+    if(wheelRing) wheelRing.style.transform = `rotate(${deg}deg)`;
     const idx = sectorFromDeg(deg);
     setPreview(idx);
-
-    if (sheetWrap?.classList.contains("open")) {
-      renderView(VIEW_DEFS[idx].id);
-    }
-  }
-
-  function previewSnippet(id) {
-    if (id === "calendar") return `<div class="miniHint">Kalender (Agenda)</div>`;
-    if (id === "prio")     return `<div class="miniHint">${store.prio.length} aktiva prios</div>`;
-    if (id === "lists")    return `<div class="miniHint">${store.lists.length} listor</div>`;
-    if (id === "ideas")    return `<div class="miniHint">${store.ideas.length} idéer</div>`;
-    if (id === "timer")    return `<div class="miniHint">Tryck för att starta 1/5/10/15/30</div>`;
-    if (id === "news")     return `<div class="miniHint">Senaste rubriker</div>`;
-    if (id === "weather")  return `<div class="miniHint">Väder just nu + prognos</div>`;
-    return `<div class="miniHint">…</div>`;
+    renderIfOpenThrottled(VIEW_DEFS[idx].id);
   }
 
   /* =========================
      SHEET OPEN/CLOSE
   ========================= */
-  function openSheet() {
+  function openSheet(){
     sheetWrap?.classList.add("open");
     document.body.classList.add("sheetOpen");
-    if (centerLabelEl) centerLabelEl.style.opacity = "0";
+    if(centerLabelEl) centerLabelEl.style.opacity = "0";
   }
 
-  function closeSheet() {
+  function closeSheet(){
     sheetWrap?.classList.remove("open");
     document.body.classList.remove("sheetOpen");
-    if (centerLabelEl) centerLabelEl.style.opacity = "1";
+    if(centerLabelEl) centerLabelEl.style.opacity = "1";
   }
 
-  // Drag-to-close (sheet)
+  /* drag-to-close */
   let sheetDragStartY = null;
 
   sheet?.addEventListener("pointerdown", (e) => {
     sheetDragStartY = e.clientY;
-    sheet.classList.add("dragging");
     sheet.setPointerCapture?.(e.pointerId);
-  }, { passive: true });
+  }, { passive:true });
 
   sheet?.addEventListener("pointermove", (e) => {
-    if (sheetDragStartY == null) return;
+    if(sheetDragStartY == null) return;
     const delta = e.clientY - sheetDragStartY;
-    if (delta > 0) {
+    if(delta > 0){
       sheet.style.transform = `translateX(-50%) translateY(${delta}px)`;
       e.preventDefault();
     }
-  }, { passive: false });
+  }, { passive:false });
 
   sheet?.addEventListener("pointerup", (e) => {
-    if (sheetDragStartY == null) return;
+    if(sheetDragStartY == null) return;
     const delta = e.clientY - sheetDragStartY;
-    if (delta > 120) closeSheet();
+    if(delta > 120) closeSheet();
     sheet.style.transform = "";
-    sheet.classList.remove("dragging");
     sheetDragStartY = null;
-  }, { passive: true });
+  }, { passive:true });
 
   sheet?.addEventListener("pointercancel", () => {
     sheet.style.transform = "";
-    sheet.classList.remove("dragging");
     sheetDragStartY = null;
-  }, { passive: true });
+  }, { passive:true });
 
   /* =========================
      WHEEL interaction
@@ -201,7 +167,7 @@
   let tapStartX = 0, tapStartY = 0;
   let didDrag = false;
 
-  function angle(cx, cy, x, y) {
+  function angle(cx, cy, x, y){
     return Math.atan2(y - cy, x - cx) * (180 / Math.PI);
   }
 
@@ -217,16 +183,16 @@
     startAngle = angle(cx, cy, e.clientX, e.clientY) - rotationDeg;
 
     wheel.setPointerCapture?.(e.pointerId);
-  }, { passive: true });
+  }, { passive:true });
 
   wheel?.addEventListener("pointermove", (e) => {
-    if (!dragging) return;
+    if(!dragging) return;
 
     const dx = e.clientX - tapStartX;
     const dy = e.clientY - tapStartY;
-    if (!didDrag && Math.hypot(dx, dy) > 18) didDrag = true;
+    if(!didDrag && Math.hypot(dx, dy) > 18) didDrag = true;
 
-    if (didDrag) {
+    if(didDrag){
       const r = wheel.getBoundingClientRect();
       const cx = r.left + r.width / 2;
       const cy = r.top + r.height / 2;
@@ -234,34 +200,33 @@
       setRotation(deg);
       e.preventDefault();
     }
-  }, { passive: false });
+  }, { passive:false });
 
   wheel?.addEventListener("pointerup", () => {
-    if (!dragging) return;
+    if(!dragging) return;
     dragging = false;
 
     const idx = sectorFromDeg(rotationDeg);
     setRotation(idx * STEP);
 
-    // Tap utan drag -> öppna sheet
-    if (!didDrag) {
+    // tap opens sheet
+    if(!didDrag){
       openSheet();
       renderView(VIEW_DEFS[activeIndex].id);
     }
-  }, { passive: true });
+  }, { passive:true });
 
-  wheel?.addEventListener("pointercancel", () => { dragging = false; }, { passive: true });
+  wheel?.addEventListener("pointercancel", () => { dragging = false; }, { passive:true });
 
-  // Mouse wheel (desktop) -> byter view
   wheel?.addEventListener("wheel", (e) => {
     e.preventDefault();
     const dir = e.deltaY > 0 ? 1 : -1;
     const next = (activeIndex + dir + VIEW_DEFS.length) % VIEW_DEFS.length;
     setRotation(next * STEP);
-  }, { passive: false });
+  }, { passive:false });
 
   /* =========================
-     TIMER + wheel ring SVG
+     TIMER + wheel ring SVG + pulse
   ========================= */
   const TIMER = {
     total: 5 * 60,
@@ -273,6 +238,11 @@
   };
   const canVibrate = !!navigator.vibrate;
 
+  // pulse overlay
+  const pulse = document.createElement("div");
+  pulse.className = "timerPulse";
+  wheel?.appendChild(pulse);
+
   const wheelSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   wheelSvg.setAttribute("class", "wheelTimerSvg");
   wheelSvg.innerHTML = `
@@ -281,19 +251,25 @@
   `;
   wheel?.appendChild(wheelSvg);
 
-  function updateWheelTimerProgress() {
+  function updateWheelTimerProgress(){
     const bg = document.getElementById("wheelTimerBg");
     const prog = document.getElementById("wheelTimerProg");
-    if (!wheel || !wheelSvg || !bg || !prog) return;
+    if(!wheel || !wheelSvg || !bg || !prog) return;
 
     const size = wheel.getBoundingClientRect().width;
-    const r = (size / 2) - 6;
+    const r = (size / 2) - 8;
     const cx = size / 2;
     const cy = size / 2;
 
     wheelSvg.setAttribute("viewBox", `0 0 ${size} ${size}`);
-    bg.setAttribute("cx", cx); bg.setAttribute("cy", cy); bg.setAttribute("r", r);
-    prog.setAttribute("cx", cx); prog.setAttribute("cy", cy); prog.setAttribute("r", r);
+
+    bg.setAttribute("cx", cx);
+    bg.setAttribute("cy", cy);
+    bg.setAttribute("r", r);
+
+    prog.setAttribute("cx", cx);
+    prog.setAttribute("cy", cy);
+    prog.setAttribute("r", r);
 
     const C = 2 * Math.PI * r;
     bg.style.strokeDasharray = String(C);
@@ -301,30 +277,29 @@
 
     prog.style.strokeDasharray = String(C);
 
-    // Countdown: pct går från 1 -> 0, ring ska “tömmas” med tiden
     const pct = TIMER.total ? (TIMER.left / TIMER.total) : 0;
-    prog.style.strokeDashoffset = String(C * (1 - clamp01(pct)));
 
-    if (pct > 0.40) prog.style.stroke = "rgba(0,209,255,.95)";
-    else if (pct > 0.15) prog.style.stroke = "rgba(255,165,0,.95)";
-    else prog.style.stroke = "rgba(255,70,70,.95)";
+    // ✅ countdown direction (reverse) via negative dashoffset
+    prog.style.strokeDashoffset = String(-C * (1 - clamp01(pct)));
 
-    // Neon-puls när timer går
-    wheel.classList.toggle("timerPulse", !!TIMER.running);
+    if(pct > 0.40) prog.style.stroke = "rgba(0,209,255,.92)";
+    else if(pct > 0.15) prog.style.stroke = "rgba(255,165,0,.92)";
+    else prog.style.stroke = "rgba(255,70,70,.92)";
   }
   window.addEventListener("resize", updateWheelTimerProgress);
 
-  function timerText() {
+  function timerText(){
     const safe = Math.max(0, TIMER.left);
     const mm = Math.floor(safe / 60);
     const ss = safe % 60;
     return `${pad2(mm)}:${pad2(ss)}`;
   }
 
-  function setTimerMinutesAndStart(min) {
+  function setTimerMinutesAndStart(min){
     const m = Number(min);
-    if (!Number.isFinite(m) || m <= 0) return;
+    if(!Number.isFinite(m) || m <= 0) return;
 
+    // stop current
     TIMER.running = false;
     cancelAnimationFrame(TIMER.raf);
 
@@ -332,9 +307,10 @@
     TIMER.left = TIMER.total;
     TIMER.pausedLeft = TIMER.left;
 
-    // start direkt
+    // start immediately
     TIMER.running = true;
     TIMER.t0 = performance.now();
+    document.body.classList.add("timerRunning");
     cancelAnimationFrame(TIMER.raf);
     TIMER.raf = requestAnimationFrame(timerLoop);
 
@@ -342,17 +318,18 @@
     renderTimerUIOnly();
   }
 
-  function resetTimer() {
+  function resetTimer(){
     TIMER.running = false;
     cancelAnimationFrame(TIMER.raf);
     TIMER.left = TIMER.total;
     TIMER.pausedLeft = TIMER.left;
+    document.body.classList.remove("timerRunning");
     updateWheelTimerProgress();
     renderTimerUIOnly();
   }
 
-  function timerLoop() {
-    if (!TIMER.running) return;
+  function timerLoop(){
+    if(!TIMER.running) return;
 
     const elapsed = (performance.now() - TIMER.t0) / 1000;
     TIMER.left = Math.max(0, Math.floor(TIMER.pausedLeft - elapsed));
@@ -360,192 +337,175 @@
     updateWheelTimerProgress();
     renderTimerUIOnly();
 
-    if (TIMER.left <= 0) {
+    if(TIMER.left <= 0){
       TIMER.running = false;
       cancelAnimationFrame(TIMER.raf);
-      if (canVibrate) navigator.vibrate([20, 40, 20, 80, 20]);
+      document.body.classList.remove("timerRunning");
+      if(canVibrate) navigator.vibrate([20, 40, 20, 60, 20]);
       updateWheelTimerProgress();
       renderTimerUIOnly();
       return;
     }
+
     TIMER.raf = requestAnimationFrame(timerLoop);
   }
 
-  function renderTimerUIOnly() {
+  function renderTimerUIOnly(){
     const tTime = $("tTime");
     const tState = $("tState");
-    if (tTime) tTime.textContent = timerText();
+    if(tTime) tTime.textContent = timerText();
 
-    if (tState) {
-      if (!TIMER.running && TIMER.left === TIMER.total) tState.textContent = "Redo";
-      else if (TIMER.running && TIMER.left > 0) tState.textContent = "Fokus…";
-      else if (!TIMER.running && TIMER.left > 0) tState.textContent = "Pausad";
+    if(tState){
+      if(!TIMER.running && TIMER.left === TIMER.total) tState.textContent = "Redo";
+      else if(TIMER.running && TIMER.left > 0) tState.textContent = "Fokus…";
+      else if(!TIMER.running && TIMER.left > 0) tState.textContent = "Pausad";
       else tState.textContent = "KLAR";
     }
   }
 
-  function renderTimer() {
+  function renderTimer(){
     sheetTitle.textContent = "Timer";
     sheetContent.innerHTML = `
-      <div class="card" style="padding:16px;">
-        <div style="display:flex; flex-direction:column; align-items:center; text-align:center;">
-          <div id="tTime" style="font-size:52px; font-weight:900; letter-spacing:1px;">${timerText()}</div>
-          <div id="tState" class="miniHint" style="margin-top:6px;">Redo</div>
+      <div class="timerBar">
+        <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px;">
+          <div id="tTime" style="font-size:52px; font-weight:900; letter-spacing:.6px;">${timerText()}</div>
+          <div id="tState" class="miniHint">Redo</div>
+        </div>
 
-          <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; justify-content:center;">
-            <button class="miniBtn tQuick" data-tmin="1">1</button>
-            <button class="miniBtn tQuick" data-tmin="5">5</button>
-            <button class="miniBtn tQuick" data-tmin="10">10</button>
-            <button class="miniBtn tQuick" data-tmin="15">15</button>
-            <button class="miniBtn tQuick" data-tmin="30">30</button>
-            <button class="miniBtn" id="tResetBtn" style="background: rgba(255,255,255,.06);">Reset</button>
-          </div>
-
-          <div class="miniHint" style="margin-top:10px; opacity:.7;">
-            Tryck på 1/5/10/15/30 för att starta direkt
-          </div>
+        <div class="timerBtns" style="margin-top:12px;">
+          <button class="timerBtn" data-min="1">1</button>
+          <button class="timerBtn" data-min="5">5</button>
+          <button class="timerBtn" data-min="10">10</button>
+          <button class="timerBtn" data-min="15">15</button>
+          <button class="timerBtn" data-min="30">30</button>
+          <button class="timerBtn timerBtnReset" id="tReset">Reset</button>
         </div>
       </div>
     `;
 
-    $("tResetBtn")?.addEventListener("click", resetTimer);
-    sheetContent.querySelectorAll(".tQuick").forEach(btn => {
-      btn.addEventListener("click", () => setTimerMinutesAndStart(btn.dataset.tmin));
+    sheetContent.querySelectorAll("[data-min]").forEach(btn => {
+      btn.addEventListener("click", () => setTimerMinutesAndStart(btn.dataset.min));
     });
+    $("tReset")?.addEventListener("click", resetTimer);
 
     updateWheelTimerProgress();
     renderTimerUIOnly();
   }
 
   /* =========================
-     MODAL for item details + sub tasks
+     MODAL (notes + sub tasks for Listor)
   ========================= */
-  function openItemModal(listType, itemId) {
-    const arr = store[listType];
-    const item = arr.find(x => x.id === itemId);
-    if (!item) return;
-
-    // Ensure structure
-    if (!Array.isArray(item.subtasks)) item.subtasks = [];
-    if (typeof item.note !== "string") item.note = "";
-
+  function openModal(item, type){
     const wrap = document.createElement("div");
     wrap.className = "modalWrap open";
     wrap.innerHTML = `
       <div class="modalBackdrop"></div>
       <div class="modalCard">
         <div class="modalHeader">
-          <div class="modalTitle"></div>
+          <div class="modalTitle">Detaljer</div>
           <button class="modalClose">✕</button>
         </div>
-
         <div class="modalBody">
           <div class="modalMainText"></div>
+          <textarea class="modalTextArea" placeholder="Skriv mer…"></textarea>
 
-          <div style="margin-top:10px;">
-            <div class="miniHint" style="margin-bottom:6px;">Anteckning</div>
-            <textarea class="modalTextArea" placeholder="Skriv mer…"></textarea>
-          </div>
+          <div class="subTaskBlock" style="display:none;">
+            <div class="subTaskHeader">Checklist</div>
 
-          <div style="margin-top:14px;">
-            <div class="miniHint" style="margin-bottom:6px;">Checklist</div>
-            <div class="miniForm" style="margin:0;">
-              <input class="miniInput" id="subInput" placeholder="Lägg till punkt…" />
-              <button class="miniBtn miniBtnIcon" id="subAdd">+</button>
+            <div class="subTaskForm">
+              <input class="miniInput" id="subTaskInput" placeholder="Lägg till sak…" />
+              <button class="miniBtn miniBtnIcon" id="subTaskAdd">+</button>
             </div>
-            <div id="subList" style="margin-top:10px; display:flex; flex-direction:column; gap:10px;"></div>
-          </div>
-        </div>
 
-        <div class="modalFooter">
-          <button class="miniBtn" id="saveModal">Spara</button>
+            <ul class="subTaskList" id="subTaskList"></ul>
+          </div>
         </div>
       </div>
     `;
     document.body.appendChild(wrap);
 
-    const titleEl = wrap.querySelector(".modalTitle");
-    const mainEl = wrap.querySelector(".modalMainText");
-    const ta = wrap.querySelector(".modalTextArea");
-    const subInput = wrap.querySelector("#subInput");
-    const subAdd = wrap.querySelector("#subAdd");
-    const subList = wrap.querySelector("#subList");
+    wrap.querySelector(".modalMainText").textContent = item.text;
 
-    titleEl.textContent = "Detaljer";
-    mainEl.textContent = item.text;
+    const ta = wrap.querySelector(".modalTextArea");
     ta.value = item.note || "";
 
     const close = () => wrap.remove();
     wrap.querySelector(".modalBackdrop").onclick = close;
     wrap.querySelector(".modalClose").onclick = close;
 
-    function renderSubtasks() {
-      // Sort: undone first, done last
-      const undone = item.subtasks.filter(s => !s.done);
-      const done = item.subtasks.filter(s => s.done);
-      const ordered = [...undone, ...done];
-
-      subList.innerHTML = "";
-      ordered.forEach(st => {
-        const row = document.createElement("label");
-        row.className = "checkRow";
-        row.style.border = "1px solid rgba(255,255,255,.10)";
-        row.style.background = "rgba(255,255,255,.03)";
-        row.style.borderRadius = "14px";
-        row.style.padding = "12px 12px";
-
-        row.innerHTML = `
-          <input type="checkbox" class="checkBox" ${st.done ? "checked" : ""} />
-          <div class="checkMid">
-            <div class="checkText" style="${st.done ? "text-decoration:line-through; opacity:.65;" : ""}"></div>
-          </div>
-          <div class="checkRight">
-            <div class="miniMeta">${st.done ? "klar" : ""}</div>
-          </div>
-        `;
-        row.querySelector(".checkText").textContent = st.text;
-
-        const cb = row.querySelector(".checkBox");
-        cb.addEventListener("change", () => {
-          st.done = !!cb.checked;
-          saveStore();
-          renderSubtasks();
-          // uppdatera progress i listan direkt om sheet är öppen
-          if (sheetWrap?.classList.contains("open")) renderView(VIEW_DEFS[activeIndex].id);
-        });
-
-        subList.appendChild(row);
-      });
-    }
-
-    subAdd.addEventListener("click", () => {
-      const t = (subInput.value || "").trim();
-      if (!t) return;
-      item.subtasks.unshift({ id: uid(), text: t, done: false });
-      subInput.value = "";
-      saveStore();
-      renderSubtasks();
-      if (sheetWrap?.classList.contains("open")) renderView(VIEW_DEFS[activeIndex].id);
-    });
-
-    subInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") subAdd.click();
-    });
-
-    wrap.querySelector("#saveModal").onclick = () => {
+    // autosave note
+    ta.addEventListener("input", () => {
       item.note = ta.value || "";
       saveStore();
-      close();
-    };
+      renderPreview(VIEW_DEFS[activeIndex].id);
+      if(sheetWrap?.classList.contains("open")) renderView(VIEW_DEFS[activeIndex].id);
+    });
 
-    renderSubtasks();
-    setTimeout(() => ta.focus(), 60);
+    // list checklists
+    if(type === "lists"){
+      const block = wrap.querySelector(".subTaskBlock");
+      block.style.display = "block";
+
+      if(!Array.isArray(item.checklist)) item.checklist = [];
+
+      const input = wrap.querySelector("#subTaskInput");
+      const addBtn = wrap.querySelector("#subTaskAdd");
+      const listEl = wrap.querySelector("#subTaskList");
+
+      const add = () => {
+        const t = (input.value || "").trim();
+        if(!t) return;
+        item.checklist.unshift({ id: uid(), text: t, done: false, createdAt: Date.now() });
+        input.value = "";
+        saveStore();
+        draw();
+      };
+
+      addBtn.addEventListener("click", add);
+      input.addEventListener("keydown", (e) => { if(e.key === "Enter") add(); });
+
+      const toggle = (id) => {
+        const i = item.checklist.findIndex(x => x.id === id);
+        if(i === -1) return;
+        item.checklist[i].done = !item.checklist[i].done;
+
+        // move done to bottom, undone to top
+        item.checklist.sort((a,b) => (a.done === b.done) ? (b.createdAt - a.createdAt) : (a.done ? 1 : -1));
+
+        saveStore();
+        draw();
+        renderPreview("lists");
+        if(sheetWrap?.classList.contains("open") && VIEW_DEFS[activeIndex].id === "lists") renderView("lists");
+      };
+
+      function draw(){
+        listEl.innerHTML = "";
+        item.checklist.forEach(st => {
+          const li = document.createElement("li");
+          li.className = "subTaskRow" + (st.done ? " done" : "");
+          li.innerHTML = `
+            <input class="subTaskCb" type="checkbox" />
+            <div class="subTaskText"></div>
+          `;
+          const cb = li.querySelector("input");
+          cb.checked = !!st.done;
+          cb.addEventListener("change", () => toggle(st.id));
+          li.querySelector(".subTaskText").textContent = st.text;
+          listEl.appendChild(li);
+        });
+      }
+
+      draw();
+      setTimeout(() => input.focus(), 120);
+    } else {
+      setTimeout(() => ta.focus(), 80);
+    }
   }
 
   /* =========================
      HEADER "Visa slutförda"
   ========================= */
-  function setSheetTitleWithDone(label) {
+  function setSheetTitleWithDone(label){
     sheetTitle.innerHTML = `
       <span>${label}</span>
       <span class="doneHeaderBtn" id="openDone">
@@ -557,89 +517,81 @@
   }
 
   /* =========================
-     LIST ITEM ROW (checkbox completes, row opens modal)
+     LIST ITEM ROW
+     - checkbox = complete
+     - rest click = modal
   ========================= */
-  function progressText(item) {
-    const subs = Array.isArray(item.subtasks) ? item.subtasks : [];
-    if (!subs.length) return "";
-    const done = subs.filter(s => s.done).length;
-    return `${done}/${subs.length}`;
+  function listProgress(item){
+    if(!Array.isArray(item.checklist) || item.checklist.length === 0) return "";
+    const total = item.checklist.length;
+    const done = item.checklist.filter(x => x.done).length;
+    return `${done}/${total}`;
   }
 
-  function mkListRow({ text, meta, progress }, onComplete, onOpen) {
+  function mkCheckItem({ item, meta, stat }, onComplete, onOpen){
     const li = document.createElement("li");
     li.className = "checkItem";
 
     const row = document.createElement("div");
     row.className = "checkRow";
-    row.style.userSelect = "none";
 
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.className = "checkBox";
-    cb.setAttribute("aria-label", "Slutför");
 
     const mid = document.createElement("div");
     mid.className = "checkMid";
 
     const t = document.createElement("div");
     t.className = "checkText";
-    t.textContent = text;
+    t.textContent = item.text;
 
     mid.appendChild(t);
 
     const right = document.createElement("div");
     right.className = "checkRight";
 
-    const p = document.createElement("div");
-    p.className = "miniMeta";
-    p.textContent = progress || "";
+    const metaEl = document.createElement("div");
+    metaEl.className = "miniMeta";
+    metaEl.textContent = meta || "";
 
-    const m = document.createElement("div");
-    m.className = "miniMeta";
-    m.textContent = meta || "";
+    right.appendChild(metaEl);
 
-    right.appendChild(p);
-    right.appendChild(m);
+    if(stat){
+      const statEl = document.createElement("div");
+      statEl.className = "checkStat";
+      statEl.textContent = stat;
+      right.appendChild(statEl);
+    }
 
     row.appendChild(cb);
     row.appendChild(mid);
     row.appendChild(right);
+
     li.appendChild(row);
 
-    // ✅ Only checkbox completes
-    cb.addEventListener("click", (e) => {
-      e.stopPropagation();
-    });
-
     cb.addEventListener("change", () => {
-      if (!cb.checked) return;
+      if(!cb.checked) return;
       cb.disabled = true;
       li.classList.add("isCompleting");
       setTimeout(() => onComplete?.(), 190);
     });
 
-    // ✅ Row opens modal (not completing)
+    // click rest opens modal (not checkbox)
     row.addEventListener("click", (e) => {
-      if (e.target === cb) return;
+      if(e.target === cb) return;
       onOpen?.();
     });
 
     return li;
   }
 
-  function renderList(type, label, allowModal) {
+  function renderList(type, label, allowModal){
     setSheetTitleWithDone(label);
-
-    const placeholder =
-      type === "lists" ? "Ny lista..." :
-      type === "prio"  ? "Ny prio..." :
-      type === "ideas" ? "Ny idé..."  :
-      "Skriv...";
 
     sheetContent.innerHTML = `
       <div class="miniForm">
-        <input id="input" class="miniInput" placeholder="${placeholder}" />
+        <input id="input" class="miniInput" placeholder="${type === "lists" ? "Ny lista..." : "Skriv..."}" />
         <button id="add" class="miniBtn miniBtnIcon">+</button>
       </div>
       <ul id="list" class="miniList"></ul>
@@ -651,45 +603,44 @@
 
     const add = () => {
       const t = (input.value || "").trim();
-      if (!t) return;
+      if(!t) return;
 
-      store[type].unshift({
-        id: uid(),
-        text: t,
-        createdAt: Date.now(),
-        note: "",
-        subtasks: [],   // ✅ checklist i modal
-      });
+      const obj = { id: uid(), text: t, createdAt: Date.now(), note: "" };
+      if(type === "lists") obj.checklist = [];
 
+      store[type].unshift(obj);
       saveStore();
       input.value = "";
-      updateStartPrioCount();
+      if(type === "prio") updateStartPrioCount();
       draw();
+      renderPreview(VIEW_DEFS[activeIndex].id);
     };
 
     addBtn.addEventListener("click", add);
-    input.addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });
+    input.addEventListener("keydown", (e) => { if(e.key === "Enter") add(); });
 
-    function complete(id) {
+    function complete(id){
       const i = store[type].findIndex(x => x.id === id);
-      if (i === -1) return;
+      if(i === -1) return;
 
       const item = store[type].splice(i, 1)[0];
       store.done.unshift({ ...item, origin: type, doneAt: Date.now() });
       saveStore();
-      updateStartPrioCount();
+
+      if(type === "prio") updateStartPrioCount();
       draw();
+      renderPreview(VIEW_DEFS[activeIndex].id);
     }
 
-    function draw() {
+    function draw(){
       listEl.innerHTML = "";
-
-      store[type].forEach(item => {
+      store[type].forEach((item) => {
+        const stat = (type === "lists") ? listProgress(item) : "";
         listEl.appendChild(
-          mkListRow(
-            { text: item.text, meta: fmt(item.createdAt), progress: progressText(item) },
+          mkCheckItem(
+            { item, meta: fmt(item.createdAt), stat },
             () => complete(item.id),
-            allowModal ? () => openItemModal(type, item.id) : null
+            allowModal ? () => openModal(item, type) : null
           )
         );
       });
@@ -698,18 +649,18 @@
     draw();
   }
 
-  function renderDone() {
+  function renderDone(){
     sheetTitle.textContent = "Slutförda";
     sheetContent.innerHTML = `<ul id="doneList" class="miniList"></ul>`;
-    const list = $("doneList");
+    const listEl = $("doneList");
 
-    store.done.forEach((item) => {
+    (store.done || []).forEach((item) => {
       const li = document.createElement("li");
       li.className = "checkItem";
       li.innerHTML = `
         <div class="checkRow" style="cursor:default;">
           <div class="checkMid">
-            <div class="checkText" style="text-decoration:line-through; opacity:.75;"></div>
+            <div class="checkText"></div>
           </div>
           <div class="checkRight">
             <div class="miniMeta"></div>
@@ -718,7 +669,7 @@
       `;
       li.querySelector(".checkText").textContent = item.text;
       li.querySelector(".miniMeta").textContent = fmt(item.doneAt);
-      list.appendChild(li);
+      listEl.appendChild(li);
     });
   }
 
@@ -728,12 +679,12 @@
   const CAL_SRC =
     "https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0";
 
-  function renderCalendar() {
+  function renderCalendar(){
     sheetTitle.textContent = "Kalender";
     sheetContent.innerHTML = `
       <div class="card" style="padding:14px;">
         <div class="calScale">
-          <iframe class="calFrame" src="${CAL_SRC}" frameborder="0" scrolling="no"></iframe>
+          <iframe class="calFrame" src="${CAL_SRC}" scrolling="no"></iframe>
         </div>
       </div>
       <div class="miniHint" style="margin-top:10px;">(iPhone Safari kan kräva cookies för Google iframe.)</div>
@@ -743,170 +694,260 @@
   /* =========================
      WEATHER
   ========================= */
-  async function renderWeather() {
+  let lastWeather = null;
+
+  async function renderWeather(){
     sheetTitle.textContent = "Väder";
     sheetContent.innerHTML = `
       <div class="card weatherCard">
         <div class="weatherNow" id="wNow">Laddar…</div>
+        <div class="weatherSub" id="wSub"></div>
         <div class="weatherForecast" id="wForecast"></div>
-      </div>
-
-      <div class="miniHint" style="margin-top:10px; opacity:.7;">
-        Prognos: temperatur + nederbördsrisk (nästa 6h)
       </div>
     `;
 
-    // Stockholm default (du kan ändra)
     const lat = 59.3293, lon = 18.0686;
     const url =
       `https://api.open-meteo.com/v1/forecast` +
       `?latitude=${lat}&longitude=${lon}` +
       `&current=temperature_2m,wind_speed_10m,relative_humidity_2m` +
       `&hourly=temperature_2m,precipitation_probability` +
+      `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
       `&timezone=Europe%2FStockholm`;
 
-    try {
-      const r = await fetch(url, { cache: "no-store" });
+    try{
+      const r = await fetch(url, { cache:"no-store" });
       const data = await r.json();
+      lastWeather = data;
 
-      const nowEl = $("wNow");
-      if (nowEl) {
-        nowEl.innerHTML = `
-          <div>${Math.round(data.current.temperature_2m)}°</div>
-          <div>${Math.round(data.current.wind_speed_10m)} m/s</div>
-          <div>${Math.round(data.current.relative_humidity_2m)}%</div>
-        `;
-      }
+      $("wNow").innerHTML = `
+        <div>${Math.round(data.current.temperature_2m)}°</div>
+        <div>${Math.round(data.current.wind_speed_10m)} m/s</div>
+        <div>${Math.round(data.current.relative_humidity_2m)}%</div>
+      `;
+
+      const tmax = Math.round(data.daily.temperature_2m_max?.[0] ?? 0);
+      const tmin = Math.round(data.daily.temperature_2m_min?.[0] ?? 0);
+      const popm = Math.round(data.daily.precipitation_probability_max?.[0] ?? 0);
+
+      $("wSub").innerHTML = `
+        <div>Idag: ${tmin}° / ${tmax}°</div>
+        <div>Regn max: ${popm}%</div>
+      `;
 
       const temps = data.hourly.temperature_2m.slice(0, 6);
       const pop = data.hourly.precipitation_probability.slice(0, 6);
 
-      const fc = $("wForecast");
-      if (fc) {
-        fc.innerHTML = temps.map((t, i) => `
-          <div class="wxMini">
-            <div class="wxMiniTop">+${i}h</div>
-            <div class="wxMiniTemp">${Math.round(t)}°</div>
-            <div class="wxMiniPop">${Math.round(pop[i] ?? 0)}%</div>
-          </div>
-        `).join("");
-      }
-    } catch {
-      const nowEl = $("wNow");
-      if (nowEl) nowEl.textContent = "Kunde inte hämta väder.";
+      $("wForecast").innerHTML = temps.map((t, i) => `
+        <div class="wxMini">
+          <div class="wxMiniTop">+${i}h</div>
+          <div class="wxMiniTemp">${Math.round(t)}°</div>
+          <div class="wxMiniPop">${Math.round(pop[i] ?? 0)}%</div>
+        </div>
+      `).join("");
+    }catch{
+      $("wNow").textContent = "Kunde inte hämta väder.";
     }
   }
 
   /* =========================
      NEWS (RSS via proxies)
   ========================= */
-  async function renderNews() {
+  let lastNews = [];
+
+  async function renderNews(){
     sheetTitle.textContent = "Nyheter";
     sheetContent.innerHTML = `
       <div class="card" style="padding:14px;">
         <div class="miniHint" id="newsStatus">Laddar…</div>
         <div id="newsList" class="newsList" style="margin-top:10px;"></div>
       </div>
-      <div class="miniHint" style="margin-top:10px; opacity:.7;">
-        Om det står “proxy/CORS” är det externa RSS-proxies som strular (inte din kod).
-      </div>
     `;
 
     const feeds = [
       { name: "SVT Nyheter", url: "https://www.svt.se/nyheter/rss.xml" },
-      { name: "Omni",       url: "https://omni.se/rss" },
+      { name: "Omni",        url: "https://omni.se/rss" },
     ];
 
     const proxies = [
-      // ofta stabil
       (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//, "")}`,
-      // fallback
       (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
       (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
     ];
 
-    async function fetchViaProxies(url) {
+    async function fetchViaProxies(url){
       let lastErr = null;
-      for (const p of proxies) {
-        try {
-          const r = await fetch(p(url), { cache: "no-store" });
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      for(const p of proxies){
+        try{
+          const r = await fetch(p(url), { cache:"no-store" });
+          if(!r.ok) throw new Error(`HTTP ${r.status}`);
           return await r.text();
-        } catch (e) {
+        }catch(e){
           lastErr = e;
         }
       }
       throw lastErr || new Error("Proxy failed");
     }
 
-    function parseRss(xmlText, sourceName) {
+    function parseAny(xmlText, sourceName){
       const doc = new DOMParser().parseFromString(xmlText, "text/xml");
-      const items = [...doc.querySelectorAll("item")].slice(0, 12);
-      return items.map((it) => ({
-        source: sourceName,
-        title: (it.querySelector("title")?.textContent || "").trim(),
-        link:  (it.querySelector("link")?.textContent || "").trim(),
-        date:  new Date(it.querySelector("pubDate")?.textContent || Date.now()),
-      })).filter(x => x.title && x.link);
+
+      const rssItems = [...doc.querySelectorAll("item")];
+      const atomEntries = [...doc.querySelectorAll("entry")];
+
+      const rows = (rssItems.length ? rssItems : atomEntries).slice(0, 12).map((it) => {
+        const title = (it.querySelector("title")?.textContent || "").trim();
+        let link = "";
+
+        // RSS
+        const l1 = it.querySelector("link")?.textContent?.trim();
+        if(l1) link = l1;
+
+        // Atom link href
+        const href = it.querySelector("link")?.getAttribute?.("href");
+        if(href) link = href;
+
+        const pd = it.querySelector("pubDate")?.textContent || it.querySelector("updated")?.textContent || "";
+        const date = new Date(pd || Date.now());
+
+        return { source: sourceName, title, link, date };
+      }).filter(x => x.title && x.link);
+
+      return rows;
     }
 
     const statusEl = $("newsStatus");
     const listEl = $("newsList");
 
-    try {
+    try{
       const results = await Promise.allSettled(
-        feeds.map(async f => {
-          const txt = await fetchViaProxies(f.url);
-          return parseRss(txt, f.name);
-        })
+        feeds.map(async f => parseAny(await fetchViaProxies(f.url), f.name))
       );
 
       const okCount = results.filter(r => r.status === "fulfilled" && r.value.length).length;
       const merged = results
         .filter(r => r.status === "fulfilled")
         .flatMap(r => r.value)
-        .sort((a, b) => b.date - a.date)
+        .sort((a,b) => b.date - a.date)
         .slice(0, 18);
 
-      if (!merged.length) {
-        if (statusEl) statusEl.textContent = `Kan inte läsa nyheter just nu (0/${feeds.length} källor).`;
+      lastNews = merged;
+
+      if(!merged.length){
+        if(statusEl) statusEl.textContent = `Kan inte läsa nyheter just nu (0/${feeds.length} källor).`;
         return;
       }
 
-      if (statusEl) statusEl.textContent = `Senaste: ${merged.length} artiklar (${okCount}/${feeds.length} källor)`;
+      if(statusEl) statusEl.textContent = `Senaste: ${merged.length} artiklar (${okCount}/${feeds.length} källor)`;
 
-      if (listEl) {
+      if(listEl){
         listEl.innerHTML = merged.map(n => `
           <a class="newsItem" href="${n.link}" target="_blank" rel="noopener">
             <div class="newsTitle">${n.title}</div>
-            <div class="newsMeta">${n.source} • ${n.date.toLocaleString("sv-SE",{ hour:"2-digit", minute:"2-digit", day:"2-digit", month:"2-digit" })}</div>
+            <div class="newsMeta">${n.source} • ${n.date.toLocaleString("sv-SE",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"})}</div>
           </a>
         `).join("");
       }
-    } catch {
-      if (statusEl) statusEl.textContent = "Kan inte läsa nyheter (proxy/CORS).";
+
+      renderPreview("news");
+    }catch{
+      if(statusEl) statusEl.textContent = "Kan inte läsa nyheter (proxy/CORS).";
     }
+  }
+
+  /* =========================
+     PREVIEW renderer
+  ========================= */
+  function renderPreview(viewId){
+    if(!previewTitle || !previewBody) return;
+
+    const v = VIEW_DEFS.find(x => x.id === viewId) || VIEW_DEFS[0];
+    previewTitle.textContent = v.label;
+
+    if(viewId === "prio"){
+      previewBody.innerHTML = `
+        Aktiva prios: <b>${(store.prio || []).length}</b><br/>
+        ${store.prio?.[0]?.text ? `Senast: ${store.prio[0].text}` : "Inga prios ännu"}
+      `;
+      return;
+    }
+
+    if(viewId === "lists"){
+      const count = (store.lists || []).length;
+      const top = store.lists?.[0];
+      const stat = top ? listProgress(top) : "";
+      previewBody.innerHTML = `
+        Antal: <b>${count}</b><br/>
+        ${top ? `Senast: ${top.text} ${stat ? `(${stat})` : ""}` : "Inga listor ännu"}
+      `;
+      return;
+    }
+
+    if(viewId === "ideas"){
+      const count = (store.ideas || []).length;
+      const top = store.ideas?.[0];
+      previewBody.innerHTML = `
+        Antal: <b>${count}</b><br/>
+        ${top ? `Senast: ${top.text}` : "Inga idéer ännu"}
+      `;
+      return;
+    }
+
+    if(viewId === "weather"){
+      if(lastWeather?.current){
+        const t = Math.round(lastWeather.current.temperature_2m);
+        const w = Math.round(lastWeather.current.wind_speed_10m);
+        previewBody.innerHTML = `Just nu: <b>${t}°</b> • Vind: <b>${w} m/s</b><br/>Tryck för detaljer.`;
+      }else{
+        previewBody.innerHTML = `Tryck för att hämta väder.`;
+      }
+      return;
+    }
+
+    if(viewId === "news"){
+      if(lastNews?.length){
+        previewBody.innerHTML = `Senaste: <b>${lastNews[0].source}</b><br/>${lastNews[0].title}`;
+      }else{
+        previewBody.innerHTML = `Tryck för att hämta nyheter.`;
+      }
+      return;
+    }
+
+    if(viewId === "calendar"){
+      previewBody.innerHTML = `Öppna agenda och dagens planering.`;
+      return;
+    }
+
+    if(viewId === "timer"){
+      previewBody.innerHTML = `Snabbstart: 1 • 5 • 10 • 15 • 30<br/>Reset om du vill nollställa.`;
+      return;
+    }
+
+    previewBody.textContent = "";
   }
 
   /* =========================
      VIEW SWITCH
   ========================= */
-  function renderView(id) {
-    if (id === "calendar") return renderCalendar();
-    if (id === "prio")     return renderList("prio",  "Aktiv prio", true);
-    if (id === "weather")  return renderWeather();
-    if (id === "news")     return renderNews();
-    if (id === "lists")    return renderList("lists", "Listor", true);
-    if (id === "ideas")    return renderList("ideas", "Idéer", true);
-    if (id === "timer")    return renderTimer();
+  function renderView(id){
+    if(id === "calendar") return renderCalendar();
+    if(id === "prio")     return renderList("prio", "Aktiv prio", true);
+    if(id === "weather")  return renderWeather();
+    if(id === "news")     return renderNews();
+    if(id === "lists")    return renderList("lists", "Listor", true);
+    if(id === "ideas")    return renderList("ideas", "Idéer", true);
+    if(id === "timer")    return renderTimer();
   }
 
   /* =========================
      INIT
   ========================= */
+  // preload preview with current view
   setRotation(0);
+  setPreview(0);
   updateWheelTimerProgress();
+  renderPreview("calendar");
 
-  // Startläge: om du vill att sheet ska vara stängd och bara öppnas på tap -> inget mer.
-  // (Vill du testa auto-open: openSheet(); renderView(VIEW_DEFS[0].id); )
+  // if you want: tap outside sheet closes (optional)
+  // sheetWrap?.addEventListener("click", (e)=>{ if(e.target === sheetWrap) closeSheet(); });
 })();

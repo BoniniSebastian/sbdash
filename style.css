@@ -4,6 +4,7 @@
   --muted:#aab6d1;
   --line:rgba(255,255,255,.10);
   --glass: rgba(255,255,255,.06);
+  --radius:24px;
 }
 
 *{ box-sizing:border-box; }
@@ -20,12 +21,10 @@ body{
   inset:0;
   width:100%;
   height:100%;
-
   background:
     radial-gradient(1200px 600px at 35% 0%, rgba(0,209,255,.08), transparent 60%),
     radial-gradient(900px 500px at 80% 20%, rgba(0,209,255,.05), transparent 55%),
     var(--bg);
-
   color:var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
 }
@@ -168,7 +167,7 @@ body{
   z-index:3;
 }
 
-/* ================= TIMER RING OVERLAY ================= */
+/* TIMER RING OVERLAY */
 .wheelTimerSvg{
   position:absolute;
   inset: 8px;
@@ -176,10 +175,7 @@ body{
   height: calc(100% - 16px);
   pointer-events:none;
   z-index:4;
-
-  /* ✅ Rätt håll: rotera -90 och spegla X */
-  transform: rotate(-90deg) scaleX(-1);
-  transform-origin: 50% 50%;
+  transform: rotate(-90deg);
 }
 
 #wheelTimerBg,
@@ -194,35 +190,22 @@ body{
 }
 
 #wheelTimerProg{
-  stroke: rgba(0,209,255,.92);
   stroke-linecap: round;
   filter:
-    drop-shadow(0 0 10px rgba(0,209,255,.80))
-    drop-shadow(0 0 24px rgba(0,209,255,.45))
-    drop-shadow(0 0 48px rgba(0,209,255,.25));
+    drop-shadow(0 0 10px rgba(0,209,255,.70))
+    drop-shadow(0 0 24px rgba(0,209,255,.35))
+    drop-shadow(0 0 44px rgba(0,209,255,.18));
 }
 
-/* ✅ Neon-puls när timer kör */
-@keyframes neonPulse{
-  0%{ filter:
-    drop-shadow(0 0 10px rgba(0,209,255,.75))
-    drop-shadow(0 0 22px rgba(0,209,255,.35))
-    drop-shadow(0 0 44px rgba(0,209,255,.18));
-  }
-  50%{ filter:
-    drop-shadow(0 0 14px rgba(0,209,255,.95))
-    drop-shadow(0 0 34px rgba(0,209,255,.55))
-    drop-shadow(0 0 70px rgba(0,209,255,.28));
-  }
-  100%{ filter:
-    drop-shadow(0 0 10px rgba(0,209,255,.75))
-    drop-shadow(0 0 22px rgba(0,209,255,.35))
-    drop-shadow(0 0 44px rgba(0,209,255,.18));
-  }
+/* TIMER – neon pulse på wheel när timer går (JS togglar .timerPulse på .wheel) */
+@keyframes neonPulse {
+  0%   { filter: drop-shadow(0 0 10px rgba(0,209,255,.20)) drop-shadow(0 0 22px rgba(0,209,255,.12)); }
+  50%  { filter: drop-shadow(0 0 18px rgba(0,209,255,.55)) drop-shadow(0 0 40px rgba(0,209,255,.22)); }
+  100% { filter: drop-shadow(0 0 10px rgba(0,209,255,.20)) drop-shadow(0 0 22px rgba(0,209,255,.12)); }
 }
-.wheel.isRunning #wheelTimerProg{
-  animation: neonPulse 1.35s ease-in-out infinite;
-}
+.wheel.timerPulse .wheelRing{ animation: neonPulse 1.25s ease-in-out infinite; }
+.wheel.timerPulse .wheelIcon{ animation: neonPulse 1.25s ease-in-out infinite; }
+.wheel.timerPulse #wheelTimerProg{ animation: neonPulse 1.25s ease-in-out infinite; }
 
 /* ================= SHEET OVERLAY ================= */
 .sheetWrap{
@@ -237,11 +220,8 @@ body{
   pointer-events:auto;
   position:absolute;
   left:50%;
-
-  /* ✅ lite mer “ut i kanterna” */
-  width: min(760px, 96vw);
-
-  top: 26px;
+  width: min(720px, 94vw);
+  top: 30px;
   bottom: 140px;
 
   border-radius: 26px;
@@ -275,7 +255,7 @@ body{
 
 .sheetContent{
   flex:1;
-  padding: 12px 12px 22px; /* ✅ lite mindre padding */
+  padding: 14px 16px 24px;
   overflow:auto;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
@@ -291,17 +271,18 @@ body{
 
 .miniForm{
   display:flex;
-  gap:8px;
+  gap:10px;
   margin: 8px 0 12px;
-  flex-wrap:wrap;
+  flex-wrap:nowrap;
+  align-items:center;
 }
 
 .miniInput{
-  flex: 1 1 180px;
+  flex: 1 1 auto;
   background: rgba(255,255,255,.05);
   border:1px solid rgba(255,255,255,.14);
-  border-radius: 12px;
-  padding: 11px 12px;
+  border-radius: 14px;
+  padding: 12px 12px;
   color: var(--text);
   outline:none;
   font-size: 16px;
@@ -311,20 +292,38 @@ body{
   border:1px solid rgba(255,255,255,.14);
   background: rgba(0,209,255,.16);
   color: var(--text);
-  padding: 11px 12px;
-  border-radius: 12px;
+  padding: 12px 12px;
+  border-radius: 14px;
   cursor:pointer;
   font-weight:900;
   font-size:14px;
 }
 
 .miniBtnIcon{
-  width:44px;
-  min-width:44px;
-  text-align:center;
-  padding: 11px 0;
-  font-size:20px;
+  width:52px;
+  height:52px;
+  min-width:52px;
+  display:grid;
+  place-items:center;
+  padding:0;
+  font-size:22px;
   line-height:1;
+}
+
+/* Timer “quick buttons” */
+.tQuick{
+  width: 54px;
+  height: 54px;
+  padding: 0 !important;
+  border-radius: 18px;
+  display: inline-grid;
+  place-items: center;
+  font-size: 16px;
+}
+#tResetBtn{
+  height: 54px;
+  border-radius: 18px;
+  padding: 0 16px;
 }
 
 .miniList{
@@ -341,17 +340,19 @@ body{
   font-size: 12px;
   font-weight: 900;
 }
+
 .miniMeta{
   color: rgba(255,255,255,.55);
   font-size: 12px;
   font-weight: 900;
 }
 
-/* ================= Calendar ================= */
-.calCard{ padding: 10px; } /* ✅ mindre padding */
+/* =========================
+   CALENDAR
+========================= */
 .calScale{
   width:100%;
-  height: 390px;            /* ✅ lite mindre */
+  height: 460px;          /* storlek */
   border-radius:18px;
   overflow:hidden;
   background:#0b1118;
@@ -361,83 +362,53 @@ body{
   height:100%;
   border:0;
   background:#0b1118;
-  display:block;            /* ✅ tar bort “kant under” */
+  display:block;          /* tar bort “kant under” */
 }
 
-/* ================= Weather ================= */
+/* =========================
+   WEATHER
+========================= */
 .weatherCard{ padding:14px; }
-.weatherTop{
+.weatherNow{
   display:flex;
-  align-items:center;
   justify-content:space-between;
-  gap:12px;
-}
-.weatherBig{
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-.weatherIcon{
-  font-size:34px;
-  filter: drop-shadow(0 0 14px rgba(0,209,255,.18));
-}
-.weatherTemp{
-  font-size:34px;
+  font-size:22px;
   font-weight:900;
-  line-height:1;
+  margin-bottom:14px;
 }
-.weatherFeels{
-  margin-top:4px;
-  font-size:12px;
-  font-weight:900;
-  color: rgba(255,255,255,.70);
-}
-.weatherStats{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-}
-.wxStat{
-  min-width: 92px;
-  text-align:right;
-}
-.wxStatVal{ font-weight:900; font-size:16px; }
-.wxStatLab{ font-weight:900; font-size:11px; opacity:.7; margin-top:2px; }
-
-.weatherRow{
-  margin-top: 12px;
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-.weatherPill{
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  border-radius: 999px;
-  padding: 8px 10px;
-  font-weight:900;
-  font-size:12px;
-  opacity:.9;
-}
-
 .weatherForecast{
-  margin-top: 12px;
   display:flex;
   justify-content:space-between;
-  gap:8px;
   font-size:12px;
   opacity:.9;
+  gap: 10px;
 }
 .wxMini{
-  text-align:center;
-  min-width: 44px;
+  flex: 1 1 0;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  border-radius: 14px;
+  padding: 10px 10px;
+  text-align: center;
 }
-.wxMiniTop{ opacity:.85; font-weight:900; }
-.wxMiniTemp{ font-weight:900; margin-top:2px; }
-.wxMiniPop{ opacity:.65; font-weight:900; margin-top:2px; }
+.wxMiniTop{
+  font-weight: 900;
+  opacity: .85;
+  margin-bottom: 6px;
+}
+.wxMiniTemp{
+  font-weight: 900;
+  font-size: 14px;
+}
+.wxMiniPop{
+  margin-top: 4px;
+  font-weight: 900;
+  opacity: .65;
+}
 
-/* ================= Done header ================= */
+/* =========================
+   DONE HEADER
+========================= */
 .doneHeaderBtn{
   display:inline-flex;
   align-items:center;
@@ -450,56 +421,51 @@ body{
 }
 .doneHeaderIcon{ width:14px; height:14px; }
 
-/* ================= CHECKBOX LIST ROWS ================= */
+/* =========================
+   CHECKBOX ROWS
+========================= */
 .checkItem{
   border-radius: 14px;
   overflow:hidden;
   border:1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.03);
 }
-
 .checkRow{
   display:flex;
   align-items:center;
   gap:10px;
   padding:12px 12px;
-}
-
-.checkBox{
-  -webkit-appearance: none;
-  appearance: none;
-  width:22px;
-  height:22px;
-
-  /* ✅ mindre rounded */
-  border-radius: 6px;
-
-  border: 2px solid rgba(0,209,255,.55);
-  background: rgba(0,0,0,.10);
-  display:grid;
-  place-items:center;
-  flex:0 0 auto;
   cursor:pointer;
 }
-
-.checkBox::after{
-  content:"";
-  width: 10px;
-  height: 6px;
-  border-left: 3px solid rgba(0,0,0,0);
-  border-bottom: 3px solid rgba(0,0,0,0);
-  transform: rotate(-45deg);
-  margin-top:-1px;
+.checkBox{
+  width: 22px;
+  height: 22px;
+  border-radius: 6px; /* mindre rounded */
+  accent-color: rgba(0,209,255,.9);
+  flex:0 0 auto;
 }
 
-.checkBox:checked{
-  background: rgba(0,209,255,.22);
-  border-color: rgba(0,209,255,.90);
-  box-shadow: 0 0 18px rgba(0,209,255,.22);
-}
-.checkBox:checked::after{
-  border-left-color: rgba(255,255,255,.92);
-  border-bottom-color: rgba(255,255,255,.92);
+@supports (-webkit-appearance: none) {
+  .checkBox{
+    -webkit-appearance: none;
+    appearance: none;
+    border: 2px solid rgba(0,209,255,.45);
+    background: rgba(0,0,0,.15);
+    display: inline-grid;
+    place-items: center;
+  }
+  .checkBox:checked{
+    background: rgba(0,209,255,.22);
+    border-color: rgba(0,209,255,.9);
+  }
+  .checkBox:checked::after{
+    content: "✓";
+    font-weight: 900;
+    font-size: 16px;
+    line-height: 1;
+    color: rgba(0,209,255,.95);
+    transform: translateY(-1px);
+  }
 }
 
 .checkMid{ min-width:0; flex:1 1 auto; }
@@ -516,11 +482,6 @@ body{
   align-items:center;
   gap:10px;
 }
-.checkMeta{
-  color: rgba(255,255,255,.55);
-  font-size:12px;
-  font-weight:900;
-}
 
 /* Fade-out when completing */
 .checkItem.isCompleting{
@@ -529,8 +490,11 @@ body{
   transition: opacity 180ms ease, transform 180ms ease;
 }
 
-/* ================= NEWS ================= */
+/* =========================
+   NEWS
+========================= */
 .newsList{ display:flex; flex-direction:column; gap:10px; }
+
 .newsItem{
   display:block;
   text-decoration:none;
@@ -552,167 +516,10 @@ body{
   color: rgba(255,255,255,.55);
 }
 
-/* ================= TIMER UI ================= */
-.timerBtns{
-  display:flex;
-  gap:10px;
-  margin-top:14px;
-  justify-content:center;
-  flex-wrap:wrap;
-}
-.timerChip{
-  width: 54px;              /* ✅ lika stora */
-  height: 44px;             /* ✅ lika stora */
-  border-radius: 12px;
-  border: 1px solid rgba(0,209,255,.35);
-  background: rgba(0,209,255,.10);
-  color: var(--text);
-  font-weight: 900;
-  cursor:pointer;
-}
-
-.timerReset{
-  margin-top: 12px;
-  background: rgba(255,255,255,.06);
-}
-
-/* ================= Modal (for notes + subtasks) ================= */
-.modalWrap{
-  position:fixed;
-  inset:0;
-  z-index:5000;
-  pointer-events:none;
-  opacity:0;
-  transition: opacity 180ms ease;
-}
-.modalWrap.open{ pointer-events:auto; opacity:1; }
-
-.modalBackdrop{
-  position:absolute;
-  inset:0;
-  background: rgba(0,0,0,.55);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-}
-
-.modalCard{
-  position:absolute;
-  left:50%;
-  top: 14%;
-  transform: translateX(-50%);
-  width: min(680px, 92vw);
-  border-radius: 22px;
-  background: rgba(255,255,255,.08);
-  border:1px solid rgba(255,255,255,.14);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  box-shadow: 0 30px 80px rgba(0,0,0,.65);
-  overflow:hidden;
-}
-
-.modalHeader{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255,255,255,.10);
-}
-
-.modalTitle{ font-weight:900; font-size:14px; }
-
-.modalClose{
-  border:1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  color: var(--text);
-  width:40px;
-  height:40px;
-  border-radius: 12px;
-  font-weight:900;
-  cursor:pointer;
-}
-
-.modalBody{ padding: 14px; }
-
-.modalMainText{
-  font-weight:900;
-  font-size:16px;
-  line-height:1.25;
-  margin-bottom:10px;
-  white-space:pre-wrap;
-}
-
-.modalTextArea{
-  width:100%;
-  min-height: 100px;
-  resize:none;
-  background: rgba(0,0,0,.20);
-  border:1px solid rgba(255,255,255,.14);
-  border-radius: 14px;
-  padding: 12px 12px;
-  color: var(--text);
-  outline:none;
-  font-size:16px;
-  line-height:1.3;
-}
-
-/* Subtasks inside modal */
-.subWrap{ margin-top: 12px; }
-.subTitle{ font-weight:900; font-size:12px; opacity:.75; }
-.subForm{
-  display:flex;
-  gap:8px;
-  margin-top:8px;
-}
-.subInput{
-  flex:1;
-  background: rgba(255,255,255,.05);
-  border:1px solid rgba(255,255,255,.14);
-  border-radius: 12px;
-  padding: 10px 12px;
-  color: var(--text);
-  outline:none;
-  font-size: 16px;
-}
-.subList{
-  list-style:none;
-  padding:0;
-  margin:10px 0 0;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.subItem{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:10px 10px;
-  border-radius: 14px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-}
-.subText{
-  font-weight:900;
-  font-size:14px;
-  min-width:0;
-  flex:1;
-}
-.subItem.done .subText{
-  text-decoration: line-through;
-  opacity:.65;
-}
-
-.modalFooter{
-  padding: 12px 14px 14px;
-  display:flex;
-  justify-content:flex-end;
-  gap:10px;
-}
-
 /* Small phones */
 @media (max-width: 390px){
-  .sheet{ top: 20px; bottom: 130px; width: 96vw; }
+  .sheet{ top: 20px; bottom: 130px; }
   .wheel{ width: min(92vw, 330px); }
-  .modalCard{ top: 12%; }
 }
 
 /* PREMIUM – wheel when sheet open */
@@ -734,4 +541,4 @@ body.sheetOpen .wheelIcon{
   opacity: 1;
   filter: drop-shadow(0 0 16px rgba(0,209,255,.28));
 }
-body.sheetOpen #wheelTimerProg{ opacity: .95; }
+body.sheetOpen #wheelTimerProg{ opacity: .90; }

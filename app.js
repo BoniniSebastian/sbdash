@@ -17,11 +17,6 @@
   const startPrioCountEl = $("startPrioCount");
   const centerLabelEl = $("centerLabel");
 
-  // Preview (behind wheel when sheet closed)
-  const previewWrap = $("previewWrap");
-  const previewTitle = $("previewTitle");
-  const previewBody = $("previewBody");
-
   function clamp01(x) { return Math.max(0, Math.min(1, x)); }
   function pad2(n) { return String(n).padStart(2, "0"); }
 
@@ -49,7 +44,7 @@
     });
 
   /* =========================
-     DATE
+     TOP DATE
   ========================= */
   function updateTopDate() {
     if (!topDate) return;
@@ -61,6 +56,9 @@
   updateTopDate();
   setInterval(updateTopDate, 60_000);
 
+  /* =========================
+     START PRIO COUNT
+  ========================= */
   function updateStartPrioCount() {
     if (!startPrioCountEl) return;
     const c = Array.isArray(store.prio) ? store.prio.length : 0;
@@ -102,129 +100,7 @@
     setCenterLabel(v.label);
   }
 
-  /* =========================
-     PREVIEW CONTENT (start mode)
-  ========================= */
-  const cache = {
-    weather: null, // { temp, wind, rh, temps[], pop[] }
-    news: null     // [{title,source,date,link}]
-  };
-
-  function isSheetOpen() {
-    return !!sheetWrap?.classList.contains("open");
-  }
-
-  function setPreviewCard(title, html) {
-    if (!previewTitle || !previewBody) return;
-    previewTitle.textContent = title || "";
-    previewBody.innerHTML = html || "";
-  }
-
-  function updatePreviewFor(id) {
-    if (!previewWrap || isSheetOpen()) return;
-
-    if (id === "calendar") {
-      setPreviewCard("Kalender", `
-        <div class="miniHint">Tryck på hjulet för agenda.</div>
-      `);
-      return;
-    }
-
-    if (id === "prio") {
-      const n = store.prio?.length || 0;
-      const top = store.prio?.[0]?.text || "";
-      setPreviewCard("Prios", `
-        <div style="display:flex; justify-content:space-between; gap:12px;">
-          <div style="font-weight:900; font-size:22px;">${n}</div>
-          <div class="miniHint" style="text-align:right;">aktiva</div>
-        </div>
-        <div class="miniHint" style="margin-top:10px;">${top ? `Senast: <b>${escapeHtml(top)}</b>` : "Inga prios ännu"}</div>
-      `);
-      return;
-    }
-
-    if (id === "todo") {
-      const n = store.todo?.length || 0;
-      const top = store.todo?.[0]?.text || "";
-      setPreviewCard("TODO", `
-        <div style="display:flex; justify-content:space-between; gap:12px;">
-          <div style="font-weight:900; font-size:22px;">${n}</div>
-          <div class="miniHint" style="text-align:right;">kvar</div>
-        </div>
-        <div class="miniHint" style="margin-top:10px;">${top ? `Nästa: <b>${escapeHtml(top)}</b>` : "Inget i TODO"}</div>
-      `);
-      return;
-    }
-
-    if (id === "ideas") {
-      const n = store.ideas?.length || 0;
-      const top = store.ideas?.[0]?.text || "";
-      setPreviewCard("Idéer", `
-        <div style="display:flex; justify-content:space-between; gap:12px;">
-          <div style="font-weight:900; font-size:22px;">${n}</div>
-          <div class="miniHint" style="text-align:right;">sparade</div>
-        </div>
-        <div class="miniHint" style="margin-top:10px;">${top ? `Senast: <b>${escapeHtml(top)}</b>` : "Inga idéer ännu"}</div>
-      `);
-      return;
-    }
-
-    if (id === "timer") {
-      setPreviewCard("Timer", `
-        <div class="miniHint">Tryck för att starta fokus.</div>
-        <div class="miniHint" style="margin-top:8px;">Standard: 5 min</div>
-      `);
-      return;
-    }
-
-    if (id === "weather") {
-      if (cache.weather) {
-        const w = cache.weather;
-        setPreviewCard("Väder", `
-          <div style="display:flex; justify-content:space-between; gap:10px; font-weight:900;">
-            <div style="font-size:22px;">${w.temp}°</div>
-            <div style="font-size:16px; opacity:.85;">${w.wind} m/s</div>
-            <div style="font-size:16px; opacity:.85;">${w.rh}%</div>
-          </div>
-          <div class="miniHint" style="margin-top:10px;">Tryck för detaljer.</div>
-        `);
-      } else {
-        setPreviewCard("Väder", `<div class="miniHint">Tryck för att ladda väder.</div>`);
-      }
-      return;
-    }
-
-    if (id === "news") {
-      if (cache.news?.length) {
-        const n = cache.news[0];
-        setPreviewCard("Nyheter", `
-          <div style="font-weight:900; font-size:14px; line-height:1.25;">
-            ${escapeHtml(n.title)}
-          </div>
-          <div class="miniHint" style="margin-top:8px;">${escapeHtml(n.source)} • ${n.date.toLocaleString("sv-SE",{hour:"2-digit",minute:"2-digit"})}</div>
-          <div class="miniHint" style="margin-top:8px;">Tryck för lista.</div>
-        `);
-      } else {
-        setPreviewCard("Nyheter", `<div class="miniHint">Tryck för att ladda nyheter.</div>`);
-      }
-      return;
-    }
-
-    setPreviewCard("Preview", `<div class="miniHint">Tryck på hjulet.</div>`);
-  }
-
-  function escapeHtml(s) {
-    return String(s || "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  /* =========================
-     ROTATION (core)
-  ========================= */
+  // ✅ Viktigt: när sheet är öppen -> byt view live när du vrider
   function setRotation(deg) {
     rotationDeg = deg;
     if (wheelRing) wheelRing.style.transform = `rotate(${deg}deg)`;
@@ -232,37 +108,24 @@
     const idx = sectorFromDeg(deg);
     setPreview(idx);
 
-    const id = VIEW_DEFS[idx].id;
-
-    // Sheet open => switch view live
-    if (isSheetOpen()) {
-      renderView(id);
-    } else {
-      // Sheet closed => update preview behind wheel
-      updatePreviewFor(id);
+    if (sheetWrap?.classList.contains("open")) {
+      renderView(VIEW_DEFS[idx].id);
     }
   }
 
   /* =========================
-     SHEET OPEN / CLOSE
+     SHEET OPEN/CLOSE
   ========================= */
   function openSheet() {
     sheetWrap?.classList.add("open");
     document.body.classList.add("sheetOpen");
-
     if (centerLabelEl) centerLabelEl.style.opacity = "0";
-    if (previewWrap) previewWrap.style.opacity = "0"; // safety
   }
 
   function closeSheet() {
     sheetWrap?.classList.remove("open");
     document.body.classList.remove("sheetOpen");
-
     if (centerLabelEl) centerLabelEl.style.opacity = "1";
-    if (previewWrap) previewWrap.style.opacity = "1"; // safety
-
-    // refresh preview for current view
-    updatePreviewFor(VIEW_DEFS[activeIndex].id);
   }
 
   /* =========================
@@ -272,7 +135,6 @@
 
   sheet?.addEventListener("pointerdown", (e) => {
     sheetDragStartY = e.clientY;
-    sheet.classList.add("dragging");
     sheet.setPointerCapture?.(e.pointerId);
   }, { passive: true });
 
@@ -281,7 +143,7 @@
     const delta = e.clientY - sheetDragStartY;
     if (delta > 0) {
       sheet.style.transform = `translateX(-50%) translateY(${delta}px)`;
-      e.preventDefault?.();
+      e.preventDefault();
     }
   }, { passive: false });
 
@@ -289,15 +151,12 @@
     if (sheetDragStartY == null) return;
     const delta = e.clientY - sheetDragStartY;
     if (delta > 120) closeSheet();
-
     sheet.style.transform = "";
-    sheet.classList.remove("dragging");
     sheetDragStartY = null;
   }, { passive: true });
 
   sheet?.addEventListener("pointercancel", () => {
     sheet.style.transform = "";
-    sheet.classList.remove("dragging");
     sheetDragStartY = null;
   }, { passive: true });
 
@@ -351,7 +210,7 @@
     const idx = sectorFromDeg(rotationDeg);
     setRotation(idx * STEP);
 
-    // Tap => open sheet
+    // Tap utan drag -> öppna sheet
     if (!didDrag) {
       openSheet();
       renderView(VIEW_DEFS[activeIndex].id);
@@ -360,6 +219,7 @@
 
   wheel?.addEventListener("pointercancel", () => { dragging = false; }, { passive: true });
 
+  // Desktop scroll
   wheel?.addEventListener("wheel", (e) => {
     e.preventDefault();
     const dir = e.deltaY > 0 ? 1 : -1;
@@ -367,12 +227,10 @@
     setRotation(next * STEP);
   }, { passive: false });
 
+  // Klick -> öppna
   wheel?.addEventListener("click", () => {
-    // safety: tap/click always opens sheet
-    if (!isSheetOpen()) {
-      openSheet();
-      renderView(VIEW_DEFS[activeIndex].id);
-    }
+    openSheet();
+    renderView(VIEW_DEFS[activeIndex].id);
   });
 
   /* =========================
@@ -425,9 +283,9 @@
     const pct = TIMER.total ? (TIMER.left / TIMER.total) : 0;
     prog.style.strokeDashoffset = String(C * (1 - clamp01(pct)));
 
-    if (pct > 0.40) prog.style.stroke = "rgba(0,209,255,.90)";
-    else if (pct > 0.15) prog.style.stroke = "rgba(255,165,0,.90)";
-    else prog.style.stroke = "rgba(255,70,70,.90)";
+    if (pct > 0.40) prog.style.stroke = "rgba(0,209,255,.92)";
+    else if (pct > 0.15) prog.style.stroke = "rgba(255,165,0,.92)";
+    else prog.style.stroke = "rgba(255,70,70,.92)";
   }
   window.addEventListener("resize", updateWheelTimerProgress);
 
@@ -447,7 +305,6 @@
     TIMER.total = Math.round(m * 60);
     TIMER.left = TIMER.total;
     TIMER.pausedLeft = TIMER.left;
-
     updateWheelTimerProgress();
     renderTimerUIOnly();
   }
@@ -457,7 +314,6 @@
     cancelAnimationFrame(TIMER.raf);
     TIMER.left = TIMER.total;
     TIMER.pausedLeft = TIMER.left;
-
     updateWheelTimerProgress();
     renderTimerUIOnly();
   }
@@ -588,7 +444,6 @@
     row.appendChild(cb);
     row.appendChild(mid);
     row.appendChild(right);
-
     li.appendChild(row);
 
     cb.addEventListener("change", () => {
@@ -630,11 +485,9 @@
     const add = () => {
       const t = (input.value || "").trim();
       if (!t) return;
-
       store[type].unshift({ id: uid(), text: t, createdAt: Date.now() });
       saveStore();
       input.value = "";
-
       if (type === "prio") updateStartPrioCount();
       draw();
     };
@@ -645,11 +498,9 @@
     function complete(id) {
       const i = store[type].findIndex((x) => x.id === id);
       if (i === -1) return;
-
       const item = store[type].splice(i, 1)[0];
       store.done.unshift({ ...item, origin: type, doneAt: Date.now() });
       saveStore();
-
       if (type === "prio") updateStartPrioCount();
       draw();
     }
@@ -734,30 +585,22 @@
     const r = await fetch(url, { cache: "no-store" });
     const data = await r.json();
 
-    const temp = Math.round(data.current.temperature_2m);
-    const wind = Math.round(data.current.wind_speed_10m);
-    const rh = Math.round(data.current.relative_humidity_2m);
-
     $("wNow").innerHTML = `
-      <div>${temp}°</div>
-      <div>${wind} m/s</div>
-      <div>${rh}%</div>
+      <div>${Math.round(data.current.temperature_2m)}°</div>
+      <div>${Math.round(data.current.wind_speed_10m)} m/s</div>
+      <div>${Math.round(data.current.relative_humidity_2m)}%</div>
     `;
 
-    const temps = data.hourly.temperature_2m.slice(0, 6).map(t => Math.round(t));
+    const temps = data.hourly.temperature_2m.slice(0, 6);
     const pop = data.hourly.precipitation_probability.slice(0, 6);
 
     $("wForecast").innerHTML = temps.map((t, i) => `
       <div class="wxMini">
         <div class="wxMiniTop">+${i}h</div>
-        <div class="wxMiniTemp">${t}°</div>
+        <div class="wxMiniTemp">${Math.round(t)}°</div>
         <div class="wxMiniPop">${pop[i]}%</div>
       </div>
     `).join("");
-
-    cache.weather = { temp, wind, rh, temps, pop };
-    // update preview if we're on weather and sheet got closed later
-    if (!isSheetOpen() && VIEW_DEFS[activeIndex].id === "weather") updatePreviewFor("weather");
   }
 
   /* =========================
@@ -774,7 +617,7 @@
 
     const feeds = [
       { name: "SVT Nyheter", url: "https://www.svt.se/nyheter/rss.xml" },
-      { name: "Omni",        url: "https://omni.se/rss" },
+      { name: "Omni",       url: "https://omni.se/rss" },
     ];
 
     const proxies = [
@@ -813,10 +656,7 @@
 
     try {
       const results = await Promise.allSettled(
-        feeds.map(async f => {
-          const txt = await fetchViaProxies(f.url);
-          return parseRss(txt, f.name);
-        })
+        feeds.map(async f => parseRss(await fetchViaProxies(f.url), f.name))
       );
 
       const okCount = results.filter(r => r.status === "fulfilled" && r.value.length).length;
@@ -836,14 +676,11 @@
       if (listEl) {
         listEl.innerHTML = merged.map(n => `
           <a class="newsItem" href="${n.link}" target="_blank" rel="noopener">
-            <div class="newsTitle">${escapeHtml(n.title)}</div>
-            <div class="newsMeta">${escapeHtml(n.source)} • ${n.date.toLocaleString("sv-SE",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"})}</div>
+            <div class="newsTitle">${n.title}</div>
+            <div class="newsMeta">${n.source} • ${n.date.toLocaleString("sv-SE",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"})}</div>
           </a>
         `).join("");
       }
-
-      cache.news = merged;
-      if (!isSheetOpen() && VIEW_DEFS[activeIndex].id === "news") updatePreviewFor("news");
     } catch (e) {
       if (statusEl) statusEl.textContent = "Kan inte läsa nyheter (proxy/CORS).";
     }
@@ -867,5 +704,4 @@
   ========================= */
   setRotation(0);
   updateWheelTimerProgress();
-  updatePreviewFor(VIEW_DEFS[0].id);
 })();

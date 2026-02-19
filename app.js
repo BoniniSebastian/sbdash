@@ -1,13 +1,10 @@
 /* =========================
    SB Dash – app.js (FULL)
-   - Wheel navigation + sheet
-   - Preview card behind wheel (dim/frost)
+   - Wheel ring + center text (NO wheel icon)
+   - Start icon swaps while rotating
+   - News: Google News RSS via cache-bust + proxy fallback + stale-filter + local cache
    - Weather (Open-Meteo)
-   - News (Google News RSS) via cache-bust + proxy fallback + stale-filter + local cache
-   - Timer: 1/5/10/15/30 starts instantly + Reset
-   - Lists/Ideas/Prio: checkbox completes, row opens modal
-   - Lists modal: checklist with reorder done->bottom
-   - IMPORTANT: wheelIcon REMOVED (icon is now startIcon). Text is wheelCenterText.
+   - Timer ring on wheel (countdown direction correct)
    ========================= */
 
 (() => {
@@ -18,11 +15,6 @@
   ========================= */
   const wheel = $("wheel");
   const wheelRing = document.querySelector(".wheelRing");
-
-  // NEW: icon moved to start
-  const startIcon = $("startIcon");
-
-  // NEW: text moved into wheel
   const wheelCenterText = $("wheelCenterText");
 
   const sheetWrap = $("sheetWrap");
@@ -32,9 +24,9 @@
 
   const topDate = $("topDate");
   const startPrioCountEl = $("startPrioCount");
+  const startIconEl = $("startIcon");
 
   // Preview (behind wheel)
-  const previewWrap = $("previewWrap");
   const previewTitle = $("previewTitle");
   const previewBody = $("previewBody");
 
@@ -42,10 +34,9 @@
   function pad2(n){ return String(n).padStart(2, "0"); }
 
   /* =========================
-     STORAGE
+     STORAGE (prio count only here)
   ========================= */
   const LS_KEY = "sbdash_store_v4";
-
   function loadStore(){
     try{
       const raw = localStorage.getItem(LS_KEY);
@@ -55,11 +46,13 @@
     }
   }
   const store = loadStore();
-  const saveStore = () => localStorage.setItem(LS_KEY, JSON.stringify(store));
-  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
 
-  const fmt = (ts) =>
-    new Date(ts).toLocaleString("sv-SE", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" });
+  function updateStartPrioCount(){
+    if(!startPrioCountEl) return;
+    const c = Array.isArray(store.prio) ? store.prio.length : 0;
+    startPrioCountEl.textContent = `Aktiva prios: ${c}`;
+  }
+  updateStartPrioCount();
 
   /* =========================
      DATE
@@ -74,23 +67,13 @@
   updateTopDate();
   setInterval(updateTopDate, 60_000);
 
-  function updateStartPrioCount(){
-    if(!startPrioCountEl) return;
-    const c = Array.isArray(store.prio) ? store.prio.length : 0;
-    startPrioCountEl.textContent = `Aktiva prios: ${c}`;
-  }
-  updateStartPrioCount();
-
   /* =========================
      VIEWS
   ========================= */
   const VIEW_DEFS = [
     { id:"calendar", label:"KALENDER", icon:"assets/ui/icon-calendar.svg" },
-    { id:"prio",     label:"PRIOS",    icon:"assets/ui/icon-prio.svg" },
     { id:"weather",  label:"VÄDER",    icon:"assets/ui/icon-weather.svg" },
     { id:"news",     label:"NYHETER",  icon:"assets/ui/icon-news.svg" },
-    { id:"lists",    label:"LISTOR",   icon:"assets/ui/icon-todo.svg" },
-    { id:"ideas",    label:"IDÉER",    icon:"assets/ui/icon-ideas.svg" },
     { id:"timer",    label:"TIMER",    icon:"assets/ui/icon-pomodoro.svg" },
   ];
 
@@ -98,132 +81,93 @@
   const STEP = 360 / VIEW_DEFS.length;
   let rotationDeg = 0;
 
-  function setWheelLabel(text){
-    if(wheelCenterText) wheelCenterText.textContent = text || "";
-  }
-
   function sectorFromDeg(deg){
     const raw = Math.round(deg / STEP);
     return ((raw % VIEW_DEFS.length) + VIEW_DEFS.length) % VIEW_DEFS.length;
   }
 
+  function setWheelText(txt){
+    if(wheelCenterText) wheelCenterText.textContent = txt || "—";
+  }
+
+  function setStartIcon(src){
+    if(startIconEl && src) startIconEl.src = src;
+  }
+
   /* =========================
-     PREVIEW (behind wheel)
+     PREVIEW
   ========================= */
   let lastWeather = null;
   let lastNews = [];
 
-  function listProgress(item){
-    if(!Array.isArray(item.checklist) || item.checklist.length === 0) return "";
-    const total = item.checklist.length;
-    const done = item.checklist.filter(x => x.done).length;
-    return `${done}/${total}`;
-  }
+  function renderPreview(viewId){
+    const v = VIEW_DEFS.find(x => x.id === viewId);
+    if(previewTitle) previewTitle.textContent = v ? v.label : "Preview";
 
-  function renderPreview(id){
-    if(!previewWrap || !previewTitle || !previewBody) return;
+    if(!previewBody) return;
 
-    const v = VIEW_DEFS.find(x => x.id === id);
-    previewTitle.textContent = v ? v.label : "Preview";
-
-    let html = "";
-
-    if(id === "calendar"){
-      html = `<div class="miniHint">Tryck på hjulet för att öppna kalendern.</div>`;
+    if(viewId === "calendar"){
+      previewBody.innerHTML = `<div class="miniHint">Tryck på hjulet för att öppna kalendern.</div>`;
+      return;
     }
 
-    if(id === "weather"){
+    if(viewId === "weather"){
       if(lastWeather?.current){
         const t = Math.round(lastWeather.current.temperature_2m);
         const w = Math.round(lastWeather.current.wind_speed_10m);
-        const h = Math.round(lastWeather.current.relative_humidity_2m);
-        html = `
-          <div style="display:flex; justify-content:space-between; gap:10px; font-weight:900;">
-            <div>${t}°</div><div>${w} m/s</div><div>${h}%</div>
+        previewBody.innerHTML = `
+          <div style="display:flex;justify-content:space-between;gap:10px;font-weight:900;">
+            <div>${t}°</div><div>${w} m/s</div>
           </div>
           <div class="miniHint" style="margin-top:8px;">Tryck för prognos</div>
         `;
-      }else{
-        html = `<div class="miniHint">Tryck för att ladda väder.</div>`;
+      } else {
+        previewBody.innerHTML = `<div class="miniHint">Tryck för att ladda väder.</div>`;
       }
+      return;
     }
 
-    if(id === "news"){
+    if(viewId === "news"){
       if(lastNews.length){
-        html = lastNews.slice(0,3).map(n => `
-          <div style="margin-top:8px; font-weight:900; line-height:1.15;">• ${n.title}</div>
-        `).join("");
-        html += `<div class="miniHint" style="margin-top:10px;">Tryck för fler</div>`;
-      }else{
-        html = `<div class="miniHint">Tryck för att ladda nyheter.</div>`;
+        previewBody.innerHTML =
+          lastNews.slice(0,3).map(n => `<div style="margin-top:8px;font-weight:900;line-height:1.15;">• ${n.title}</div>`).join("") +
+          `<div class="miniHint" style="margin-top:10px;">Tryck för fler</div>`;
+      } else {
+        previewBody.innerHTML = `<div class="miniHint">Tryck för att ladda nyheter.</div>`;
       }
+      return;
     }
 
-    if(id === "prio"){
-      const c = store.prio?.length || 0;
-      const first = store.prio?.[0]?.text;
-      html = `
-        <div style="font-weight:900;">Aktiva prios: ${c}</div>
-        ${first ? `<div class="miniHint" style="margin-top:8px;">Nästa: ${first}</div>` : `<div class="miniHint" style="margin-top:8px;">Inga prios ännu</div>`}
-      `;
-    }
-
-    if(id === "lists"){
-      const c = store.lists?.length || 0;
-      const first = store.lists?.[0];
-      const stat = first ? listProgress(first) : "";
-      html = `
-        <div style="font-weight:900;">Listor: ${c}</div>
-        ${first ? `<div class="miniHint" style="margin-top:8px;">${first.text}${stat ? ` • ${stat}` : ""}</div>` : `<div class="miniHint" style="margin-top:8px;">Skapa en lista (t.ex. packlista)</div>`}
-      `;
-    }
-
-    if(id === "ideas"){
-      const c = store.ideas?.length || 0;
-      const first = store.ideas?.[0]?.text;
-      html = `
-        <div style="font-weight:900;">Idéer: ${c}</div>
-        ${first ? `<div class="miniHint" style="margin-top:8px;">Senast: ${first}</div>` : `<div class="miniHint" style="margin-top:8px;">Inga idéer ännu</div>`}
-      `;
-    }
-
-    if(id === "timer"){
-      html = `
+    if(viewId === "timer"){
+      previewBody.innerHTML = `
         <div style="font-weight:900;">${timerText()}</div>
         <div class="miniHint" style="margin-top:8px;">Tryck för 1/5/10/15/30</div>
       `;
+      return;
     }
-
-    previewBody.innerHTML = html;
   }
 
-  function setPreview(index){
-    activeIndex = (index + VIEW_DEFS.length) % VIEW_DEFS.length;
+  function applyActiveView(idx){
+    activeIndex = (idx + VIEW_DEFS.length) % VIEW_DEFS.length;
     const v = VIEW_DEFS[activeIndex];
 
-    // NEW: icon goes to startIcon
-    if(startIcon) startIcon.src = v.icon;
-
-    // NEW: label goes into wheel center
-    setWheelLabel(v.label);
-
+    setWheelText(v.label);
+    setStartIcon(v.icon);
     renderPreview(v.id);
-  }
-
-  // throttle render when sheet open and wheel rotates a lot
-  let renderT = 0;
-  function renderIfOpenThrottled(id){
-    if(!sheetWrap?.classList.contains("open")) return;
-    clearTimeout(renderT);
-    renderT = setTimeout(() => renderView(id), 90);
   }
 
   function setRotation(deg){
     rotationDeg = deg;
     if(wheelRing) wheelRing.style.transform = `rotate(${deg}deg)`;
+
     const idx = sectorFromDeg(deg);
-    setPreview(idx);
-    renderIfOpenThrottled(VIEW_DEFS[idx].id);
+    applyActiveView(idx);
+
+    // live update inside sheet if open (light throttle)
+    if(sheetWrap?.classList.contains("open")){
+      clearTimeout(setRotation._t);
+      setRotation._t = setTimeout(() => renderView(VIEW_DEFS[idx].id), 90);
+    }
   }
 
   /* =========================
@@ -231,19 +175,20 @@
   ========================= */
   function openSheet(){
     sheetWrap?.classList.add("open");
-    document.body.classList.add("sheetOpen");
     if(wheelCenterText) wheelCenterText.style.opacity = "0";
   }
-
   function closeSheet(){
     sheetWrap?.classList.remove("open");
-    document.body.classList.remove("sheetOpen");
     if(wheelCenterText) wheelCenterText.style.opacity = "1";
   }
 
-  /* drag-to-close */
-  let sheetDragStartY = null;
+  // click outside to close
+  sheetWrap?.addEventListener("click", (e) => {
+    if(e.target === sheetWrap) closeSheet();
+  });
 
+  // drag-to-close
+  let sheetDragStartY = null;
   sheet?.addEventListener("pointerdown", (e) => {
     sheetDragStartY = e.clientY;
     sheet.setPointerCapture?.(e.pointerId);
@@ -258,9 +203,9 @@
     }
   }, { passive:false });
 
-  sheet?.addEventListener("pointerup", (e) => {
+  sheet?.addEventListener("pointerup", () => {
     if(sheetDragStartY == null) return;
-    const delta = e.clientY - sheetDragStartY;
+    const delta = parseFloat((sheet.style.transform.match(/translateY\(([-\d.]+)px\)/)||[])[1] || "0");
     if(delta > 120) closeSheet();
     sheet.style.transform = "";
     sheetDragStartY = null;
@@ -270,11 +215,6 @@
     sheet.style.transform = "";
     sheetDragStartY = null;
   }, { passive:true });
-
-  // click outside sheet closes
-  sheetWrap?.addEventListener("click", (e) => {
-    if(e.target === sheetWrap) closeSheet();
-  });
 
   /* =========================
      WHEEL interaction
@@ -326,7 +266,6 @@
     const idx = sectorFromDeg(rotationDeg);
     setRotation(idx * STEP);
 
-    // tap opens sheet
     if(!didDrag){
       openSheet();
       renderView(VIEW_DEFS[activeIndex].id);
@@ -335,7 +274,6 @@
 
   wheel?.addEventListener("pointercancel", () => { dragging = false; }, { passive:true });
 
-  // desktop wheel scroll
   wheel?.addEventListener("wheel", (e) => {
     e.preventDefault();
     const dir = e.deltaY > 0 ? 1 : -1;
@@ -361,11 +299,12 @@
   };
   const canVibrate = !!navigator.vibrate;
 
-  // pulse overlay (CSS controls glow)
+  // pulse overlay
   const pulse = document.createElement("div");
   pulse.className = "timerPulse";
   wheel?.appendChild(pulse);
 
+  // ring svg
   const wheelSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   wheelSvg.setAttribute("class", "wheelTimerSvg");
   wheelSvg.innerHTML = `
@@ -380,7 +319,7 @@
     if(!wheel || !wheelSvg || !bg || !prog) return;
 
     const size = wheel.getBoundingClientRect().width;
-    const r = (size / 2) - 8;
+    const r = (size / 2) - 10;
     const cx = size / 2;
     const cy = size / 2;
 
@@ -401,8 +340,7 @@
     prog.style.strokeDasharray = String(C);
 
     const pct = TIMER.total ? (TIMER.left / TIMER.total) : 0;
-
-    // Countdown direction (reverse) via negative dashoffset
+    // Countdown direction
     prog.style.strokeDashoffset = String(-C * (1 - clamp01(pct)));
 
     if(pct > 0.40) prog.style.stroke = "rgba(0,209,255,.92)";
@@ -422,7 +360,6 @@
     const m = Number(min);
     if(!Number.isFinite(m) || m <= 0) return;
 
-    // stop current
     TIMER.running = false;
     cancelAnimationFrame(TIMER.raf);
 
@@ -430,7 +367,6 @@
     TIMER.left = TIMER.total;
     TIMER.pausedLeft = TIMER.left;
 
-    // start immediately
     TIMER.running = true;
     TIMER.t0 = performance.now();
     document.body.classList.add("timerRunning");
@@ -438,7 +374,6 @@
     TIMER.raf = requestAnimationFrame(timerLoop);
 
     updateWheelTimerProgress();
-    renderTimerUIOnly();
     renderPreview("timer");
   }
 
@@ -449,7 +384,6 @@
     TIMER.pausedLeft = TIMER.left;
     document.body.classList.remove("timerRunning");
     updateWheelTimerProgress();
-    renderTimerUIOnly();
     renderPreview("timer");
   }
 
@@ -460,7 +394,6 @@
     TIMER.left = Math.max(0, Math.floor(TIMER.pausedLeft - elapsed));
 
     updateWheelTimerProgress();
-    renderTimerUIOnly();
     renderPreview("timer");
 
     if(TIMER.left <= 0){
@@ -469,34 +402,18 @@
       document.body.classList.remove("timerRunning");
       if(canVibrate) navigator.vibrate([20, 40, 20, 60, 20]);
       updateWheelTimerProgress();
-      renderTimerUIOnly();
-      renderPreview("timer");
       return;
     }
-
     TIMER.raf = requestAnimationFrame(timerLoop);
-  }
-
-  function renderTimerUIOnly(){
-    const tTime = $("tTime");
-    const tState = $("tState");
-    if(tTime) tTime.textContent = timerText();
-
-    if(tState){
-      if(!TIMER.running && TIMER.left === TIMER.total) tState.textContent = "Redo";
-      else if(TIMER.running && TIMER.left > 0) tState.textContent = "Fokus…";
-      else if(!TIMER.running && TIMER.left > 0) tState.textContent = "Pausad";
-      else tState.textContent = "KLAR";
-    }
   }
 
   function renderTimer(){
     sheetTitle.textContent = "Timer";
     sheetContent.innerHTML = `
-      <div class="timerBar">
-        <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px;">
-          <div id="tTime" style="font-size:52px; font-weight:900; letter-spacing:.6px;">${timerText()}</div>
-          <div id="tState" class="miniHint">${(!TIMER.running && TIMER.left === TIMER.total) ? "Redo" : (TIMER.running ? "Fokus…" : (TIMER.left > 0 ? "Pausad" : "KLAR"))}</div>
+      <div class="card">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <div id="tTime" style="font-size:52px;font-weight:900;letter-spacing:.6px;">${timerText()}</div>
+          <div class="miniHint" id="tState">${TIMER.running ? "Fokus…" : (TIMER.left === TIMER.total ? "Redo" : (TIMER.left > 0 ? "Pausad" : "KLAR"))}</div>
         </div>
 
         <div class="timerBtns" style="margin-top:12px;">
@@ -514,283 +431,6 @@
       btn.addEventListener("click", () => setTimerMinutesAndStart(btn.dataset.min));
     });
     $("tReset")?.addEventListener("click", resetTimer);
-
-    updateWheelTimerProgress();
-    renderTimerUIOnly();
-  }
-
-  /* =========================
-     MODAL (notes + sub tasks for Listor)
-  ========================= */
-  function openModal(item, type){
-    const wrap = document.createElement("div");
-    wrap.className = "modalWrap open";
-    wrap.innerHTML = `
-      <div class="modalBackdrop"></div>
-      <div class="modalCard">
-        <div class="modalHeader">
-          <div class="modalTitle">Detaljer</div>
-          <button class="modalClose">✕</button>
-        </div>
-        <div class="modalBody">
-          <div class="modalMainText"></div>
-          <textarea class="modalTextArea" placeholder="Skriv mer…"></textarea>
-
-          <div class="subTaskBlock" style="display:none;">
-            <div class="subTaskHeader">Checklist</div>
-
-            <div class="subTaskForm">
-              <input class="miniInput" id="subTaskInput" placeholder="Lägg till sak…" />
-              <button class="miniBtn miniBtnIcon" id="subTaskAdd">+</button>
-            </div>
-
-            <ul class="subTaskList" id="subTaskList"></ul>
-          </div>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(wrap);
-
-    wrap.querySelector(".modalMainText").textContent = item.text;
-
-    const ta = wrap.querySelector(".modalTextArea");
-    ta.value = item.note || "";
-
-    const close = () => wrap.remove();
-    wrap.querySelector(".modalBackdrop").onclick = close;
-    wrap.querySelector(".modalClose").onclick = close;
-
-    // autosave note
-    ta.addEventListener("input", () => {
-      item.note = ta.value || "";
-      saveStore();
-      renderPreview(VIEW_DEFS[activeIndex].id);
-      if(sheetWrap?.classList.contains("open")) renderView(VIEW_DEFS[activeIndex].id);
-    });
-
-    // list checklists
-    if(type === "lists"){
-      const block = wrap.querySelector(".subTaskBlock");
-      block.style.display = "block";
-
-      if(!Array.isArray(item.checklist)) item.checklist = [];
-
-      const input = wrap.querySelector("#subTaskInput");
-      const addBtn = wrap.querySelector("#subTaskAdd");
-      const listEl = wrap.querySelector("#subTaskList");
-
-      const add = () => {
-        const t = (input.value || "").trim();
-        if(!t) return;
-        item.checklist.unshift({ id: uid(), text: t, done: false, createdAt: Date.now() });
-        input.value = "";
-        saveStore();
-        draw();
-      };
-
-      addBtn.addEventListener("click", add);
-      input.addEventListener("keydown", (e) => { if(e.key === "Enter") add(); });
-
-      const toggle = (id) => {
-        const i = item.checklist.findIndex(x => x.id === id);
-        if(i === -1) return;
-        item.checklist[i].done = !item.checklist[i].done;
-
-        // move done to bottom, undone to top
-        item.checklist.sort((a,b) => (a.done === b.done) ? (b.createdAt - a.createdAt) : (a.done ? 1 : -1));
-
-        saveStore();
-        draw();
-        renderPreview("lists");
-        if(sheetWrap?.classList.contains("open") && VIEW_DEFS[activeIndex].id === "lists") renderView("lists");
-      };
-
-      function draw(){
-        listEl.innerHTML = "";
-        item.checklist.forEach(st => {
-          const li = document.createElement("li");
-          li.className = "subTaskRow" + (st.done ? " done" : "");
-          li.innerHTML = `
-            <input class="subTaskCb" type="checkbox" />
-            <div class="subTaskText"></div>
-          `;
-          const cb = li.querySelector("input");
-          cb.checked = !!st.done;
-          cb.addEventListener("change", () => toggle(st.id));
-          li.querySelector(".subTaskText").textContent = st.text;
-          listEl.appendChild(li);
-        });
-      }
-
-      draw();
-      setTimeout(() => input.focus(), 120);
-    } else {
-      setTimeout(() => ta.focus(), 80);
-    }
-  }
-
-  /* =========================
-     HEADER "Visa slutförda"
-  ========================= */
-  function setSheetTitleWithDone(label){
-    sheetTitle.innerHTML = `
-      <span>${label}</span>
-      <span class="doneHeaderBtn" id="openDone">
-        <span class="doneHeaderText">Visa slutförda</span>
-        <img class="doneHeaderIcon" src="assets/ui/icon-done.svg" alt="done" />
-      </span>
-    `;
-    $("openDone")?.addEventListener("click", renderDone);
-  }
-
-  /* =========================
-     LIST ITEM ROW
-     - checkbox = complete
-     - rest click = modal
-  ========================= */
-  function mkCheckItem({ item, meta, stat }, onComplete, onOpen){
-    const li = document.createElement("li");
-    li.className = "checkItem";
-
-    const row = document.createElement("div");
-    row.className = "checkRow";
-
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.className = "checkBox";
-
-    const mid = document.createElement("div");
-    mid.className = "checkMid";
-
-    const t = document.createElement("div");
-    t.className = "checkText";
-    t.textContent = item.text;
-
-    mid.appendChild(t);
-
-    const right = document.createElement("div");
-    right.className = "checkRight";
-
-    const metaEl = document.createElement("div");
-    metaEl.className = "miniMeta";
-    metaEl.textContent = meta || "";
-
-    right.appendChild(metaEl);
-
-    if(stat){
-      const statEl = document.createElement("div");
-      statEl.className = "checkStat";
-      statEl.textContent = stat;
-      right.appendChild(statEl);
-    }
-
-    row.appendChild(cb);
-    row.appendChild(mid);
-    row.appendChild(right);
-
-    li.appendChild(row);
-
-    cb.addEventListener("change", () => {
-      if(!cb.checked) return;
-      cb.disabled = true;
-      li.classList.add("isCompleting");
-      setTimeout(() => onComplete?.(), 190);
-    });
-
-    // click rest opens modal (not checkbox)
-    row.addEventListener("click", (e) => {
-      if(e.target === cb) return;
-      onOpen?.();
-    });
-
-    return li;
-  }
-
-  function renderList(type, label, allowModal){
-    setSheetTitleWithDone(label);
-
-    sheetContent.innerHTML = `
-      <div class="miniForm">
-        <input id="input" class="miniInput" placeholder="${type === "lists" ? "Ny lista..." : "Skriv..."}" />
-        <button id="add" class="miniBtn miniBtnIcon">+</button>
-      </div>
-      <ul id="list" class="miniList"></ul>
-    `;
-
-    const input = $("input");
-    const addBtn = $("add");
-    const listEl = $("list");
-
-    const add = () => {
-      const t = (input.value || "").trim();
-      if(!t) return;
-
-      const obj = { id: uid(), text: t, createdAt: Date.now(), note: "" };
-      if(type === "lists") obj.checklist = [];
-
-      store[type].unshift(obj);
-      saveStore();
-      input.value = "";
-      if(type === "prio") updateStartPrioCount();
-      draw();
-      renderPreview(VIEW_DEFS[activeIndex].id);
-    };
-
-    addBtn.addEventListener("click", add);
-    input.addEventListener("keydown", (e) => { if(e.key === "Enter") add(); });
-
-    function complete(id){
-      const i = store[type].findIndex(x => x.id === id);
-      if(i === -1) return;
-
-      const item = store[type].splice(i, 1)[0];
-      store.done.unshift({ ...item, origin: type, doneAt: Date.now() });
-      saveStore();
-
-      if(type === "prio") updateStartPrioCount();
-      draw();
-      renderPreview(VIEW_DEFS[activeIndex].id);
-    }
-
-    function draw(){
-      listEl.innerHTML = "";
-      store[type].forEach((item) => {
-        const stat = (type === "lists") ? listProgress(item) : "";
-        listEl.appendChild(
-          mkCheckItem(
-            { item, meta: fmt(item.createdAt), stat },
-            () => complete(item.id),
-            allowModal ? () => openModal(item, type) : null
-          )
-        );
-      });
-    }
-
-    draw();
-  }
-
-  function renderDone(){
-    sheetTitle.textContent = "Slutförda";
-    sheetContent.innerHTML = `<ul id="doneList" class="miniList"></ul>`;
-    const listEl = $("doneList");
-
-    (store.done || []).forEach((item) => {
-      const li = document.createElement("li");
-      li.className = "checkItem";
-      li.innerHTML = `
-        <div class="checkRow" style="cursor:default;">
-          <div class="checkMid">
-            <div class="checkText"></div>
-          </div>
-          <div class="checkRight">
-            <div class="miniMeta"></div>
-          </div>
-        </div>
-      `;
-      li.querySelector(".checkText").textContent = item.text;
-      li.querySelector(".miniMeta").textContent = fmt(item.doneAt);
-      listEl.appendChild(li);
-    });
   }
 
   /* =========================
@@ -803,8 +443,12 @@
     sheetTitle.textContent = "Kalender";
     sheetContent.innerHTML = `
       <div class="card" style="padding:14px;">
-        <div class="calScale">
-          <iframe class="calFrame" src="${CAL_SRC}" scrolling="no"></iframe>
+        <div style="border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.10);">
+          <iframe
+            style="width:100%; height:520px; border:0;"
+            src="${CAL_SRC}"
+            scrolling="yes">
+          </iframe>
         </div>
       </div>
       <div class="miniHint" style="margin-top:10px;">(iPhone Safari kan kräva cookies för Google iframe.)</div>
@@ -817,10 +461,9 @@
   async function renderWeather(){
     sheetTitle.textContent = "Väder";
     sheetContent.innerHTML = `
-      <div class="card weatherCard">
-        <div class="weatherNow" id="wNow">Laddar…</div>
-        <div class="weatherSub" id="wSub"></div>
-        <div class="weatherForecast" id="wForecast"></div>
+      <div class="card">
+        <div id="wNow" style="font-weight:900;">Laddar…</div>
+        <div class="miniHint" id="wSub" style="margin-top:8px;"></div>
       </div>
     `;
 
@@ -828,41 +471,25 @@
     const url =
       `https://api.open-meteo.com/v1/forecast` +
       `?latitude=${lat}&longitude=${lon}` +
-      `&current=temperature_2m,wind_speed_10m,relative_humidity_2m` +
-      `&hourly=temperature_2m,precipitation_probability` +
-      `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
+      `&current=temperature_2m,wind_speed_10m` +
+      `&daily=temperature_2m_max,temperature_2m_min` +
+      `&forecast_days=2` +
       `&timezone=Europe%2FStockholm`;
 
     try{
       const r = await fetch(url, { cache:"no-store" });
+      if(!r.ok) throw new Error("weather http");
       const data = await r.json();
       lastWeather = data;
 
-      $("wNow").innerHTML = `
-        <div>${Math.round(data.current.temperature_2m)}°</div>
-        <div>${Math.round(data.current.wind_speed_10m)} m/s</div>
-        <div>${Math.round(data.current.relative_humidity_2m)}%</div>
-      `;
+      const t = Math.round(data.current.temperature_2m);
+      const w = Math.round(data.current.wind_speed_10m);
 
       const tmax = Math.round(data.daily.temperature_2m_max?.[0] ?? 0);
       const tmin = Math.round(data.daily.temperature_2m_min?.[0] ?? 0);
-      const popm = Math.round(data.daily.precipitation_probability_max?.[0] ?? 0);
 
-      $("wSub").innerHTML = `
-        <div>Idag: ${tmin}° / ${tmax}°</div>
-        <div>Regn max: ${popm}%</div>
-      `;
-
-      const temps = (data.hourly.temperature_2m || []).slice(0, 6);
-      const pop = (data.hourly.precipitation_probability || []).slice(0, 6);
-
-      $("wForecast").innerHTML = temps.map((t, i) => `
-        <div class="wxMini">
-          <div class="wxMiniTop">+${i}h</div>
-          <div class="wxMiniTemp">${Math.round(t)}°</div>
-          <div class="wxMiniPop">${Math.round(pop[i] ?? 0)}%</div>
-        </div>
-      `).join("");
+      $("wNow").textContent = `${t}° • ${w} m/s`;
+      $("wSub").textContent = `Idag: ${tmin}°–${tmax}°`;
 
       renderPreview("weather");
     }catch{
@@ -872,16 +499,13 @@
   }
 
   /* =========================
-     NEWS (robust)
+     NEWS
   ========================= */
   const RSS_URL_BASE = "https://news.google.com/rss?hl=sv&gl=SE&ceid=SE:sv";
+  const NEWS_CACHE_KEY = "sbdash_news_cache_v1";
 
-  // bump key to avoid being stuck on old cache like 14 feb
-  const NEWS_CACHE_KEY = "sbdash_news_cache_v2";
-
-  // Put Jina FIRST (often avoids stale allorigins)
   const PROXIES = [
-    (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//, "")}`,
+    (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//, "")}`,                 // ofta minst cache
     (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
     (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
   ];
@@ -896,13 +520,11 @@
 
         const txt = await res.text();
 
-        // allorigins /get returns JSON
         if(proxyUrl.includes("/get?url=")){
           const obj = JSON.parse(txt);
           if(obj?.contents) return obj.contents;
           throw new Error("No contents in allorigins get");
         }
-
         return txt;
       }catch(err){
         lastErr = err;
@@ -926,13 +548,10 @@
       localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify({ updatedAt: Date.now(), items }));
     }catch{}
   }
-
   function loadNewsCache(){
     try{
       return JSON.parse(localStorage.getItem(NEWS_CACHE_KEY) || "null");
-    }catch{
-      return null;
-    }
+    }catch{ return null; }
   }
 
   function renderNewsList(items, metaText){
@@ -972,16 +591,10 @@
 
       const right = document.createElement("div");
       right.className = "miniMeta";
-
       if(it.pubDate){
         const date = new Date(it.pubDate);
         if(!isNaN(date.getTime())){
-          right.textContent = date.toLocaleString("sv-SE", {
-            day: "2-digit",
-            month: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
+          right.textContent = date.toLocaleString("sv-SE", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" });
         }
       }
 
@@ -992,7 +605,6 @@
   }
 
   let newsLoading = false;
-
   async function loadNews(){
     const newsList = document.getElementById("newsList");
     const newsMeta = document.getElementById("newsMeta");
@@ -1005,21 +617,14 @@
     newsList.innerHTML = "";
 
     try{
-      // cache-bust HARD (also changes query shape each run)
-      const url = `${RSS_URL_BASE}&_=${Date.now()}&nocache=${Math.random().toString(16).slice(2)}`;
+      // cache-bust
+      const url = `${RSS_URL_BASE}&_=${Date.now()}`;
       const xmlText = await fetchTextWithFallback(url);
 
       const items = parseRss(xmlText, 10);
 
-      // filter out very old items (48h). If everything old, still show but annotate.
+      // filter 48h (om allt är gammalt, visa ändå men märk)
       const now = Date.now();
-      const ages = items
-        .map(it => it.pubDate ? new Date(it.pubDate).getTime() : 0)
-        .filter(Boolean);
-
-      const newest = ages.length ? Math.max(...ages) : 0;
-      const oldest = ages.length ? Math.min(...ages) : 0;
-
       const fresh = items.filter(it => {
         const t = it.pubDate ? new Date(it.pubDate).getTime() : 0;
         return t && (now - t) < (48 * 60 * 60 * 1000);
@@ -1030,24 +635,16 @@
       saveNewsCache(finalItems);
 
       const stamp = new Date().toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit" });
-
-      // diagnostics so you see if feed is old
-      const diag = newest
-        ? ` • Nyast: ${new Date(newest).toLocaleDateString("sv-SE")} `
-        : "";
       const note = fresh.length ? "" : " (äldre batch)";
-
-      renderNewsList(finalItems, `Uppdaterad: ${stamp}${note}${diag}`);
+      renderNewsList(finalItems, `Uppdaterad: ${stamp}${note}`);
 
       renderPreview("news");
-    }catch(err){
+    }catch{
       const c = loadNewsCache();
       if(c?.items?.length){
         lastNews = c.items;
-        renderNewsList(
-          c.items,
-          `Visar cache (senast: ${new Date(c.updatedAt).toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit" })})`
-        );
+        const stamp = new Date(c.updatedAt).toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit" });
+        renderNewsList(c.items, `Visar cache (senast: ${stamp})`);
         renderPreview("news");
       }else{
         renderNewsList([], "Kunde inte ladda nyheter.");
@@ -1066,7 +663,7 @@
     loadNews();
   }
 
-  // auto-refresh var 10:e minut (om du råkar stå kvar på nyhetssidan)
+  // auto-refresh var 10:e minut om news-view är öppen
   setInterval(() => {
     if(document.getElementById("newsList") && document.getElementById("newsMeta")){
       loadNews();
@@ -1078,11 +675,8 @@
   ========================= */
   function renderView(id){
     if(id === "calendar") return renderCalendar();
-    if(id === "prio")     return renderList("prio", "Aktiv prio", true);
     if(id === "weather")  return renderWeather();
     if(id === "news")     return renderNews();
-    if(id === "lists")    return renderList("lists", "Listor", true);
-    if(id === "ideas")    return renderList("ideas", "Idéer", true);
     if(id === "timer")    return renderTimer();
   }
 
@@ -1090,7 +684,7 @@
      INIT
   ========================= */
   setRotation(0);
-  setPreview(0);
+  applyActiveView(0);
   updateWheelTimerProgress();
   renderPreview("calendar");
 })();

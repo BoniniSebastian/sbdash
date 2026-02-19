@@ -1,16 +1,12 @@
-Här är hela app.js (ersätt allt i din app.js med detta):
-
 /* =========================
    SB Dash – app.js (FULL)
-   - Wheel navigation + sheet BEHIND wheel (wheel always usable)
-   - Center text stays visible even when sheet open
-   - Start icon below preview (big/frost look via CSS)
-   - Weather (Open-Meteo)
-   - News (Google News RSS) via proxy fallback + cache-bust + local cache
-   - Timer: 1/5/10/15/30 starts instantly + Reset (ring on wheel)
-   - Lists/Ideas/Prio: checkbox completes, row opens modal
-   - Lists modal: checklist with reorder done->bottom
-   - + New view: Stocks (icon-stocks.svg)
+   - Wheel navigation + sheet (sheet behind wheel)
+   - Start icon follows view (big frosted icon on start)
+   - News: Google News RSS via cache-bust + proxy fallback + local cache
+   - Weather: Open-Meteo
+   - Timer: 1/5/10/15/30 starts instantly + Reset
+   - Prio/Lists/Ideas: checkbox completes, row opens modal
+   - + View: Stocks (placeholder)
    ========================= */
 
 (() => {
@@ -27,24 +23,18 @@ Här är hela app.js (ersätt allt i din app.js med detta):
   const sheet = $("sheet");
   const sheetTitle = $("sheetTitle");
   const sheetContent = $("sheetContent");
-  const sheetCloseBtn = $("sheetCloseBtn");
 
   const topDate = $("topDate");
   const startPrioCountEl = $("startPrioCount");
   const startIconEl = $("startIcon");
 
   // Preview (behind wheel)
+  const previewWrap = $("previewWrap");
   const previewTitle = $("previewTitle");
   const previewBody = $("previewBody");
 
   function clamp01(x){ return Math.max(0, Math.min(1, x)); }
   function pad2(n){ return String(n).padStart(2, "0"); }
-
-  /* =========================
-     HAPTICS
-  ========================= */
-  const canVibrate = !!navigator.vibrate;
-  const tick = (ms=8) => { if(canVibrate) navigator.vibrate(ms); };
 
   /* =========================
      STORAGE
@@ -104,12 +94,14 @@ Här är hela app.js (ersätt allt i din app.js med detta):
   const STEP = 360 / VIEW_DEFS.length;
   let rotationDeg = 0;
 
-  function setWheelLabel(text){
-    if(wheelCenterText) wheelCenterText.textContent = text || "—";
+  function setWheelText(text){
+    if(wheelCenterText) wheelCenterText.textContent = text || "";
   }
+
   function setStartIcon(src){
-    if(startIconEl && src) startIconEl.src = src;
+    if(startIconEl) startIconEl.src = src || "";
   }
+
   function sectorFromDeg(deg){
     const raw = Math.round(deg / STEP);
     return ((raw % VIEW_DEFS.length) + VIEW_DEFS.length) % VIEW_DEFS.length;
@@ -128,9 +120,11 @@ Här är hela app.js (ersätt allt i din app.js med detta):
     return `${done}/${total}`;
   }
 
-  function setPreview(id){
+  function renderPreview(id){
+    if(!previewWrap || !previewTitle || !previewBody) return;
+
     const v = VIEW_DEFS.find(x => x.id === id);
-    if(previewTitle) previewTitle.textContent = v ? v.label : "Preview";
+    previewTitle.textContent = v ? v.label : "Preview";
 
     let html = "";
 
@@ -142,14 +136,12 @@ Här är hela app.js (ersätt allt i din app.js med detta):
       if(lastWeather?.current){
         const t = Math.round(lastWeather.current.temperature_2m);
         const w = Math.round(lastWeather.current.wind_speed_10m);
-        const tmax = Math.round(lastWeather.daily?.temperature_2m_max?.[0] ?? t);
-        const tmin = Math.round(lastWeather.daily?.temperature_2m_min?.[0] ?? t);
+        const h = Math.round(lastWeather.current.relative_humidity_2m);
         html = `
           <div style="display:flex; justify-content:space-between; gap:10px; font-weight:900;">
-            <div>${t}°</div><div>${w} m/s</div>
+            <div>${t}°</div><div>${w} m/s</div><div>${h}%</div>
           </div>
-          <div class="miniHint" style="margin-top:8px;">Idag: ${tmin}°–${tmax}°</div>
-          <div class="miniHint" style="margin-top:6px;">Tryck för prognos</div>
+          <div class="miniHint" style="margin-top:8px;">Tryck för prognos</div>
         `;
       }else{
         html = `<div class="miniHint">Tryck för att ladda väder.</div>`;
@@ -196,10 +188,7 @@ Här är hela app.js (ersätt allt i din app.js med detta):
     }
 
     if(id === "stocks"){
-      html = `
-        <div style="font-weight:900;">Aktier</div>
-        <div class="miniHint" style="margin-top:8px;">(kommer) Favoriter / watchlist</div>
-      `;
+      html = `<div class="miniHint">Aktier-sidan är en placeholder just nu.</div>`;
     }
 
     if(id === "timer"){
@@ -209,15 +198,16 @@ Här är hela app.js (ersätt allt i din app.js med detta):
       `;
     }
 
-    if(previewBody) previewBody.innerHTML = html;
+    previewBody.innerHTML = html;
   }
 
-  function setActiveByIndex(idx){
-    activeIndex = (idx + VIEW_DEFS.length) % VIEW_DEFS.length;
+  function setPreview(index){
+    activeIndex = (index + VIEW_DEFS.length) % VIEW_DEFS.length;
     const v = VIEW_DEFS[activeIndex];
-    setWheelLabel(v.label);
+
+    setWheelText(v.label);
     setStartIcon(v.icon);
-    setPreview(v.id);
+    renderPreview(v.id);
   }
 
   // throttle render when sheet open and wheel rotates a lot
@@ -232,28 +222,30 @@ Här är hela app.js (ersätt allt i din app.js med detta):
     rotationDeg = deg;
     if(wheelRing) wheelRing.style.transform = `rotate(${deg}deg)`;
     const idx = sectorFromDeg(deg);
-    setActiveByIndex(idx);
+    setPreview(idx);
     renderIfOpenThrottled(VIEW_DEFS[idx].id);
   }
 
   /* =========================
      SHEET OPEN/CLOSE
+     - wheel stays on top
   ========================= */
   function openSheet(){
     sheetWrap?.classList.add("open");
-    sheetWrap?.setAttribute("aria-hidden","false");
     document.body.classList.add("sheetOpen");
   }
 
   function closeSheet(){
     sheetWrap?.classList.remove("open");
-    sheetWrap?.setAttribute("aria-hidden","true");
     document.body.classList.remove("sheetOpen");
   }
 
-  sheetCloseBtn?.addEventListener("click", closeSheet);
+  // close by tapping outside (on wrap)
+  sheetWrap?.addEventListener("click", (e) => {
+    if(e.target === sheetWrap) closeSheet();
+  });
 
-  /* drag-to-close (only on sheet) */
+  // drag-to-close (down)
   let sheetDragStartY = null;
 
   sheet?.addEventListener("pointerdown", (e) => {
@@ -273,7 +265,7 @@ Här är hela app.js (ersätt allt i din app.js med detta):
   sheet?.addEventListener("pointerup", (e) => {
     if(sheetDragStartY == null) return;
     const delta = e.clientY - sheetDragStartY;
-    if(delta > 120) closeSheet();
+    if(delta > 140) closeSheet();
     sheet.style.transform = "";
     sheetDragStartY = null;
   }, { passive:true });
@@ -285,12 +277,12 @@ Här är hela app.js (ersätt allt i din app.js med detta):
 
   /* =========================
      WHEEL interaction
+     - works even when sheet open
   ========================= */
   let dragging = false;
   let startAngle = 0;
   let tapStartX = 0, tapStartY = 0;
   let didDrag = false;
-  let lastSector = 0;
 
   function angle(cx, cy, x, y){
     return Math.atan2(y - cy, x - cx) * (180 / Math.PI);
@@ -315,22 +307,14 @@ Här är hela app.js (ersätt allt i din app.js med detta):
 
     const dx = e.clientX - tapStartX;
     const dy = e.clientY - tapStartY;
-    if(!didDrag && Math.hypot(dx, dy) > 14) didDrag = true;
+    if(!didDrag && Math.hypot(dx, dy) > 18) didDrag = true;
 
     if(didDrag){
       const r = wheel.getBoundingClientRect();
       const cx = r.left + r.width / 2;
       const cy = r.top + r.height / 2;
       const deg = angle(cx, cy, e.clientX, e.clientY) - startAngle;
-
       setRotation(deg);
-
-      const s = sectorFromDeg(deg);
-      if(s !== lastSector){
-        lastSector = s;
-        tick(8);
-      }
-
       e.preventDefault();
     }
   }, { passive:false });
@@ -341,7 +325,6 @@ Här är hela app.js (ersätt allt i din app.js med detta):
 
     const idx = sectorFromDeg(rotationDeg);
     setRotation(idx * STEP);
-    lastSector = idx;
 
     // tap opens sheet
     if(!didDrag){
@@ -357,7 +340,6 @@ Här är hela app.js (ersätt allt i din app.js med detta):
     const dir = e.deltaY > 0 ? 1 : -1;
     const next = (activeIndex + dir + VIEW_DEFS.length) % VIEW_DEFS.length;
     setRotation(next * STEP);
-    tick(8);
   }, { passive:false });
 
   /* =========================
@@ -371,8 +353,9 @@ Här är hela app.js (ersätt allt i din app.js med detta):
     pausedLeft: 5 * 60,
     raf: 0
   };
+  const canVibrate = !!navigator.vibrate;
 
-  // pulse overlay
+  // pulse overlay (CSS controls glow)
   const pulse = document.createElement("div");
   pulse.className = "timerPulse";
   wheel?.appendChild(pulse);
@@ -408,10 +391,10 @@ Här är hela app.js (ersätt allt i din app.js med detta):
     const C = 2 * Math.PI * r;
     bg.style.strokeDasharray = String(C);
     bg.style.strokeDashoffset = "0";
+
     prog.style.strokeDasharray = String(C);
 
     const pct = TIMER.total ? (TIMER.left / TIMER.total) : 0;
-    // countdown direction
     prog.style.strokeDashoffset = String(-C * (1 - clamp01(pct)));
 
     if(pct > 0.40) prog.style.stroke = "rgba(0,209,255,.92)";
@@ -445,7 +428,8 @@ Här är hela app.js (ersätt allt i din app.js med detta):
     TIMER.raf = requestAnimationFrame(timerLoop);
 
     updateWheelTimerProgress();
-    setPreview(VIEW_DEFS[activeIndex].id);
+    renderTimerUIOnly();
+    renderPreview("timer");
   }
 
   function resetTimer(){
@@ -455,7 +439,8 @@ Här är hela app.js (ersätt allt i din app.js med detta):
     TIMER.pausedLeft = TIMER.left;
     document.body.classList.remove("timerRunning");
     updateWheelTimerProgress();
-    setPreview(VIEW_DEFS[activeIndex].id);
+    renderTimerUIOnly();
+    renderPreview("timer");
   }
 
   function timerLoop(){
@@ -465,11 +450,8 @@ Här är hela app.js (ersätt allt i din app.js med detta):
     TIMER.left = Math.max(0, Math.floor(TIMER.pausedLeft - elapsed));
 
     updateWheelTimerProgress();
-    if(VIEW_DEFS[activeIndex].id === "timer") {
-      const tTime = $("tTime");
-      if(tTime) tTime.textContent = timerText();
-    }
-    setPreview(VIEW_DEFS[activeIndex].id);
+    renderTimerUIOnly();
+    renderPreview("timer");
 
     if(TIMER.left <= 0){
       TIMER.running = false;
@@ -477,21 +459,37 @@ Här är hela app.js (ersätt allt i din app.js med detta):
       document.body.classList.remove("timerRunning");
       if(canVibrate) navigator.vibrate([20, 40, 20, 60, 20]);
       updateWheelTimerProgress();
+      renderTimerUIOnly();
+      renderPreview("timer");
       return;
     }
+
     TIMER.raf = requestAnimationFrame(timerLoop);
+  }
+
+  function renderTimerUIOnly(){
+    const tTime = $("tTime");
+    const tState = $("tState");
+    if(tTime) tTime.textContent = timerText();
+
+    if(tState){
+      if(!TIMER.running && TIMER.left === TIMER.total) tState.textContent = "Redo";
+      else if(TIMER.running && TIMER.left > 0) tState.textContent = "Fokus…";
+      else if(!TIMER.running && TIMER.left > 0) tState.textContent = "Pausad";
+      else tState.textContent = "KLAR";
+    }
   }
 
   function renderTimer(){
     sheetTitle.textContent = "Timer";
     sheetContent.innerHTML = `
-      <div class="card">
+      <div class="timerBar">
         <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px;">
           <div id="tTime" style="font-size:52px; font-weight:900; letter-spacing:.6px;">${timerText()}</div>
-          <div class="miniHint">${TIMER.running ? "Fokus…" : (TIMER.left === TIMER.total ? "Redo" : (TIMER.left > 0 ? "Pausad" : "KLAR"))}</div>
+          <div id="tState" class="miniHint">${(!TIMER.running && TIMER.left === TIMER.total) ? "Redo" : (TIMER.running ? "Fokus…" : (TIMER.left > 0 ? "Pausad" : "KLAR"))}</div>
         </div>
 
-        <div class="timerBtns" style="margin-top:14px;">
+        <div class="timerBtns" style="margin-top:12px;">
           <button class="timerBtn" data-min="1">1</button>
           <button class="timerBtn" data-min="5">5</button>
           <button class="timerBtn" data-min="10">10</button>
@@ -500,7 +498,6 @@ Här är hela app.js (ersätt allt i din app.js med detta):
           <button class="timerBtn timerBtnReset" id="tReset">Reset</button>
         </div>
       </div>
-      <div class="miniHint">Hjulets ring visar nedräkning.</div>
     `;
 
     sheetContent.querySelectorAll("[data-min]").forEach(btn => {
@@ -509,65 +506,66 @@ Här är hela app.js (ersätt allt i din app.js med detta):
     $("tReset")?.addEventListener("click", resetTimer);
 
     updateWheelTimerProgress();
+    renderTimerUIOnly();
   }
 
   /* =========================
-     MODAL (notes + checklist for Listor)
+     MODAL (notes + checklists)
   ========================= */
   function openModal(item, type){
     const wrap = document.createElement("div");
-    wrap.style.position = "fixed";
-    wrap.style.inset = "0";
-    wrap.style.zIndex = "999";
+    wrap.className = "modalWrap open";
     wrap.innerHTML = `
-      <div style="position:absolute; inset:0; background:rgba(0,0,0,.55); backdrop-filter: blur(6px);"></div>
-      <div style="position:absolute; left:18px; right:18px; top:90px; max-width:720px; margin:0 auto;
-                  background: rgba(10,18,26,.92); border:1px solid rgba(255,255,255,.10); border-radius:18px;
-                  box-shadow:0 22px 70px rgba(0,0,0,.55); overflow:hidden;">
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:14px; border-bottom:1px solid rgba(255,255,255,.08);">
-          <div style="font-weight:900;">Detaljer</div>
-          <button id="mClose" style="width:34px;height:34px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.12);color:#fff;">✕</button>
+      <div class="modalBackdrop"></div>
+      <div class="modalCard">
+        <div class="modalHeader">
+          <div class="modalTitle">Detaljer</div>
+          <button class="modalClose">✕</button>
         </div>
-        <div style="padding:14px;">
-          <div id="mTitle" style="font-weight:900; margin-bottom:10px;"></div>
-          <textarea id="mNote" class="miniInput" style="width:100%; height:120px;" placeholder="Skriv mer…"></textarea>
+        <div class="modalBody">
+          <div class="modalMainText"></div>
+          <textarea class="modalTextArea" placeholder="Skriv mer…"></textarea>
 
-          <div id="subWrap" style="display:none; margin-top:12px;">
-            <div style="font-weight:900; margin-bottom:8px;">Checklist</div>
-            <div class="miniForm">
-              <input id="subInput" class="miniInput" placeholder="Lägg till sak…" />
-              <button id="subAdd" class="miniBtn miniBtnIcon">+</button>
+          <div class="subTaskBlock" style="display:none;">
+            <div class="subTaskHeader">Checklist</div>
+
+            <div class="subTaskForm">
+              <input class="miniInput" id="subTaskInput" placeholder="Lägg till sak…" />
+              <button class="miniBtn miniBtnIcon" id="subTaskAdd">+</button>
             </div>
-            <ul id="subList" class="miniList"></ul>
+
+            <ul class="subTaskList" id="subTaskList"></ul>
           </div>
         </div>
       </div>
     `;
     document.body.appendChild(wrap);
 
-    wrap.querySelector("#mTitle").textContent = item.text;
-    const ta = wrap.querySelector("#mNote");
+    wrap.querySelector(".modalMainText").textContent = item.text;
+
+    const ta = wrap.querySelector(".modalTextArea");
     ta.value = item.note || "";
 
     const close = () => wrap.remove();
-    wrap.querySelector("#mClose").onclick = close;
-    wrap.firstElementChild.onclick = close;
+    wrap.querySelector(".modalBackdrop").onclick = close;
+    wrap.querySelector(".modalClose").onclick = close;
 
     ta.addEventListener("input", () => {
       item.note = ta.value || "";
       saveStore();
-      setPreview(VIEW_DEFS[activeIndex].id);
+      renderPreview(VIEW_DEFS[activeIndex].id);
       if(sheetWrap?.classList.contains("open")) renderView(VIEW_DEFS[activeIndex].id);
     });
 
     if(type === "lists"){
-      const subWrap = wrap.querySelector("#subWrap");
-      subWrap.style.display = "block";
+      const block = wrap.querySelector(".subTaskBlock");
+      block.style.display = "block";
 
       if(!Array.isArray(item.checklist)) item.checklist = [];
-      const input = wrap.querySelector("#subInput");
-      const addBtn = wrap.querySelector("#subAdd");
-      const listEl = wrap.querySelector("#subList");
+
+      const input = wrap.querySelector("#subTaskInput");
+      const addBtn = wrap.querySelector("#subTaskAdd");
+      const listEl = wrap.querySelector("#subTaskList");
 
       const add = () => {
         const t = (input.value || "").trim();
@@ -590,7 +588,7 @@ Här är hela app.js (ersätt allt i din app.js med detta):
 
         saveStore();
         draw();
-        setPreview("lists");
+        renderPreview("lists");
         if(sheetWrap?.classList.contains("open") && VIEW_DEFS[activeIndex].id === "lists") renderView("lists");
       };
 
@@ -598,18 +596,15 @@ Här är hela app.js (ersätt allt i din app.js med detta):
         listEl.innerHTML = "";
         item.checklist.forEach(st => {
           const li = document.createElement("li");
-          li.className = "miniRow";
-          li.style.alignItems = "center";
+          li.className = "subTaskRow" + (st.done ? " done" : "");
           li.innerHTML = `
-            <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
-              <input class="checkBox" type="checkbox" />
-              <div style="font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
-            </div>
+            <input class="subTaskCb" type="checkbox" />
+            <div class="subTaskText"></div>
           `;
           const cb = li.querySelector("input");
           cb.checked = !!st.done;
           cb.addEventListener("change", () => toggle(st.id));
-          li.querySelector("div div").textContent = st.text;
+          li.querySelector(".subTaskText").textContent = st.text;
           listEl.appendChild(li);
         });
       }
@@ -669,7 +664,8 @@ Här är hela app.js (ersätt allt i din app.js med detta):
     cb.addEventListener("change", () => {
       if(!cb.checked) return;
       cb.disabled = true;
-      setTimeout(() => onComplete?.(), 140);
+      li.classList.add("isCompleting");
+      setTimeout(() => onComplete?.(), 190);
     });
 
     row.addEventListener("click", (e) => {
@@ -689,7 +685,6 @@ Här är hela app.js (ersätt allt i din app.js med detta):
         <button id="add" class="miniBtn miniBtnIcon">+</button>
       </div>
       <ul id="list" class="miniList"></ul>
-      <div class="miniHint">Bocka = slutför • Tryck på raden = öppna</div>
     `;
 
     const input = $("input");
@@ -708,7 +703,7 @@ Här är hela app.js (ersätt allt i din app.js med detta):
       input.value = "";
       if(type === "prio") updateStartPrioCount();
       draw();
-      setPreview(VIEW_DEFS[activeIndex].id);
+      renderPreview(VIEW_DEFS[activeIndex].id);
     };
 
     addBtn.addEventListener("click", add);
@@ -724,7 +719,7 @@ Här är hela app.js (ersätt allt i din app.js med detta):
 
       if(type === "prio") updateStartPrioCount();
       draw();
-      setPreview(VIEW_DEFS[activeIndex].id);
+      renderPreview(VIEW_DEFS[activeIndex].id);
     }
 
     function draw(){
@@ -739,13 +734,33 @@ Här är hela app.js (ersätt allt i din app.js med detta):
           )
         );
       });
-
-      if(!store[type].length){
-        listEl.innerHTML = `<li class="miniHint">Tomt här just nu.</li>`;
-      }
     }
 
     draw();
+  }
+
+  function renderDone(){
+    sheetTitle.textContent = "Slutförda";
+    sheetContent.innerHTML = `<ul id="doneList" class="miniList"></ul>`;
+    const listEl = $("doneList");
+
+    (store.done || []).forEach((item) => {
+      const li = document.createElement("li");
+      li.className = "checkItem";
+      li.innerHTML = `
+        <div class="checkRow" style="cursor:default;">
+          <div class="checkMid">
+            <div class="checkText"></div>
+          </div>
+          <div class="checkRight">
+            <div class="miniMeta"></div>
+          </div>
+        </div>
+      `;
+      li.querySelector(".checkText").textContent = item.text;
+      li.querySelector(".miniMeta").textContent = fmt(item.doneAt);
+      listEl.appendChild(li);
+    });
   }
 
   /* =========================
@@ -757,9 +772,9 @@ Här är hela app.js (ersätt allt i din app.js med detta):
   function renderCalendar(){
     sheetTitle.textContent = "Kalender";
     sheetContent.innerHTML = `
-      <div class="card">
+      <div class="card" style="padding:14px;">
         <div class="calScale">
-          <iframe class="calFrame" src="${CAL_SRC}" scrolling="yes"></iframe>
+          <iframe class="calFrame" src="${CAL_SRC}" scrolling="no"></iframe>
         </div>
       </div>
       <div class="miniHint" style="margin-top:10px;">(iPhone Safari kan kräva cookies för Google iframe.)</div>
@@ -772,9 +787,10 @@ Här är hela app.js (ersätt allt i din app.js med detta):
   async function renderWeather(){
     sheetTitle.textContent = "Väder";
     sheetContent.innerHTML = `
-      <div class="card">
-        <div id="wNow" style="font-weight:900;">Laddar…</div>
-        <div id="wSub" class="miniHint" style="margin-top:8px;"></div>
+      <div class="card weatherCard">
+        <div class="weatherNow" id="wNow">Laddar…</div>
+        <div class="weatherSub" id="wSub"></div>
+        <div class="weatherForecast" id="wForecast"></div>
       </div>
     `;
 
@@ -782,9 +798,9 @@ Här är hela app.js (ersätt allt i din app.js med detta):
     const url =
       `https://api.open-meteo.com/v1/forecast` +
       `?latitude=${lat}&longitude=${lon}` +
-      `&current=temperature_2m,wind_speed_10m` +
-      `&daily=temperature_2m_max,temperature_2m_min` +
-      `&forecast_days=2` +
+      `&current=temperature_2m,wind_speed_10m,relative_humidity_2m` +
+      `&hourly=temperature_2m,precipitation_probability` +
+      `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
       `&timezone=Europe%2FStockholm`;
 
     try{
@@ -792,15 +808,33 @@ Här är hela app.js (ersätt allt i din app.js med detta):
       const data = await r.json();
       lastWeather = data;
 
-      const t = Math.round(data.current.temperature_2m);
-      const w = Math.round(data.current.wind_speed_10m);
-      const tmax = Math.round(data.daily.temperature_2m_max?.[0] ?? t);
-      const tmin = Math.round(data.daily.temperature_2m_min?.[0] ?? t);
+      $("wNow").innerHTML = `
+        <div>${Math.round(data.current.temperature_2m)}°</div>
+        <div>${Math.round(data.current.wind_speed_10m)} m/s</div>
+        <div>${Math.round(data.current.relative_humidity_2m)}%</div>
+      `;
 
-      $("wNow").textContent = `${t}° • ${w} m/s`;
-      $("wSub").textContent = `Idag: ${tmin}°–${tmax}°`;
+      const tmax = Math.round(data.daily.temperature_2m_max?.[0] ?? 0);
+      const tmin = Math.round(data.daily.temperature_2m_min?.[0] ?? 0);
+      const popm = Math.round(data.daily.precipitation_probability_max?.[0] ?? 0);
 
-      setPreview("weather");
+      $("wSub").innerHTML = `
+        <div>Idag: ${tmin}° / ${tmax}°</div>
+        <div>Regn max: ${popm}%</div>
+      `;
+
+      const temps = (data.hourly.temperature_2m || []).slice(0, 6);
+      const pop = (data.hourly.precipitation_probability || []).slice(0, 6);
+
+      $("wForecast").innerHTML = temps.map((t, i) => `
+        <div class="wxMini">
+          <div class="wxMiniTop">+${i}h</div>
+          <div class="wxMiniTemp">${Math.round(t)}°</div>
+          <div class="wxMiniPop">${Math.round(pop[i] ?? 0)}%</div>
+        </div>
+      `).join("");
+
+      renderPreview("weather");
     }catch{
       const el = $("wNow");
       if(el) el.textContent = "Kunde inte hämta väder.";
@@ -808,7 +842,7 @@ Här är hela app.js (ersätt allt i din app.js med detta):
   }
 
   /* =========================
-     NEWS (fast + robust)
+     NEWS
   ========================= */
   const RSS_URL_BASE = "https://news.google.com/rss?hl=sv&gl=SE&ceid=SE:sv";
   const NEWS_CACHE_KEY = "sbdash_news_cache_v2";
@@ -833,6 +867,7 @@ Här är hela app.js (ersätt allt i din app.js med detta):
           if(obj?.contents) return obj.contents;
           throw new Error("No contents in allorigins get");
         }
+
         return txt;
       }catch(err){
         lastErr = err;
@@ -856,6 +891,7 @@ Här är hela app.js (ersätt allt i din app.js med detta):
       localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify({ updatedAt: Date.now(), items }));
     }catch{}
   }
+
   function loadNewsCache(){
     try{
       return JSON.parse(localStorage.getItem(NEWS_CACHE_KEY) || "null");
@@ -877,7 +913,7 @@ Här är hela app.js (ersätt allt i din app.js med detta):
       return;
     }
 
-    for(const it of items){
+    items.forEach((it) => {
       const li = document.createElement("li");
       li.className = "miniRow";
 
@@ -903,9 +939,9 @@ Här är hela app.js (ersätt allt i din app.js med detta):
       right.className = "miniMeta";
 
       if(it.pubDate){
-        const d = new Date(it.pubDate);
-        if(!isNaN(d.getTime())){
-          right.textContent = d.toLocaleString("sv-SE", {
+        const date = new Date(it.pubDate);
+        if(!isNaN(date.getTime())){
+          right.textContent = date.toLocaleString("sv-SE", {
             day: "2-digit",
             month: "2-digit",
             hour: "2-digit",
@@ -917,7 +953,7 @@ Här är hela app.js (ersätt allt i din app.js med detta):
       li.appendChild(left);
       li.appendChild(right);
       newsList.appendChild(li);
-    }
+    });
   }
 
   let newsLoading = false;
@@ -936,14 +972,12 @@ Här är hela app.js (ersätt allt i din app.js med detta):
     try{
       const url = `${RSS_URL_BASE}&_=${Date.now()}`; // cache-bust
       const xmlText = await fetchTextWithFallback(url);
-
       const items = parseRss(xmlText, 10);
 
-      // filter older than 7 days (but if all old, show anyway)
       const now = Date.now();
       const fresh = items.filter(it => {
         const t = it.pubDate ? new Date(it.pubDate).getTime() : 0;
-        return t && (now - t) < (7 * 24 * 60 * 60 * 1000);
+        return t && (now - t) < (48 * 60 * 60 * 1000);
       });
       const finalItems = fresh.length ? fresh : items;
 
@@ -951,10 +985,11 @@ Här är hela app.js (ersätt allt i din app.js med detta):
       saveNewsCache(finalItems);
 
       const stamp = new Date().toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit" });
-      renderNewsList(finalItems, `Uppdaterad: ${stamp}${fresh.length ? "" : " (äldre batch)"}`);
+      const note = fresh.length ? "" : " (äldre batch)";
+      renderNewsList(finalItems, `Uppdaterad: ${stamp}${note}`);
 
-      setPreview("news");
-    }catch{
+      renderPreview("news");
+    }catch(err){
       const c = loadNewsCache();
       if(c?.items?.length){
         lastNews = c.items;
@@ -962,7 +997,7 @@ Här är hela app.js (ersätt allt i din app.js med detta):
           c.items,
           `Visar cache (senast: ${new Date(c.updatedAt).toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit" })})`
         );
-        setPreview("news");
+        renderPreview("news");
       }else{
         renderNewsList([], "Kunde inte ladda nyheter.");
       }
@@ -974,10 +1009,8 @@ Här är hela app.js (ersätt allt i din app.js med detta):
   function renderNews(){
     sheetTitle.textContent = "Nyheter";
     sheetContent.innerHTML = `
-      <div class="card">
-        <ul id="newsList" class="miniList"></ul>
-        <div id="newsMeta" class="miniHint" style="margin-top:10px;">Laddar…</div>
-      </div>
+      <ul id="newsList" class="miniList"></ul>
+      <div id="newsMeta" class="miniHint" style="margin-top:8px;">Laddar…</div>
     `;
     loadNews();
   }
@@ -994,9 +1027,9 @@ Här är hela app.js (ersätt allt i din app.js med detta):
   function renderStocks(){
     sheetTitle.textContent = "Aktier";
     sheetContent.innerHTML = `
-      <div class="card">
-        <div style="font-weight:900;">Aktier</div>
-        <div class="miniHint" style="margin-top:10px;">Nästa steg: watchlist + prisfeed.</div>
+      <div class="card" style="padding:14px;">
+        <div style="font-weight:900;">Aktier (placeholder)</div>
+        <div class="miniHint" style="margin-top:8px;">Här kan vi senare lägga in watchlist, priser, alerts osv.</div>
       </div>
     `;
   }
@@ -1019,8 +1052,7 @@ Här är hela app.js (ersätt allt i din app.js med detta):
      INIT
   ========================= */
   setRotation(0);
-  setActiveByIndex(0);
+  setPreview(0);
   updateWheelTimerProgress();
-  setPreview("calendar");
-
+  renderPreview("calendar");
 })();

@@ -192,7 +192,7 @@ body.sheetOpen .previewWrap{
   width:100%;
   height:100%;
   object-fit:contain;
-  box-shadow: 0 0 18px rgba(0,209,255,.25);
+  filter: drop-shadow(0 0 18px rgba(0,209,255,.25));
   transition: transform 70ms linear;
   position:relative;
   z-index:2;

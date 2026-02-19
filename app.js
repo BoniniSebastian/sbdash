@@ -1,3 +1,14 @@
+/* =========================
+   SB Dash – app.js (FULL)
+   - Wheel navigation + sheet
+   - Preview card behind wheel (dim/frost)
+   - Weather (Open-Meteo)
+   - News (SVT + Omni) via robust proxy + RSS/Atom parser
+   - Timer: 1/5/10/15/30 starts instantly + Reset
+   - Lists/Ideas/Prio: checkbox completes, row opens modal
+   - Lists modal: checklist with reorder done->bottom
+   ========================= */
+
 (() => {
   const $ = (id) => document.getElementById(id);
 
@@ -17,6 +28,7 @@
   const startPrioCountEl = $("startPrioCount");
   const centerLabelEl = $("centerLabel");
 
+  // Preview (behind wheel)
   const previewWrap = $("previewWrap");
   const previewTitle = $("previewTitle");
   const previewBody = $("previewBody");
@@ -88,6 +100,96 @@
   function sectorFromDeg(deg){
     const raw = Math.round(deg / STEP);
     return ((raw % VIEW_DEFS.length) + VIEW_DEFS.length) % VIEW_DEFS.length;
+  }
+
+  /* =========================
+     PREVIEW (behind wheel)
+  ========================= */
+  let lastWeather = null;
+  let lastNews = [];
+
+  function listProgress(item){
+    if(!Array.isArray(item.checklist) || item.checklist.length === 0) return "";
+    const total = item.checklist.length;
+    const done = item.checklist.filter(x => x.done).length;
+    return `${done}/${total}`;
+  }
+
+  function renderPreview(id){
+    if(!previewWrap || !previewTitle || !previewBody) return;
+
+    const v = VIEW_DEFS.find(x => x.id === id);
+    previewTitle.textContent = v ? v.label : "Preview";
+
+    let html = "";
+
+    if(id === "calendar"){
+      html = `<div class="miniHint">Tryck på hjulet för att öppna kalendern.</div>`;
+    }
+
+    if(id === "weather"){
+      if(lastWeather?.current){
+        const t = Math.round(lastWeather.current.temperature_2m);
+        const w = Math.round(lastWeather.current.wind_speed_10m);
+        const h = Math.round(lastWeather.current.relative_humidity_2m);
+        html = `
+          <div style="display:flex; justify-content:space-between; gap:10px; font-weight:900;">
+            <div>${t}°</div><div>${w} m/s</div><div>${h}%</div>
+          </div>
+          <div class="miniHint" style="margin-top:8px;">Tryck för prognos</div>
+        `;
+      }else{
+        html = `<div class="miniHint">Tryck för att ladda väder.</div>`;
+      }
+    }
+
+    if(id === "news"){
+      if(lastNews.length){
+        html = lastNews.slice(0,3).map(n => `
+          <div style="margin-top:8px; font-weight:900; line-height:1.15;">• ${n.title}</div>
+        `).join("");
+        html += `<div class="miniHint" style="margin-top:10px;">Tryck för fler</div>`;
+      }else{
+        html = `<div class="miniHint">Tryck för att ladda nyheter.</div>`;
+      }
+    }
+
+    if(id === "prio"){
+      const c = store.prio?.length || 0;
+      const first = store.prio?.[0]?.text;
+      html = `
+        <div style="font-weight:900;">Aktiva prios: ${c}</div>
+        ${first ? `<div class="miniHint" style="margin-top:8px;">Nästa: ${first}</div>` : `<div class="miniHint" style="margin-top:8px;">Inga prios ännu</div>`}
+      `;
+    }
+
+    if(id === "lists"){
+      const c = store.lists?.length || 0;
+      const first = store.lists?.[0];
+      const stat = first ? listProgress(first) : "";
+      html = `
+        <div style="font-weight:900;">Listor: ${c}</div>
+        ${first ? `<div class="miniHint" style="margin-top:8px;">${first.text}${stat ? ` • ${stat}` : ""}</div>` : `<div class="miniHint" style="margin-top:8px;">Skapa en lista (t.ex. packlista)</div>`}
+      `;
+    }
+
+    if(id === "ideas"){
+      const c = store.ideas?.length || 0;
+      const first = store.ideas?.[0]?.text;
+      html = `
+        <div style="font-weight:900;">Idéer: ${c}</div>
+        ${first ? `<div class="miniHint" style="margin-top:8px;">Senast: ${first}</div>` : `<div class="miniHint" style="margin-top:8px;">Inga idéer ännu</div>`}
+      `;
+    }
+
+    if(id === "timer"){
+      html = `
+        <div style="font-weight:900;">${timerText()}</div>
+        <div class="miniHint" style="margin-top:8px;">Tryck för 1/5/10/15/30</div>
+      `;
+    }
+
+    previewBody.innerHTML = html;
   }
 
   function setPreview(index){
@@ -225,6 +327,11 @@
     setRotation(next * STEP);
   }, { passive:false });
 
+  wheel?.addEventListener("click", () => {
+    openSheet();
+    renderView(VIEW_DEFS[activeIndex].id);
+  });
+
   /* =========================
      TIMER + wheel ring SVG + pulse
   ========================= */
@@ -238,7 +345,7 @@
   };
   const canVibrate = !!navigator.vibrate;
 
-  // pulse overlay
+  // pulse overlay (CSS controls glow)
   const pulse = document.createElement("div");
   pulse.className = "timerPulse";
   wheel?.appendChild(pulse);
@@ -279,7 +386,7 @@
 
     const pct = TIMER.total ? (TIMER.left / TIMER.total) : 0;
 
-    // ✅ countdown direction (reverse) via negative dashoffset
+    // Countdown direction (reverse) via negative dashoffset
     prog.style.strokeDashoffset = String(-C * (1 - clamp01(pct)));
 
     if(pct > 0.40) prog.style.stroke = "rgba(0,209,255,.92)";
@@ -316,6 +423,7 @@
 
     updateWheelTimerProgress();
     renderTimerUIOnly();
+    renderPreview("timer");
   }
 
   function resetTimer(){
@@ -326,6 +434,7 @@
     document.body.classList.remove("timerRunning");
     updateWheelTimerProgress();
     renderTimerUIOnly();
+    renderPreview("timer");
   }
 
   function timerLoop(){
@@ -336,6 +445,7 @@
 
     updateWheelTimerProgress();
     renderTimerUIOnly();
+    renderPreview("timer");
 
     if(TIMER.left <= 0){
       TIMER.running = false;
@@ -344,6 +454,7 @@
       if(canVibrate) navigator.vibrate([20, 40, 20, 60, 20]);
       updateWheelTimerProgress();
       renderTimerUIOnly();
+      renderPreview("timer");
       return;
     }
 
@@ -369,7 +480,7 @@
       <div class="timerBar">
         <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px;">
           <div id="tTime" style="font-size:52px; font-weight:900; letter-spacing:.6px;">${timerText()}</div>
-          <div id="tState" class="miniHint">Redo</div>
+          <div id="tState" class="miniHint">${(!TIMER.running && TIMER.left === TIMER.total) ? "Redo" : (TIMER.running ? "Fokus…" : (TIMER.left > 0 ? "Pausad" : "KLAR"))}</div>
         </div>
 
         <div class="timerBtns" style="margin-top:12px;">
@@ -521,13 +632,6 @@
      - checkbox = complete
      - rest click = modal
   ========================= */
-  function listProgress(item){
-    if(!Array.isArray(item.checklist) || item.checklist.length === 0) return "";
-    const total = item.checklist.length;
-    const done = item.checklist.filter(x => x.done).length;
-    return `${done}/${total}`;
-  }
-
   function mkCheckItem({ item, meta, stat }, onComplete, onOpen){
     const li = document.createElement("li");
     li.className = "checkItem";
@@ -694,8 +798,6 @@
   /* =========================
      WEATHER
   ========================= */
-  let lastWeather = null;
-
   async function renderWeather(){
     sheetTitle.textContent = "Väder";
     sheetContent.innerHTML = `
@@ -745,139 +847,140 @@
           <div class="wxMiniPop">${Math.round(pop[i] ?? 0)}%</div>
         </div>
       `).join("");
+
+      renderPreview("weather");
     }catch{
       $("wNow").textContent = "Kunde inte hämta väder.";
     }
   }
 
-/* =========================
-   NEWS (RSS/Atom via proxies) – robust
-========================= */
-async function renderNews() {
-  sheetTitle.textContent = "Nyheter";
-  sheetContent.innerHTML = `
-    <div class="card" style="padding:14px;">
-      <div class="miniHint" id="newsStatus">Laddar…</div>
-      <div id="newsList" class="newsList" style="margin-top:10px;"></div>
-    </div>
-  `;
+  /* =========================
+     NEWS (SVT + Omni) – RSS/Atom via proxies (ROBUST)
+     - FEEDS: https://www.svt.se/nyheter/rss.xml + https://omni.se/rss
+  ========================= */
+  async function renderNews() {
+    sheetTitle.textContent = "Nyheter";
+    sheetContent.innerHTML = `
+      <div class="card" style="padding:14px;">
+        <div class="miniHint" id="newsStatus">Laddar…</div>
+        <div id="newsList" class="newsList" style="margin-top:10px;"></div>
+      </div>
+    `;
 
-  const feeds = [
-    { name: "SVT Nyheter", url: "https://www.svt.se/nyheter/rss.xml" },
-    { name: "Omni",        url: "https://omni.se/rss" },
-  ];
+    const feeds = [
+      { name: "SVT Nyheter", url: "https://www.svt.se/nyheter/rss.xml" },
+      { name: "Omni",        url: "https://omni.se/rss" },
+    ];
 
-  // Proxies (testas i ordning). Vi använder jina som “sista utväg” pga wrapper-text.
-  const proxies = [
-    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-    (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
-    (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//, "")}`,
-  ];
+    // Proxies (testas i ordning). Jina sist pga wrapper-text.
+    const proxies = [
+      (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+      (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+      (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//, "")}`,
+    ];
 
-  async function fetchViaProxies(url) {
-    let lastErr = null;
-    for (const p of proxies) {
-      try {
-        const r = await fetch(p(url), { cache: "no-store" });
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const txt = await r.text();
-        // Sanera om proxy lägger på “skräp” före XML
-        const clean = sanitizeXml(txt);
-        if (!clean) throw new Error("Empty/invalid XML");
-        return clean;
-      } catch (e) {
-        lastErr = e;
+    function sanitizeXml(text) {
+      if (!text) return "";
+      const i = text.indexOf("<");
+      if (i === -1) return "";
+      return text.slice(i).trim();
+    }
+
+    async function fetchViaProxies(url) {
+      let lastErr = null;
+      for (const p of proxies) {
+        try {
+          const r = await fetch(p(url), { cache: "no-store" });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const txt = await r.text();
+          const clean = sanitizeXml(txt);
+          if (!clean) throw new Error("Empty/invalid XML");
+          return clean;
+        } catch (e) {
+          lastErr = e;
+        }
       }
+      throw lastErr || new Error("Proxy failed");
     }
-    throw lastErr || new Error("Proxy failed");
+
+    function parseAny(xmlText, sourceName) {
+      const doc = new DOMParser().parseFromString(xmlText, "text/xml");
+      if (doc.querySelector("parsererror")) return [];
+
+      // RSS
+      const rssItems = [...doc.querySelectorAll("item")];
+      if (rssItems.length) {
+        return rssItems.slice(0, 12).map(it => {
+          const title = (it.querySelector("title")?.textContent || "").trim();
+          const link  = (it.querySelector("link")?.textContent  || "").trim();
+          const pd    = (it.querySelector("pubDate")?.textContent || "").trim();
+          const date  = new Date(pd || Date.now());
+          return { source: sourceName, title, link, date };
+        }).filter(x => x.title && x.link);
+      }
+
+      // Atom
+      const entries = [...doc.querySelectorAll("entry")];
+      if (entries.length) {
+        return entries.slice(0, 12).map(en => {
+          const title = (en.querySelector("title")?.textContent || "").trim();
+
+          let link = (en.querySelector("link")?.textContent || "").trim();
+          const href = en.querySelector("link")?.getAttribute?.("href");
+          if (href) link = href;
+
+          const upd  = (en.querySelector("updated")?.textContent || "").trim();
+          const pub  = (en.querySelector("published")?.textContent || "").trim();
+          const date = new Date((upd || pub) || Date.now());
+
+          return { source: sourceName, title, link, date };
+        }).filter(x => x.title && x.link);
+      }
+
+      return [];
+    }
+
+    const statusEl = $("newsStatus");
+    const listEl = $("newsList");
+
+    try {
+      const results = await Promise.allSettled(
+        feeds.map(async f => {
+          const xml = await fetchViaProxies(f.url);
+          return parseAny(xml, f.name);
+        })
+      );
+
+      const okCount = results.filter(r => r.status === "fulfilled" && r.value.length).length;
+
+      const merged = results
+        .filter(r => r.status === "fulfilled")
+        .flatMap(r => r.value)
+        .sort((a, b) => b.date - a.date)
+        .slice(0, 18);
+
+      lastNews = merged;
+      renderPreview("news");
+
+      if (!merged.length) {
+        if (statusEl) statusEl.textContent = `Kan inte läsa nyheter just nu (0/${feeds.length} källor).`;
+        return;
+      }
+
+      if (statusEl) statusEl.textContent = `Senaste: ${merged.length} artiklar (${okCount}/${feeds.length} källor)`;
+
+      if (listEl) {
+        listEl.innerHTML = merged.map(n => `
+          <a class="newsItem" href="${n.link}" target="_blank" rel="noopener">
+            <div class="newsTitle">${n.title}</div>
+            <div class="newsMeta">${n.source} • ${n.date.toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit", day:"2-digit", month:"2-digit" })}</div>
+          </a>
+        `).join("");
+      }
+    } catch (e) {
+      if (statusEl) statusEl.textContent = "Kan inte läsa nyheter (proxy/CORS).";
+    }
   }
-
-  function sanitizeXml(text) {
-    if (!text) return "";
-    const i = text.indexOf("<");
-    if (i === -1) return "";
-    return text.slice(i).trim();
-  }
-
-  function parseAny(xmlText, sourceName) {
-    const doc = new DOMParser().parseFromString(xmlText, "text/xml");
-
-    // Om parsererror finns → bail
-    const perr = doc.querySelector("parsererror");
-    if (perr) return [];
-
-    // RSS <item>
-    const rssItems = [...doc.querySelectorAll("item")];
-    if (rssItems.length) {
-      return rssItems.slice(0, 12).map(it => {
-        const title = (it.querySelector("title")?.textContent || "").trim();
-        const link  = (it.querySelector("link")?.textContent  || "").trim();
-        const pd    = (it.querySelector("pubDate")?.textContent || "").trim();
-        const date  = new Date(pd || Date.now());
-        return { source: sourceName, title, link, date };
-      }).filter(x => x.title && x.link);
-    }
-
-    // ATOM <entry>
-    const entries = [...doc.querySelectorAll("entry")];
-    if (entries.length) {
-      return entries.slice(0, 12).map(en => {
-        const title = (en.querySelector("title")?.textContent || "").trim();
-
-        // Atom link kan vara <link href="..."> eller <link>...</link>
-        let link = (en.querySelector("link")?.textContent || "").trim();
-        const href = en.querySelector("link")?.getAttribute?.("href");
-        if (href) link = href;
-
-        const upd  = (en.querySelector("updated")?.textContent || "").trim();
-        const pub  = (en.querySelector("published")?.textContent || "").trim();
-        const date = new Date((upd || pub) || Date.now());
-
-        return { source: sourceName, title, link, date };
-      }).filter(x => x.title && x.link);
-    }
-
-    return [];
-  }
-
-  const statusEl = $("newsStatus");
-  const listEl = $("newsList");
-
-  try {
-    const results = await Promise.allSettled(
-      feeds.map(async f => {
-        const xml = await fetchViaProxies(f.url);
-        return parseAny(xml, f.name);
-      })
-    );
-
-    const okCount = results.filter(r => r.status === "fulfilled" && r.value.length).length;
-
-    const merged = results
-      .filter(r => r.status === "fulfilled")
-      .flatMap(r => r.value)
-      .sort((a, b) => b.date - a.date)
-      .slice(0, 18);
-
-    if (!merged.length) {
-      if (statusEl) statusEl.textContent = `Kan inte läsa nyheter just nu (0/${feeds.length} källor).`;
-      return;
-    }
-
-    if (statusEl) statusEl.textContent = `Senaste: ${merged.length} artiklar (${okCount}/${feeds.length} källor)`;
-
-    if (listEl) {
-      listEl.innerHTML = merged.map(n => `
-        <a class="newsItem" href="${n.link}" target="_blank" rel="noopener">
-          <div class="newsTitle">${n.title}</div>
-          <div class="newsMeta">${n.source} • ${n.date.toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit", day:"2-digit", month:"2-digit" })}</div>
-        </a>
-      `).join("");
-    }
-  } catch (e) {
-    if (statusEl) statusEl.textContent = "Kan inte läsa nyheter (proxy/CORS).";
-  }
-}
 
   /* =========================
      VIEW SWITCH
@@ -895,12 +998,8 @@ async function renderNews() {
   /* =========================
      INIT
   ========================= */
-  // preload preview with current view
   setRotation(0);
   setPreview(0);
   updateWheelTimerProgress();
   renderPreview("calendar");
-
-  // if you want: tap outside sheet closes (optional)
-  // sheetWrap?.addEventListener("click", (e)=>{ if(e.target === sheetWrap) closeSheet(); });
 })();

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
   <title>SB Dash</title>
-  <link rel="stylesheet" href="style.css?v=2" />
+  <link rel="stylesheet" href="style.css?v=1" />
 </head>
 
 <body>
@@ -18,7 +18,7 @@
       </div>
     </div>
 
-    <div class="topDate" id="topDate"></div>
+    <div class="topDate" id="topDate">—</div>
     <div class="topRight"></div>
   </header>
 
@@ -54,15 +54,15 @@
 
     <!-- ===== WHEEL ===== -->
     <div class="wheelWrap">
-      <div class="wheel" id="wheel">
+      <div class="wheel" id="wheel" aria-label="Scrollhjul">
         <img src="assets/ui/knob-ring.svg" class="wheelRing" alt="ring" />
         <div id="wheelCenterText" class="wheelCenterText">—</div>
-        <!-- timer pulse is injected by JS -->
+        <!-- timer pulse + timer ring svg injiceras av JS -->
       </div>
     </div>
 
   </div>
 
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=1"></script>
 </body>
 </html>

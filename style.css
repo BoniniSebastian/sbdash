@@ -9,10 +9,15 @@
   --cyan: rgba(0,209,255,.95);
   --shadow: 0 18px 60px rgba(0,0,0,.55);
   --r: 22px;
+
+  /* Wheel sizing */
+  --wheelSize: 320px;         /* stort på start */
+  --wheelSizeOpen: 0.92;      /* lite mindre när sheet öppnas */
 }
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
+
 body{
   margin:0;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -26,6 +31,7 @@ body{
 /* Prevent iOS zoom on inputs */
 input, textarea, button { font-size:16px; }
 
+/* ================= TOPBAR ================= */
 .topbar{
   position:fixed;
   inset: 0 0 auto 0;
@@ -52,6 +58,7 @@ input, textarea, button { font-size:16px; }
 .topRight{ display:flex; align-items:flex-end; }
 .topPrioMini{ font-weight:800; color: rgba(255,255,255,.65); font-size:14px; }
 
+/* ================= SHELL ================= */
 .shell{
   position:fixed;
   inset: 84px 0 0 0;
@@ -59,13 +66,13 @@ input, textarea, button { font-size:16px; }
   overflow:hidden;
 }
 
-/* Preview card (behind wheel) */
+/* ================= PREVIEW CARD (behind wheel) ================= */
 .previewWrap{
   position:absolute;
   left: 14px;
   right: 14px;
   top: 12px;
-  z-index: 5;
+  z-index: 6;
   pointer-events:none;
 }
 .previewCard{
@@ -90,37 +97,48 @@ input, textarea, button { font-size:16px; }
   color: rgba(255,255,255,.86);
 }
 
-/* Big start icon under preview */
+/* ================= START ICON =================
+   - under preview
+   - bigger (3x-ish) + frosted/blurry feel
+*/
 .startIconWrap{
   position:absolute;
   left:0; right:0;
-  top: 175px;
+  top: 170px; /* under preview */
   display:flex;
   justify-content:center;
-  z-index: 4;
+  z-index: 5;
   pointer-events:none;
 }
 .startIcon{
-  width: 160px;
-  height: 160px;
+  width: 240px;
+  height: 240px;
   opacity: .95;
-  filter: drop-shadow(0 0 22px rgba(0,209,255,.35)) blur(.2px);
+  filter:
+    drop-shadow(0 0 34px rgba(0,209,255,.42))
+    drop-shadow(0 0 70px rgba(255,90,180,.10))
+    blur(.35px);
   transform: translateZ(0);
 }
 
-/* Sheet behind wheel */
+/* ================= SHEET (behind wheel) ================= */
 .sheetWrap{
   position:absolute;
-  inset: 0 0 0 0;
-  z-index: 10; /* below wheel */
-  pointer-events:none; /* enabled only when open on the sheet itself */
+  inset: 0;
+  z-index: 10;             /* below wheel */
+  pointer-events:none;     /* IMPORTANT: doesn't block wheel */
 }
+
+/* Sheet box itself can receive touches when open */
 .sheet{
   position:absolute;
   left: 14px;
   right: 14px;
-  bottom: calc(22px + env(safe-area-inset-bottom) + 240px); /* keep away from wheel */
-  top: 210px; /* below icon/preview area */
+
+  /* Leave space for wheel so it never covers it */
+  bottom: calc(14px + env(safe-area-inset-bottom) + var(--wheelSize) * 0.52);
+  top: 220px; /* below preview + icon area */
+
   border-radius: 28px;
   background: linear-gradient(180deg, rgba(0,220,255,.10), rgba(255,255,255,.05));
   border: 1px solid var(--stroke);
@@ -128,9 +146,11 @@ input, textarea, button { font-size:16px; }
   overflow:hidden;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+
   transform: translateY(24px);
   opacity: 0;
   transition: transform .22s ease, opacity .22s ease;
+
   pointer-events:none;
 }
 .sheetHeader{
@@ -162,27 +182,27 @@ input, textarea, button { font-size:16px; }
 }
 
 /* Open state */
-body.sheetOpen .sheetWrap{ pointer-events:none; }
 body.sheetOpen .sheet{
   opacity: 1;
   transform: translateY(0);
-  pointer-events:auto;
+  pointer-events:auto; /* only the sheet itself becomes interactive */
 }
 
-/* Wheel */
+/* ================= WHEEL ================= */
 .wheelWrap{
   position:absolute;
   left:50%;
   transform: translateX(-50%);
   bottom: calc(14px + env(safe-area-inset-bottom));
-  width: 260px;
-  height: 260px;
+  width: var(--wheelSize);
+  height: var(--wheelSize);
   z-index: 30; /* above sheet */
   pointer-events:auto;
   transition: transform .22s ease;
 }
+
 body.sheetOpen .wheelWrap{
-  transform: translateX(-50%) scale(.92); /* shrink a bit when sheet open */
+  transform: translateX(-50%) scale(var(--wheelSizeOpen)); /* shrink a bit when open */
 }
 
 .wheel{
@@ -198,6 +218,7 @@ body.sheetOpen .wheelWrap{
   touch-action: none;
   user-select:none;
 }
+
 .wheelRing{
   position:absolute;
   inset: -8px;
@@ -206,17 +227,21 @@ body.sheetOpen .wheelWrap{
   filter: drop-shadow(0 0 22px rgba(0,209,255,.45));
   transform-origin: 50% 50%;
 }
+
+/* Center text should NEVER disappear */
 .wheelCenterText{
   position:absolute;
-  bottom: 22px;
+  bottom: 24px;
   left: 0; right: 0;
   text-align:center;
   font-weight: 950;
   letter-spacing:.18em;
   text-transform: uppercase;
   font-size: 13px;
-  color: rgba(255,255,255,.85);
+  color: rgba(255,255,255,.86);
   text-shadow: 0 0 18px rgba(0,0,0,.7);
+  opacity: 1 !important;
+  pointer-events:none;
 }
 
 /* Timer ring SVG injected */
@@ -259,7 +284,7 @@ body.timerRunning .timerPulse{
   100%{ transform: scale(0.98); opacity:.55; }
 }
 
-/* Common UI */
+/* ================= COMMON UI ================= */
 .card{
   border-radius: var(--r);
   background: rgba(255,255,255,.05);
@@ -286,9 +311,7 @@ body.timerRunning .timerPulse{
   color: rgba(255,255,255,.92);
   font-weight: 900;
 }
-.miniBtn.ghost{
-  background: rgba(0,0,0,.18);
-}
+.miniBtn.ghost{ background: rgba(0,0,0,.18); }
 
 .miniList{ list-style:none; padding:0; margin: 0; }
 .checkItem{
@@ -304,10 +327,7 @@ body.timerRunning .timerPulse{
   gap: 10px;
   padding: 12px 12px;
 }
-.checkBox{
-  width: 20px;
-  height: 20px;
-}
+.checkBox{ width: 20px; height: 20px; }
 .checkMid{ flex:1; min-width: 0; }
 .checkText{
   font-weight: 900;
@@ -334,9 +354,7 @@ body.timerRunning .timerPulse{
   color: rgba(255,255,255,.92);
   font-weight: 950;
 }
-.timerBtnReset{
-  background: rgba(255,70,70,.18);
-}
+.timerBtnReset{ background: rgba(255,70,70,.18); }
 
 /* Calendar iframe */
 .calScale{
@@ -365,3 +383,19 @@ body.timerRunning .timerPulse{
   margin-bottom: 10px;
 }
 .miniRowLeft{ flex:1; min-width:0; }
+
+/* ================= LANDSCAPE TWEAKS ================= */
+@media (orientation: landscape){
+  :root{ --wheelSize: 280px; }
+
+  .shell{ padding-bottom: 10px; }
+
+  .previewWrap{ top: 8px; }
+  .startIconWrap{ top: 140px; }
+  .startIcon{ width: 200px; height: 200px; }
+
+  .sheet{
+    top: 170px;
+    bottom: calc(10px + env(safe-area-inset-bottom) + var(--wheelSize) * 0.55);
+  }
+}

@@ -2,12 +2,16 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
   <title>SB Dash</title>
+
+  <!-- CSS -->
   <link rel="stylesheet" href="style.css?v=1" />
 </head>
 
 <body>
+
   <!-- ================= TOPBAR ================= -->
   <header class="topbar">
     <div class="brand">
@@ -21,54 +25,96 @@
     <div class="topDate" id="topDate">—</div>
 
     <div class="topRight">
-      <div class="topPrioMini">Aktiva prios: <span id="topPrioCount">0</span></div>
+      <div class="topPrioMini">
+        Aktiva prios: <span id="topPrioCount">0</span>
+      </div>
     </div>
   </header>
 
   <!-- ================= APP SHELL ================= -->
   <div class="shell">
 
-    <!-- ===== PREVIEW (start only) ===== -->
-    <div class="previewWrap" id="previewWrap" aria-hidden="true">
+    <!-- ===== PREVIEW (visas endast när sheet är stängd) ===== -->
+    <div class="previewWrap" id="previewWrap">
       <div class="previewCard">
-        <div class="previewTitle" id="previewTitle">Preview</div>
+        <div class="previewTitle" id="previewTitle">—</div>
         <div class="previewBody" id="previewBody"></div>
       </div>
     </div>
 
-    <!-- ===== BIG START ICON (under preview) ===== -->
-    <div class="startIconWrap" id="startIconWrap" aria-hidden="true">
-      <img class="startIcon" id="startIcon" src="assets/ui/icon-calendar.svg" alt="">
+    <!-- ===== STOR STARTIKON (under preview) ===== -->
+    <div class="startIconWrap" id="startIconWrap">
+      <img
+        class="startIcon"
+        id="startIcon"
+        src="assets/ui/icon-calendar.svg"
+        alt="Startikon"
+      />
     </div>
 
-    <!-- ===== SHEET WRAP (overlay, behind wheel) ===== -->
+    <!-- ===== SHEET (öppnas bakom hjulet) ===== -->
     <div class="sheetWrap" id="sheetWrap" aria-hidden="true">
-      <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Panel">
+      <div
+        class="sheet"
+        id="sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Panel"
+      >
+
         <div class="sheetHeader">
           <div class="sheetTitle" id="sheetTitle">—</div>
-          <button class="sheetClose" id="sheetCloseBtn" aria-label="Stäng">✕</button>
+          <button
+            class="sheetClose"
+            id="sheetCloseBtn"
+            aria-label="Stäng panel"
+          >
+            ✕
+          </button>
         </div>
-        <div class="sheetContent" id="sheetContent"></div>
+
+        <div class="sheetContent" id="sheetContent">
+          <!-- JS renderar innehåll här -->
+        </div>
+
       </div>
     </div>
 
     <!-- ===== WHEEL ===== -->
     <div class="wheelWrap" id="wheelWrap" aria-label="Scrollhjul">
       <div class="wheel" id="wheel">
-        <img src="assets/ui/knob-ring.svg" class="wheelRing" alt="ring" />
-        <div id="wheelCenterText" class="wheelCenterText">—</div>
-        <!-- timer pulse + timer svg injected by JS -->
+
+        <!-- Roterande ring -->
+        <img
+          src="assets/ui/knob-ring.svg"
+          class="wheelRing"
+          alt="Ring"
+        />
+
+        <!-- Text i hjulet -->
+        <div
+          id="wheelCenterText"
+          class="wheelCenterText"
+        >
+          —
+        </div>
+
+        <!-- Timer SVG + Pulse injiceras av JS -->
+
       </div>
     </div>
 
   </div>
 
-  <!-- Alarm (valfritt: app.js använder WebAudio som fallback) -->
+  <!-- ===== ALARM (valfri ljudfil) ===== -->
   <audio id="alarmAudio" preload="auto">
-    <!-- Om du vill: lägg en fil i assets/sfx/alarm.mp3 och avkommentera raden nedan -->
-    <!-- <source src="assets/sfx/alarm.mp3" type="audio/mpeg" /> -->
+    <!-- Om du lägger alarm.mp3 i assets/sfx kan du aktivera:
+    <source src="assets/sfx/alarm.mp3" type="audio/mpeg" />
+    -->
   </audio>
 
+  <!-- JS -->
   <script src="app.js?v=1"></script>
+
 </body>
 </html>

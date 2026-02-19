@@ -3,7 +3,7 @@
    - Wheel navigation + sheet
    - Preview card behind wheel (dim/frost)
    - Weather (Open-Meteo)
-   - News (SVT + Omni) via robust proxy + RSS/Atom parser
+   - News (Google News RSS) via robust proxy fallback + cache
    - Timer: 1/5/10/15/30 starts instantly + Reset
    - Lists/Ideas/Prio: checkbox completes, row opens modal
    - Lists modal: checklist with reorder done->bottom
@@ -406,7 +406,6 @@
     const m = Number(min);
     if(!Number.isFinite(m) || m <= 0) return;
 
-    // stop current
     TIMER.running = false;
     cancelAnimationFrame(TIMER.raf);
 
@@ -414,7 +413,6 @@
     TIMER.left = TIMER.total;
     TIMER.pausedLeft = TIMER.left;
 
-    // start immediately
     TIMER.running = true;
     TIMER.t0 = performance.now();
     document.body.classList.add("timerRunning");
@@ -544,7 +542,6 @@
     wrap.querySelector(".modalBackdrop").onclick = close;
     wrap.querySelector(".modalClose").onclick = close;
 
-    // autosave note
     ta.addEventListener("input", () => {
       item.note = ta.value || "";
       saveStore();
@@ -552,7 +549,6 @@
       if(sheetWrap?.classList.contains("open")) renderView(VIEW_DEFS[activeIndex].id);
     });
 
-    // list checklists
     if(type === "lists"){
       const block = wrap.querySelector(".subTaskBlock");
       block.style.display = "block";
@@ -580,7 +576,6 @@
         if(i === -1) return;
         item.checklist[i].done = !item.checklist[i].done;
 
-        // move done to bottom, undone to top
         item.checklist.sort((a,b) => (a.done === b.done) ? (b.createdAt - a.createdAt) : (a.done ? 1 : -1));
 
         saveStore();
@@ -629,8 +624,6 @@
 
   /* =========================
      LIST ITEM ROW
-     - checkbox = complete
-     - rest click = modal
   ========================= */
   function mkCheckItem({ item, meta, stat }, onComplete, onOpen){
     const li = document.createElement("li");
@@ -681,7 +674,6 @@
       setTimeout(() => onComplete?.(), 190);
     });
 
-    // click rest opens modal (not checkbox)
     row.addEventListener("click", (e) => {
       if(e.target === cb) return;
       onOpen?.();
@@ -854,42 +846,78 @@
     }
   }
 
- // ---------- NEWS (Stabil v1) ----------
-const RSS_URL = "https://news.google.com/rss?hl=sv&gl=SE&ceid=SE:sv";
-const newsList = document.getElementById("newsList");
-const newsMeta = document.getElementById("newsMeta");
+  /* =========================
+     NEWS (ROBUST + CACHE)
+  ========================= */
+  const RSS_URL = "https://news.google.com/rss?hl=sv&gl=SE&ceid=SE:sv";
+  const NEWS_CACHE_KEY = "sbdash_news_cache_v1";
+  let newsIntervalStarted = false;
 
-async function loadNews() {
-  const newsList = document.getElementById("newsList");
-  const newsMeta = document.getElementById("newsMeta");
+  const PROXIES = [
+    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//, "")}`,
+    (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, // needs JSON parse
+  ];
 
-  if (!newsList || !newsMeta) return;
+  async function fetchTextWithFallback(url){
+    let lastErr;
+    for (const p of PROXIES){
+      try{
+        const proxied = p(url);
+        const r = await fetch(proxied, { cache:"no-store" });
+        if(!r.ok) throw new Error(`HTTP ${r.status}`);
+        const t = await r.text();
 
-  newsMeta.textContent = "Laddar…";
-  newsList.innerHTML = "";
+        if (proxied.includes("/get?url=")){
+          const obj = JSON.parse(t);
+          if (obj?.contents) return obj.contents;
+          throw new Error("No contents");
+        }
+        return t;
+      }catch(e){
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error("All proxies failed");
+  }
 
-  try {
-    const proxyUrl =
-      "https://api.allorigins.win/raw?url=" + encodeURIComponent(RSS_URL);
+  function saveNewsCache(items){
+    try{
+      localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify({ updatedAt: Date.now(), items }));
+    }catch{}
+  }
+  function loadNewsCache(){
+    try{
+      return JSON.parse(localStorage.getItem(NEWS_CACHE_KEY) || "null");
+    }catch{
+      return null;
+    }
+  }
 
-    const res = await fetch(proxyUrl);
-    if (!res.ok) throw new Error("Network error");
+  function parseRss(xmlText, max=10){
+    const doc = new DOMParser().parseFromString(xmlText, "text/xml");
+    const nodes = Array.from(doc.querySelectorAll("item")).slice(0, max);
+    return nodes.map((it) => ({
+      title: it.querySelector("title")?.textContent?.trim() || "Nyhet",
+      link: it.querySelector("link")?.textContent?.trim() || "#",
+      pubDate: it.querySelector("pubDate")?.textContent?.trim() || "",
+    }));
+  }
 
-    const xmlText = await res.text();
+  function renderNewsList(items, metaText){
+    const newsList = document.getElementById("newsList");
+    const newsMeta = document.getElementById("newsMeta");
+    if(!newsList || !newsMeta) return;
 
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(xmlText, "text/xml");
-    const items = xml.querySelectorAll("item");
+    newsMeta.textContent = metaText || "";
+    newsList.innerHTML = "";
 
-    const max = 10;
+    if(!items?.length){
+      newsList.innerHTML = `<li class="miniHint">Inget att visa just nu.</li>`;
+      return;
+    }
 
-    items.forEach((item, index) => {
-      if (index >= max) return;
-
-      const title = item.querySelector("title")?.textContent || "Nyhet";
-      const link = item.querySelector("link")?.textContent || "#";
-      const pubDate = item.querySelector("pubDate")?.textContent || "";
-
+    items.forEach((it) => {
       const li = document.createElement("li");
       li.className = "miniRow";
 
@@ -897,10 +925,10 @@ async function loadNews() {
       left.className = "miniRowLeft";
 
       const a = document.createElement("a");
-      a.href = link;
+      a.href = it.link;
       a.target = "_blank";
       a.rel = "noopener noreferrer";
-      a.textContent = title;
+      a.textContent = it.title;
       a.style.color = "var(--text)";
       a.style.textDecoration = "none";
       a.style.fontWeight = "700";
@@ -908,47 +936,67 @@ async function loadNews() {
       a.style.whiteSpace = "nowrap";
       a.style.overflow = "hidden";
       a.style.textOverflow = "ellipsis";
-
       left.appendChild(a);
 
       const right = document.createElement("div");
       right.className = "miniMeta";
-
-      if (pubDate) {
-        const date = new Date(pubDate);
-        right.textContent = date.toLocaleString("sv-SE", {
-          day: "2-digit",
-          month: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
+      if(it.pubDate){
+        const d = new Date(it.pubDate);
+        if(!isNaN(d.getTime())){
+          right.textContent = d.toLocaleString("sv-SE", {
+            day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"
+          });
+        }
       }
 
       li.appendChild(left);
       li.appendChild(right);
-
       newsList.appendChild(li);
     });
-
-    newsMeta.textContent =
-      "Uppdaterad: " +
-      new Date().toLocaleString("sv-SE", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-
-  } catch (err) {
-    newsMeta.textContent = "Kunde inte ladda nyheter.";
-    newsList.innerHTML =
-      '<li class="miniHint">Försök igen senare.</li>';
   }
-}
 
-// Auto-load
-loadNews();
+  async function loadNews(){
+    const newsList = document.getElementById("newsList");
+    const newsMeta = document.getElementById("newsMeta");
+    if(!newsList || !newsMeta) return;
 
-// Auto-refresh var 10:e minut
-setInterval(loadNews, 10 * 60 * 1000);
+    newsMeta.textContent = "Laddar…";
+    newsList.innerHTML = "";
+
+    try{
+      const xml = await fetchTextWithFallback(RSS_URL);
+      const items = parseRss(xml, 10);
+      lastNews = items;              // preview
+      saveNewsCache(items);
+      renderPreview("news");
+
+      renderNewsList(items, "Uppdaterad: " + new Date().toLocaleString("sv-SE", {hour:"2-digit", minute:"2-digit"}));
+    }catch(e){
+      const c = loadNewsCache();
+      if(c?.items?.length){
+        lastNews = c.items;
+        renderPreview("news");
+        renderNewsList(c.items, "Visar cache (senast: " + new Date(c.updatedAt).toLocaleString("sv-SE", {hour:"2-digit", minute:"2-digit"}) + ")");
+      }else{
+        renderNewsList([], "Kunde inte ladda nyheter.");
+      }
+    }
+  }
+
+  function renderNews(){
+    sheetTitle.textContent = "Nyheter";
+    sheetContent.innerHTML = `
+      <ul id="newsList" class="miniList"></ul>
+      <div id="newsMeta" class="miniHint" style="margin-top:8px;">Laddar…</div>
+    `;
+    loadNews();
+
+    if(!newsIntervalStarted){
+      newsIntervalStarted = true;
+      setInterval(loadNews, 10 * 60 * 1000);
+    }
+  }
+
   /* =========================
      VIEW SWITCH
   ========================= */
@@ -956,15 +1004,7 @@ setInterval(loadNews, 10 * 60 * 1000);
     if(id === "calendar") return renderCalendar();
     if(id === "prio")     return renderList("prio", "Aktiv prio", true);
     if(id === "weather")  return renderWeather();
-    if(id === "news"){
-  sheetTitle.textContent = "Nyheter";
-  sheetContent.innerHTML = `
-    <ul id="newsList" class="miniList"></ul>
-    <div id="newsMeta" class="miniHint" style="margin-top:8px;">Laddar…</div>
-  `;
-  loadNews();
-  return;
-}
+    if(id === "news")     return renderNews();
     if(id === "lists")    return renderList("lists", "Listor", true);
     if(id === "ideas")    return renderList("ideas", "Idéer", true);
     if(id === "timer")    return renderTimer();

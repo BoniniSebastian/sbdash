@@ -956,7 +956,15 @@ setInterval(loadNews, 10 * 60 * 1000);
     if(id === "calendar") return renderCalendar();
     if(id === "prio")     return renderList("prio", "Aktiv prio", true);
     if(id === "weather")  return renderWeather();
-    if(id === "news")     return renderNews();
+    if(id === "news"){
+  sheetTitle.textContent = "Nyheter";
+  sheetContent.innerHTML = `
+    <ul id="newsList" class="miniList"></ul>
+    <div id="newsMeta" class="miniHint" style="margin-top:8px;">Laddar…</div>
+  `;
+  loadNews();
+  return;
+}
     if(id === "lists")    return renderList("lists", "Listor", true);
     if(id === "ideas")    return renderList("ideas", "Idéer", true);
     if(id === "timer")    return renderTimer();

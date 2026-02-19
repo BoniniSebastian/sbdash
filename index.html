@@ -2,54 +2,67 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
   <title>SB Dash</title>
   <link rel="stylesheet" href="style.css?v=2" />
 </head>
 
 <body>
-
-<header class="topbar">
-  <div class="brand">
-    <div class="brandDot"></div>
-    <div>
-      <div class="brandTitle">SB Dash</div>
-      <div class="brandSub">Control dashboard</div>
-    </div>
-  </div>
-  <div class="topDate" id="topDate"></div>
-</header>
-
-<div class="shell">
-
-  <!-- Start info -->
-  <div class="startInfo">
-    <img class="startIcon" id="startIcon"
-         src="assets/ui/icon-calendar.svg" alt="">
-    <div class="startPrio" id="startPrioCount">Aktiva prios: 0</div>
-  </div>
-
-  <!-- Sheet -->
-  <div class="sheetWrap" id="sheetWrap">
-    <div class="sheet" id="sheet">
-      <div class="sheetHeader">
-        <div class="sheetTitle" id="sheetTitle">Preview</div>
+  <!-- ================= TOPBAR ================= -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brandDot"></div>
+      <div>
+        <div class="brandTitle">SB Dash</div>
+        <div class="brandSub">Control dashboard</div>
       </div>
-      <div class="sheetContent" id="sheetContent"></div>
     </div>
+
+    <div class="topDate" id="topDate"></div>
+    <div class="topRight"></div>
+  </header>
+
+  <!-- ================= APP SHELL ================= -->
+  <div class="shell">
+
+    <!-- ===== START INFO (sheet closed) ===== -->
+    <div class="startInfo" id="startInfo">
+      <div class="startSpacer"></div>
+      <div class="startPrio" id="startPrioCount">Aktiva prios: 0</div>
+    </div>
+
+    <!-- ===== START ICON (sync with wheel) ===== -->
+    <img class="startIcon" id="startIcon" src="assets/ui/icon-calendar.svg" alt="">
+
+    <!-- ===== PREVIEW (behind wheel when sheet closed) ===== -->
+    <div class="previewWrap" id="previewWrap" aria-hidden="true">
+      <div class="previewCard">
+        <div class="previewTitle" id="previewTitle">Preview</div>
+        <div class="previewBody" id="previewBody"></div>
+      </div>
+    </div>
+
+    <!-- ===== SHEET WRAP (overlay) ===== -->
+    <div class="sheetWrap" id="sheetWrap">
+      <div class="sheet" id="sheet">
+        <div class="sheetHeader">
+          <div class="sheetTitle" id="sheetTitle">Preview</div>
+        </div>
+        <div class="sheetContent" id="sheetContent"></div>
+      </div>
+    </div>
+
+    <!-- ===== WHEEL ===== -->
+    <div class="wheelWrap">
+      <div class="wheel" id="wheel">
+        <img src="assets/ui/knob-ring.svg" class="wheelRing" alt="ring" />
+        <div id="wheelCenterText" class="wheelCenterText">—</div>
+        <!-- timer pulse is injected by JS -->
+      </div>
+    </div>
+
   </div>
 
-  <!-- Wheel -->
-  <div class="wheelWrap">
-    <div class="wheel" id="wheel">
-      <img src="assets/ui/knob-ring.svg" class="wheelRing" alt="">
-      <div id="wheelCenterText" class="wheelCenterText">KALENDER</div>
-    </div>
-  </div>
-
-</div>
-
-<script src="app.js?v=2"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>

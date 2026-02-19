@@ -21,14 +21,14 @@
     <div class="topDate" id="topDate">—</div>
 
     <div class="topRight">
-      <div class="topPrioMini" id="topPrioMini">Aktiva prios: 0</div>
+      <div class="topPrioMini">Aktiva prios: <span id="topPrioCount">0</span></div>
     </div>
   </header>
 
   <!-- ================= APP SHELL ================= -->
   <div class="shell">
 
-    <!-- ===== PREVIEW (behind wheel when sheet closed) ===== -->
+    <!-- ===== PREVIEW (start only) ===== -->
     <div class="previewWrap" id="previewWrap" aria-hidden="true">
       <div class="previewCard">
         <div class="previewTitle" id="previewTitle">Preview</div>
@@ -37,13 +37,13 @@
     </div>
 
     <!-- ===== BIG START ICON (under preview) ===== -->
-    <div class="startIconWrap" aria-hidden="true">
+    <div class="startIconWrap" id="startIconWrap" aria-hidden="true">
       <img class="startIcon" id="startIcon" src="assets/ui/icon-calendar.svg" alt="">
     </div>
 
     <!-- ===== SHEET WRAP (overlay, behind wheel) ===== -->
     <div class="sheetWrap" id="sheetWrap" aria-hidden="true">
-      <div class="sheet" id="sheet" role="dialog" aria-modal="true">
+      <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Panel">
         <div class="sheetHeader">
           <div class="sheetTitle" id="sheetTitle">—</div>
           <button class="sheetClose" id="sheetCloseBtn" aria-label="Stäng">✕</button>
@@ -53,15 +53,21 @@
     </div>
 
     <!-- ===== WHEEL ===== -->
-    <div class="wheelWrap" id="wheelWrap">
-      <div class="wheel" id="wheel" aria-label="Scrollhjul">
+    <div class="wheelWrap" id="wheelWrap" aria-label="Scrollhjul">
+      <div class="wheel" id="wheel">
         <img src="assets/ui/knob-ring.svg" class="wheelRing" alt="ring" />
         <div id="wheelCenterText" class="wheelCenterText">—</div>
-        <!-- timer pulse + timer ring injected by JS -->
+        <!-- timer pulse + timer svg injected by JS -->
       </div>
     </div>
 
   </div>
+
+  <!-- Alarm (valfritt: app.js använder WebAudio som fallback) -->
+  <audio id="alarmAudio" preload="auto">
+    <!-- Om du vill: lägg en fil i assets/sfx/alarm.mp3 och avkommentera raden nedan -->
+    <!-- <source src="assets/sfx/alarm.mp3" type="audio/mpeg" /> -->
+  </audio>
 
   <script src="app.js?v=1"></script>
 </body>

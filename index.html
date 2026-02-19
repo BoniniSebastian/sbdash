@@ -21,7 +21,7 @@
     <div class="topDate" id="topDate">—</div>
 
     <div class="topRight">
-      <div class="topPrioMini" id="startPrioCount">Aktiva prios: 0</div>
+      <div class="topPrioMini" id="topPrioMini">Aktiva prios: 0</div>
     </div>
   </header>
 
@@ -37,15 +37,15 @@
     </div>
 
     <!-- ===== BIG START ICON (under preview) ===== -->
-    <div class="startIconWrap">
+    <div class="startIconWrap" aria-hidden="true">
       <img class="startIcon" id="startIcon" src="assets/ui/icon-calendar.svg" alt="">
     </div>
 
-    <!-- ===== SHEET WRAP (overlay behind wheel) ===== -->
-    <div class="sheetWrap" id="sheetWrap">
-      <div class="sheet" id="sheet">
+    <!-- ===== SHEET WRAP (overlay, behind wheel) ===== -->
+    <div class="sheetWrap" id="sheetWrap" aria-hidden="true">
+      <div class="sheet" id="sheet" role="dialog" aria-modal="true">
         <div class="sheetHeader">
-          <div class="sheetTitle" id="sheetTitle">Preview</div>
+          <div class="sheetTitle" id="sheetTitle">—</div>
           <button class="sheetClose" id="sheetCloseBtn" aria-label="Stäng">✕</button>
         </div>
         <div class="sheetContent" id="sheetContent"></div>
@@ -54,10 +54,10 @@
 
     <!-- ===== WHEEL ===== -->
     <div class="wheelWrap" id="wheelWrap">
-      <div class="wheel" id="wheel" aria-label="Hjul">
+      <div class="wheel" id="wheel" aria-label="Scrollhjul">
         <img src="assets/ui/knob-ring.svg" class="wheelRing" alt="ring" />
         <div id="wheelCenterText" class="wheelCenterText">—</div>
-        <!-- timer pulse + svg injected by JS -->
+        <!-- timer pulse + timer ring injected by JS -->
       </div>
     </div>
 

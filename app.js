@@ -860,7 +860,10 @@ const newsList = document.getElementById("newsList");
 const newsMeta = document.getElementById("newsMeta");
 
 async function loadNews() {
-  if (!newsList) return;
+  const newsList = document.getElementById("newsList");
+  const newsMeta = document.getElementById("newsMeta");
+
+  if (!newsList || !newsMeta) return;
 
   newsMeta.textContent = "Laddar…";
   newsList.innerHTML = "";

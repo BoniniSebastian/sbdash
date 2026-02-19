@@ -3,7 +3,7 @@
    - Wheel navigation + sheet
    - Preview card behind wheel (dim/frost)
    - Weather (Open-Meteo)
-   - News (Google News RSS) via robust proxy fallback + cache
+   - News (Google News RSS) via cache-bust + proxy fallback + stale-filter + local cache
    - Timer: 1/5/10/15/30 starts instantly + Reset
    - Lists/Ideas/Prio: checkbox completes, row opens modal
    - Lists modal: checklist with reorder done->bottom
@@ -406,6 +406,7 @@
     const m = Number(min);
     if(!Number.isFinite(m) || m <= 0) return;
 
+    // stop current
     TIMER.running = false;
     cancelAnimationFrame(TIMER.raf);
 
@@ -413,6 +414,7 @@
     TIMER.left = TIMER.total;
     TIMER.pausedLeft = TIMER.left;
 
+    // start immediately
     TIMER.running = true;
     TIMER.t0 = performance.now();
     document.body.classList.add("timerRunning");
@@ -542,6 +544,7 @@
     wrap.querySelector(".modalBackdrop").onclick = close;
     wrap.querySelector(".modalClose").onclick = close;
 
+    // autosave note
     ta.addEventListener("input", () => {
       item.note = ta.value || "";
       saveStore();
@@ -549,6 +552,7 @@
       if(sheetWrap?.classList.contains("open")) renderView(VIEW_DEFS[activeIndex].id);
     });
 
+    // list checklists
     if(type === "lists"){
       const block = wrap.querySelector(".subTaskBlock");
       block.style.display = "block";
@@ -576,6 +580,7 @@
         if(i === -1) return;
         item.checklist[i].done = !item.checklist[i].done;
 
+        // move done to bottom, undone to top
         item.checklist.sort((a,b) => (a.done === b.done) ? (b.createdAt - a.createdAt) : (a.done ? 1 : -1));
 
         saveStore();
@@ -624,6 +629,8 @@
 
   /* =========================
      LIST ITEM ROW
+     - checkbox = complete
+     - rest click = modal
   ========================= */
   function mkCheckItem({ item, meta, stat }, onComplete, onOpen){
     const li = document.createElement("li");
@@ -674,6 +681,7 @@
       setTimeout(() => onComplete?.(), 190);
     });
 
+    // click rest opens modal (not checkbox)
     row.addEventListener("click", (e) => {
       if(e.target === cb) return;
       onOpen?.();
@@ -829,8 +837,8 @@
         <div>Regn max: ${popm}%</div>
       `;
 
-      const temps = data.hourly.temperature_2m.slice(0, 6);
-      const pop = data.hourly.precipitation_probability.slice(0, 6);
+      const temps = (data.hourly.temperature_2m || []).slice(0, 6);
+      const pop = (data.hourly.precipitation_probability || []).slice(0, 6);
 
       $("wForecast").innerHTML = temps.map((t, i) => `
         <div class="wxMini">
@@ -842,43 +850,60 @@
 
       renderPreview("weather");
     }catch{
-      $("wNow").textContent = "Kunde inte hämta väder.";
+      const el = $("wNow");
+      if(el) el.textContent = "Kunde inte hämta väder.";
     }
   }
 
   /* =========================
-     NEWS (ROBUST + CACHE)
+     NEWS (FIX)
+     - cache-bust url
+     - proxy fallback
+     - stale filter (48h)
+     - local cache fallback
   ========================= */
-  const RSS_URL = "https://news.google.com/rss?hl=sv&gl=SE&ceid=SE:sv";
+  const RSS_URL_BASE = "https://news.google.com/rss?hl=sv&gl=SE&ceid=SE:sv";
   const NEWS_CACHE_KEY = "sbdash_news_cache_v1";
-  let newsIntervalStarted = false;
 
   const PROXIES = [
     (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
     (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//, "")}`,
-    (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, // needs JSON parse
+    (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
   ];
 
   async function fetchTextWithFallback(url){
-    let lastErr;
-    for (const p of PROXIES){
+    let lastErr = null;
+    for(const mk of PROXIES){
       try{
-        const proxied = p(url);
-        const r = await fetch(proxied, { cache:"no-store" });
-        if(!r.ok) throw new Error(`HTTP ${r.status}`);
-        const t = await r.text();
+        const proxyUrl = mk(url);
+        const res = await fetch(proxyUrl, { cache:"no-store" });
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
 
-        if (proxied.includes("/get?url=")){
-          const obj = JSON.parse(t);
-          if (obj?.contents) return obj.contents;
-          throw new Error("No contents");
+        const txt = await res.text();
+
+        // allorigins /get returns JSON
+        if(proxyUrl.includes("/get?url=")){
+          const obj = JSON.parse(txt);
+          if(obj?.contents) return obj.contents;
+          throw new Error("No contents in allorigins get");
         }
-        return t;
-      }catch(e){
-        lastErr = e;
+
+        return txt;
+      }catch(err){
+        lastErr = err;
       }
     }
-    throw lastErr || new Error("All proxies failed");
+    throw (lastErr || new Error("All proxies failed"));
+  }
+
+  function parseRss(xmlText, max = 10){
+    const xml = new DOMParser().parseFromString(xmlText, "text/xml");
+    const items = Array.from(xml.querySelectorAll("item")).slice(0, max);
+    return items.map((item) => ({
+      title: item.querySelector("title")?.textContent?.trim() || "Nyhet",
+      link: item.querySelector("link")?.textContent?.trim() || "#",
+      pubDate: item.querySelector("pubDate")?.textContent?.trim() || "",
+    }));
   }
 
   function saveNewsCache(items){
@@ -886,22 +911,13 @@
       localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify({ updatedAt: Date.now(), items }));
     }catch{}
   }
+
   function loadNewsCache(){
     try{
       return JSON.parse(localStorage.getItem(NEWS_CACHE_KEY) || "null");
     }catch{
       return null;
     }
-  }
-
-  function parseRss(xmlText, max=10){
-    const doc = new DOMParser().parseFromString(xmlText, "text/xml");
-    const nodes = Array.from(doc.querySelectorAll("item")).slice(0, max);
-    return nodes.map((it) => ({
-      title: it.querySelector("title")?.textContent?.trim() || "Nyhet",
-      link: it.querySelector("link")?.textContent?.trim() || "#",
-      pubDate: it.querySelector("pubDate")?.textContent?.trim() || "",
-    }));
   }
 
   function renderNewsList(items, metaText){
@@ -931,20 +947,25 @@
       a.textContent = it.title;
       a.style.color = "var(--text)";
       a.style.textDecoration = "none";
-      a.style.fontWeight = "700";
+      a.style.fontWeight = "900";
       a.style.fontSize = "12px";
       a.style.whiteSpace = "nowrap";
       a.style.overflow = "hidden";
       a.style.textOverflow = "ellipsis";
+
       left.appendChild(a);
 
       const right = document.createElement("div");
       right.className = "miniMeta";
+
       if(it.pubDate){
-        const d = new Date(it.pubDate);
-        if(!isNaN(d.getTime())){
-          right.textContent = d.toLocaleString("sv-SE", {
-            day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"
+        const date = new Date(it.pubDate);
+        if(!isNaN(date.getTime())){
+          right.textContent = date.toLocaleString("sv-SE", {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
           });
         }
       }
@@ -955,31 +976,53 @@
     });
   }
 
+  let newsLoading = false;
+
   async function loadNews(){
     const newsList = document.getElementById("newsList");
     const newsMeta = document.getElementById("newsMeta");
     if(!newsList || !newsMeta) return;
 
+    if(newsLoading) return;
+    newsLoading = true;
+
     newsMeta.textContent = "Laddar…";
     newsList.innerHTML = "";
 
     try{
-      const xml = await fetchTextWithFallback(RSS_URL);
-      const items = parseRss(xml, 10);
-      lastNews = items;              // preview
-      saveNewsCache(items);
-      renderPreview("news");
+      // cache-bust to avoid stale batches
+      const url = `${RSS_URL_BASE}&_=${Date.now()}`;
+      const xmlText = await fetchTextWithFallback(url);
 
-      renderNewsList(items, "Uppdaterad: " + new Date().toLocaleString("sv-SE", {hour:"2-digit", minute:"2-digit"}));
-    }catch(e){
+      const items = parseRss(xmlText, 10);
+
+      // filter out very old items (48h). If everything old, still show but annotate.
+      const now = Date.now();
+      const fresh = items.filter(it => {
+        const t = it.pubDate ? new Date(it.pubDate).getTime() : 0;
+        return t && (now - t) < (48 * 60 * 60 * 1000);
+      });
+      const finalItems = fresh.length ? fresh : items;
+
+      lastNews = finalItems;
+      saveNewsCache(finalItems);
+
+      const stamp = new Date().toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit" });
+      const note = fresh.length ? "" : " (äldre batch)";
+      renderNewsList(finalItems, `Uppdaterad: ${stamp}${note}`);
+
+      renderPreview("news");
+    }catch(err){
       const c = loadNewsCache();
       if(c?.items?.length){
         lastNews = c.items;
+        renderNewsList(c.items, `Visar cache (senast: ${new Date(c.updatedAt).toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit" })})`);
         renderPreview("news");
-        renderNewsList(c.items, "Visar cache (senast: " + new Date(c.updatedAt).toLocaleString("sv-SE", {hour:"2-digit", minute:"2-digit"}) + ")");
       }else{
         renderNewsList([], "Kunde inte ladda nyheter.");
       }
+    }finally{
+      newsLoading = false;
     }
   }
 
@@ -990,12 +1033,14 @@
       <div id="newsMeta" class="miniHint" style="margin-top:8px;">Laddar…</div>
     `;
     loadNews();
-
-    if(!newsIntervalStarted){
-      newsIntervalStarted = true;
-      setInterval(loadNews, 10 * 60 * 1000);
-    }
   }
+
+  // auto-refresh var 10:e minut (om du råkar stå kvar på nyhetssidan)
+  setInterval(() => {
+    if(document.getElementById("newsList") && document.getElementById("newsMeta")){
+      loadNews();
+    }
+  }, 10 * 60 * 1000);
 
   /* =========================
      VIEW SWITCH
@@ -1017,4 +1062,7 @@
   setPreview(0);
   updateWheelTimerProgress();
   renderPreview("calendar");
+
+  // (valfritt) om du vill att preview för news ska ha något direkt:
+  // loadNews();  // kör bara om du redan har newsList/newsMeta i DOM vid start
 })();

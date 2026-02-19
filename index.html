@@ -32,7 +32,7 @@
     </div>
 
     <!-- ===== CENTER LABEL (sync with wheel) ===== -->
-    <div class="centerLabel" id="centerLabel">KALENDER</div>
+    <img class="startIcon" id="startIcon" src="assets/ui/icon-calendar.svg" alt="">
 
     <!-- ===== PREVIEW (behind wheel when sheet closed) ===== -->
     <div class="previewWrap" id="previewWrap" aria-hidden="true">
@@ -56,7 +56,8 @@
     <div class="wheelWrap">
       <div class="wheel" id="wheel">
         <img src="assets/ui/knob-ring.svg" class="wheelRing" alt="ring" />
-        <img id="wheelIcon" class="wheelIcon" src="assets/ui/icon-calendar.svg" alt="icon" />
+        if(wheelCenterText) wheelCenterText.style.opacity = "0"; ... if(wheelCenterText) wheelCenterText.style.opacity = "1";
+        <div id="wheelCenterText" class="wheelCenterText">—</div>
         <!-- timer pulse is injected by JS -->
       </div>
     </div>

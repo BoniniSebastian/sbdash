@@ -750,181 +750,134 @@
     }
   }
 
-  /* =========================
-     NEWS (RSS via proxies)
-  ========================= */
-  let lastNews = [];
+/* =========================
+   NEWS (RSS/Atom via proxies) – robust
+========================= */
+async function renderNews() {
+  sheetTitle.textContent = "Nyheter";
+  sheetContent.innerHTML = `
+    <div class="card" style="padding:14px;">
+      <div class="miniHint" id="newsStatus">Laddar…</div>
+      <div id="newsList" class="newsList" style="margin-top:10px;"></div>
+    </div>
+  `;
 
-  async function renderNews(){
-    sheetTitle.textContent = "Nyheter";
-    sheetContent.innerHTML = `
-      <div class="card" style="padding:14px;">
-        <div class="miniHint" id="newsStatus">Laddar…</div>
-        <div id="newsList" class="newsList" style="margin-top:10px;"></div>
-      </div>
-    `;
+  const feeds = [
+    { name: "SVT Nyheter", url: "https://www.svt.se/nyheter/rss.xml" },
+    { name: "Omni",        url: "https://omni.se/rss" },
+  ];
 
-    const feeds = [
-      { name: "SVT Nyheter", url: "https://www.svt.se/nyheter/rss.xml" },
-      { name: "Omni",        url: "https://omni.se/rss" },
-    ];
+  // Proxies (testas i ordning). Vi använder jina som “sista utväg” pga wrapper-text.
+  const proxies = [
+    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+    (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//, "")}`,
+  ];
 
-    const proxies = [
-      (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//, "")}`,
-      (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-      (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
-    ];
-
-    async function fetchViaProxies(url){
-      let lastErr = null;
-      for(const p of proxies){
-        try{
-          const r = await fetch(p(url), { cache:"no-store" });
-          if(!r.ok) throw new Error(`HTTP ${r.status}`);
-          return await r.text();
-        }catch(e){
-          lastErr = e;
-        }
+  async function fetchViaProxies(url) {
+    let lastErr = null;
+    for (const p of proxies) {
+      try {
+        const r = await fetch(p(url), { cache: "no-store" });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const txt = await r.text();
+        // Sanera om proxy lägger på “skräp” före XML
+        const clean = sanitizeXml(txt);
+        if (!clean) throw new Error("Empty/invalid XML");
+        return clean;
+      } catch (e) {
+        lastErr = e;
       }
-      throw lastErr || new Error("Proxy failed");
+    }
+    throw lastErr || new Error("Proxy failed");
+  }
+
+  function sanitizeXml(text) {
+    if (!text) return "";
+    const i = text.indexOf("<");
+    if (i === -1) return "";
+    return text.slice(i).trim();
+  }
+
+  function parseAny(xmlText, sourceName) {
+    const doc = new DOMParser().parseFromString(xmlText, "text/xml");
+
+    // Om parsererror finns → bail
+    const perr = doc.querySelector("parsererror");
+    if (perr) return [];
+
+    // RSS <item>
+    const rssItems = [...doc.querySelectorAll("item")];
+    if (rssItems.length) {
+      return rssItems.slice(0, 12).map(it => {
+        const title = (it.querySelector("title")?.textContent || "").trim();
+        const link  = (it.querySelector("link")?.textContent  || "").trim();
+        const pd    = (it.querySelector("pubDate")?.textContent || "").trim();
+        const date  = new Date(pd || Date.now());
+        return { source: sourceName, title, link, date };
+      }).filter(x => x.title && x.link);
     }
 
-    function parseAny(xmlText, sourceName){
-      const doc = new DOMParser().parseFromString(xmlText, "text/xml");
+    // ATOM <entry>
+    const entries = [...doc.querySelectorAll("entry")];
+    if (entries.length) {
+      return entries.slice(0, 12).map(en => {
+        const title = (en.querySelector("title")?.textContent || "").trim();
 
-      const rssItems = [...doc.querySelectorAll("item")];
-      const atomEntries = [...doc.querySelectorAll("entry")];
+        // Atom link kan vara <link href="..."> eller <link>...</link>
+        let link = (en.querySelector("link")?.textContent || "").trim();
+        const href = en.querySelector("link")?.getAttribute?.("href");
+        if (href) link = href;
 
-      const rows = (rssItems.length ? rssItems : atomEntries).slice(0, 12).map((it) => {
-        const title = (it.querySelector("title")?.textContent || "").trim();
-        let link = "";
-
-        // RSS
-        const l1 = it.querySelector("link")?.textContent?.trim();
-        if(l1) link = l1;
-
-        // Atom link href
-        const href = it.querySelector("link")?.getAttribute?.("href");
-        if(href) link = href;
-
-        const pd = it.querySelector("pubDate")?.textContent || it.querySelector("updated")?.textContent || "";
-        const date = new Date(pd || Date.now());
+        const upd  = (en.querySelector("updated")?.textContent || "").trim();
+        const pub  = (en.querySelector("published")?.textContent || "").trim();
+        const date = new Date((upd || pub) || Date.now());
 
         return { source: sourceName, title, link, date };
       }).filter(x => x.title && x.link);
-
-      return rows;
     }
 
-    const statusEl = $("newsStatus");
-    const listEl = $("newsList");
-
-    try{
-      const results = await Promise.allSettled(
-        feeds.map(async f => parseAny(await fetchViaProxies(f.url), f.name))
-      );
-
-      const okCount = results.filter(r => r.status === "fulfilled" && r.value.length).length;
-      const merged = results
-        .filter(r => r.status === "fulfilled")
-        .flatMap(r => r.value)
-        .sort((a,b) => b.date - a.date)
-        .slice(0, 18);
-
-      lastNews = merged;
-
-      if(!merged.length){
-        if(statusEl) statusEl.textContent = `Kan inte läsa nyheter just nu (0/${feeds.length} källor).`;
-        return;
-      }
-
-      if(statusEl) statusEl.textContent = `Senaste: ${merged.length} artiklar (${okCount}/${feeds.length} källor)`;
-
-      if(listEl){
-        listEl.innerHTML = merged.map(n => `
-          <a class="newsItem" href="${n.link}" target="_blank" rel="noopener">
-            <div class="newsTitle">${n.title}</div>
-            <div class="newsMeta">${n.source} • ${n.date.toLocaleString("sv-SE",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"})}</div>
-          </a>
-        `).join("");
-      }
-
-      renderPreview("news");
-    }catch{
-      if(statusEl) statusEl.textContent = "Kan inte läsa nyheter (proxy/CORS).";
-    }
+    return [];
   }
 
-  /* =========================
-     PREVIEW renderer
-  ========================= */
-  function renderPreview(viewId){
-    if(!previewTitle || !previewBody) return;
+  const statusEl = $("newsStatus");
+  const listEl = $("newsList");
 
-    const v = VIEW_DEFS.find(x => x.id === viewId) || VIEW_DEFS[0];
-    previewTitle.textContent = v.label;
+  try {
+    const results = await Promise.allSettled(
+      feeds.map(async f => {
+        const xml = await fetchViaProxies(f.url);
+        return parseAny(xml, f.name);
+      })
+    );
 
-    if(viewId === "prio"){
-      previewBody.innerHTML = `
-        Aktiva prios: <b>${(store.prio || []).length}</b><br/>
-        ${store.prio?.[0]?.text ? `Senast: ${store.prio[0].text}` : "Inga prios ännu"}
-      `;
+    const okCount = results.filter(r => r.status === "fulfilled" && r.value.length).length;
+
+    const merged = results
+      .filter(r => r.status === "fulfilled")
+      .flatMap(r => r.value)
+      .sort((a, b) => b.date - a.date)
+      .slice(0, 18);
+
+    if (!merged.length) {
+      if (statusEl) statusEl.textContent = `Kan inte läsa nyheter just nu (0/${feeds.length} källor).`;
       return;
     }
 
-    if(viewId === "lists"){
-      const count = (store.lists || []).length;
-      const top = store.lists?.[0];
-      const stat = top ? listProgress(top) : "";
-      previewBody.innerHTML = `
-        Antal: <b>${count}</b><br/>
-        ${top ? `Senast: ${top.text} ${stat ? `(${stat})` : ""}` : "Inga listor ännu"}
-      `;
-      return;
-    }
+    if (statusEl) statusEl.textContent = `Senaste: ${merged.length} artiklar (${okCount}/${feeds.length} källor)`;
 
-    if(viewId === "ideas"){
-      const count = (store.ideas || []).length;
-      const top = store.ideas?.[0];
-      previewBody.innerHTML = `
-        Antal: <b>${count}</b><br/>
-        ${top ? `Senast: ${top.text}` : "Inga idéer ännu"}
-      `;
-      return;
+    if (listEl) {
+      listEl.innerHTML = merged.map(n => `
+        <a class="newsItem" href="${n.link}" target="_blank" rel="noopener">
+          <div class="newsTitle">${n.title}</div>
+          <div class="newsMeta">${n.source} • ${n.date.toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit", day:"2-digit", month:"2-digit" })}</div>
+        </a>
+      `).join("");
     }
-
-    if(viewId === "weather"){
-      if(lastWeather?.current){
-        const t = Math.round(lastWeather.current.temperature_2m);
-        const w = Math.round(lastWeather.current.wind_speed_10m);
-        previewBody.innerHTML = `Just nu: <b>${t}°</b> • Vind: <b>${w} m/s</b><br/>Tryck för detaljer.`;
-      }else{
-        previewBody.innerHTML = `Tryck för att hämta väder.`;
-      }
-      return;
-    }
-
-    if(viewId === "news"){
-      if(lastNews?.length){
-        previewBody.innerHTML = `Senaste: <b>${lastNews[0].source}</b><br/>${lastNews[0].title}`;
-      }else{
-        previewBody.innerHTML = `Tryck för att hämta nyheter.`;
-      }
-      return;
-    }
-
-    if(viewId === "calendar"){
-      previewBody.innerHTML = `Öppna agenda och dagens planering.`;
-      return;
-    }
-
-    if(viewId === "timer"){
-      previewBody.innerHTML = `Snabbstart: 1 • 5 • 10 • 15 • 30<br/>Reset om du vill nollställa.`;
-      return;
-    }
-
-    previewBody.textContent = "";
+  } catch (e) {
+    if (statusEl) statusEl.textContent = "Kan inte läsa nyheter (proxy/CORS).";
   }
+}
 
   /* =========================
      VIEW SWITCH

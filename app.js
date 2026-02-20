@@ -1,5 +1,3 @@
-Här är hela app.js igen (komplett fil). Ersätt allt i din nuvarande app.js med detta:
-
 alert("app.js loaded");
 
 /* =========================

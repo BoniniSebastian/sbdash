@@ -153,7 +153,17 @@
     };
     return m[code] || `Väderkod ${code}`;
   }
-
+  /* =========================
+     TIMER STATE (MUST BE BEFORE timerText)
+  ========================= */
+  const TIMER = {
+    total: 5 * 60,
+    left:  5 * 60,
+    running: false,
+    t0: 0,
+    pausedLeft: 5 * 60,
+    raf: 0
+  };
   function timerText() {
     const safe = Math.max(0, TIMER.left);
     const mm = Math.floor(safe / 60);
@@ -359,158 +369,6 @@
     renderView(VIEW_DEFS[activeIndex].id, { fast: true });
   });
 
-  /* =========================
-     TIMER (wheel ring svg + fullscreen pulse)
-  ========================= */
-  const TIMER = {
-    total: 5 * 60,
-    left:  5 * 60,
-    running: false,
-    t0: 0,
-    pausedLeft: 5 * 60,
-    raf: 0
-  };
-
-  const wheelSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  wheelSvg.setAttribute("class", "wheelTimerSvg");
-  wheelSvg.innerHTML = `<circle id="wheelTimerBg"></circle><circle id="wheelTimerProg"></circle>`;
-  wheel?.appendChild(wheelSvg);
-
-  function updateWheelTimerProgress() {
-    const bg = document.getElementById("wheelTimerBg");
-    const prog = document.getElementById("wheelTimerProg");
-    if (!wheel || !bg || !prog) return;
-
-    const size = wheel.getBoundingClientRect().width;
-    const r = (size / 2) - 10;
-    const cx = size / 2;
-    const cy = size / 2;
-
-    wheelSvg.setAttribute("viewBox", `0 0 ${size} ${size}`);
-
-    bg.setAttribute("cx", cx);
-    bg.setAttribute("cy", cy);
-    bg.setAttribute("r", r);
-
-    prog.setAttribute("cx", cx);
-    prog.setAttribute("cy", cy);
-    prog.setAttribute("r", r);
-
-    const C = 2 * Math.PI * r;
-    bg.style.strokeDasharray = String(C);
-    bg.style.strokeDashoffset = "0";
-    prog.style.strokeDasharray = String(C);
-
-    const pct = TIMER.total ? (TIMER.left / TIMER.total) : 0;
-    prog.style.strokeDashoffset = String(-C * (1 - clamp01(pct)));
-
-    if (pct > 0.40) prog.style.stroke = "rgba(0,209,255,.92)";
-    else if (pct > 0.15) prog.style.stroke = "rgba(255,165,0,.92)";
-    else prog.style.stroke = "rgba(255,70,70,.92)";
-  }
-  window.addEventListener("resize", updateWheelTimerProgress);
-
-  function ensureFullscreenPulse(on) {
-    const id = "timerPulseFullscreen";
-    let el = document.getElementById(id);
-    if (on) {
-      if (!el) {
-        el = document.createElement("div");
-        el.id = id;
-        el.className = "timerPulseFullscreen";
-        document.body.appendChild(el);
-      }
-    } else {
-      el?.remove();
-    }
-  }
-
-  function alarm() {
-    const audio = document.getElementById("alarmAudio");
-    if (audio?.querySelector("source")) {
-      audio.currentTime = 0;
-      audio.play().catch(() => beepFallback());
-      return;
-    }
-    beepFallback();
-  }
-
-  function beepFallback() {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = "sine";
-      o.frequency.value = 880;
-      g.gain.value = 0.08;
-      o.connect(g);
-      g.connect(ctx.destination);
-      o.start();
-      setTimeout(() => { o.stop(); ctx.close(); }, 900);
-    } catch {}
-  }
-
-  function setTimerMinutesAndStart(min) {
-    const m = Number(min);
-    if (!Number.isFinite(m) || m <= 0) return;
-
-    TIMER.running = false;
-    cancelAnimationFrame(TIMER.raf);
-
-    TIMER.total = Math.round(m * 60);
-    TIMER.left = TIMER.total;
-    TIMER.pausedLeft = TIMER.left;
-
-    TIMER.running = true;
-    TIMER.t0 = performance.now();
-
-    document.body.classList.add("timerRunning");
-    ensureFullscreenPulse(true);
-
-    cancelAnimationFrame(TIMER.raf);
-    TIMER.raf = requestAnimationFrame(timerLoop);
-
-    updateWheelTimerProgress();
-    renderPreview("timer");
-  }
-
-  function resetTimer() {
-    TIMER.running = false;
-    cancelAnimationFrame(TIMER.raf);
-    TIMER.left = TIMER.total;
-    TIMER.pausedLeft = TIMER.left;
-
-    document.body.classList.remove("timerRunning");
-    ensureFullscreenPulse(false);
-
-    updateWheelTimerProgress();
-    renderPreview("timer");
-  }
-
-  function timerLoop() {
-    if (!TIMER.running) return;
-
-    const elapsed = (performance.now() - TIMER.t0) / 1000;
-    TIMER.left = Math.max(0, Math.floor(TIMER.pausedLeft - elapsed));
-
-    updateWheelTimerProgress();
-    renderPreview("timer");
-
-    if (TIMER.left <= 0) {
-      TIMER.running = false;
-      cancelAnimationFrame(TIMER.raf);
-
-      document.body.classList.remove("timerRunning");
-      ensureFullscreenPulse(false);
-
-      updateWheelTimerProgress();
-      alarm();
-      renderPreview("timer");
-      return;
-    }
-
-    TIMER.raf = requestAnimationFrame(timerLoop);
-  }
 
   /* =========================
      DONE (restore-to-origin)

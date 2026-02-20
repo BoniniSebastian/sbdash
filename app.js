@@ -5,6 +5,9 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
+  /* =========================
+     ELEMENTS
+  ========================= */
   const wheel = $("wheel");
   const wheelRing = document.querySelector(".wheelRing");
   const wheelCenterText = $("wheelCenterText");
@@ -25,6 +28,9 @@
   function clamp01(x) { return Math.max(0, Math.min(1, x)); }
   function pad2(n) { return String(n).padStart(2, "0"); }
 
+  /* =========================
+     STORAGE
+  ========================= */
   const LS_KEY = "sbdash_store_v5";
   const NEWS_CACHE_KEY = "sbdash_news_cache_v2";
 
@@ -66,6 +72,9 @@
   }
   updatePrioCount();
 
+  /* =========================
+     VIEWS
+  ========================= */
   const VIEW_DEFS = [
     { id: "calendar", label: "KALENDER",  icon: "assets/ui/icon-calendar.svg" },
     { id: "prio",     label: "PRIOS",     icon: "assets/ui/icon-prio.svg" },
@@ -95,7 +104,34 @@
     if (startIcon && src) startIcon.src = src;
   }
 
-  // TIMER state must exist early
+  function escapeHtml(s) {
+    return String(s ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  let lastNews = [];
+  let lastWeather = null;
+
+  function wxText(code) {
+    const m = {
+      0:"Klart",1:"Mestadels klart",2:"Delvis molnigt",3:"Mulet",
+      45:"Dimma",48:"Isdimma",
+      51:"Duggregn",53:"Duggregn",55:"Duggregn (kraftigt)",
+      61:"Regn (lätt)",63:"Regn",65:"Regn (kraftigt)",
+      71:"Snö (lätt)",73:"Snö",75:"Snö (kraftigt)",
+      80:"Skurar (lätta)",81:"Skurar",82:"Skurar (kraftiga)",
+      95:"Åska",96:"Åska + hagel",99:"Åska + hagel",
+    };
+    return m[code] || `Väderkod ${code}`;
+  }
+
+  /* =========================
+     TIMER STATE
+  ========================= */
   const TIMER = {
     total: 5 * 60,
     left:  5 * 60,
@@ -112,31 +148,9 @@
     return `${pad2(mm)}:${pad2(ss)}`;
   }
 
-  let lastNews = [];
-  let lastWeather = null;
-
-  function escapeHtml(s) {
-    return String(s ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  function wxText(code) {
-    const m = {
-      0:"Klart",1:"Mestadels klart",2:"Delvis molnigt",3:"Mulet",
-      45:"Dimma",48:"Isdimma",
-      51:"Duggregn",53:"Duggregn",55:"Duggregn (kraftigt)",
-      61:"Regn (lätt)",63:"Regn",65:"Regn (kraftigt)",
-      71:"Snö (lätt)",73:"Snö",75:"Snö (kraftigt)",
-      80:"Skurar (lätta)",81:"Skurar",82:"Skurar (kraftiga)",
-      95:"Åska",96:"Åska + hagel",99:"Åska + hagel",
-    };
-    return m[code] || `Väderkod ${code}`;
-  }
-
+  /* =========================
+     PREVIEW
+  ========================= */
   function previewHtmlFor(id) {
     if (id === "calendar") return `<div class="miniHint">Tryck på hjulet för att öppna kalendern.</div>`;
 
@@ -172,11 +186,11 @@
                : `<div class="miniHint" style="margin-top:8px;">Inga prios ännu</div>`);
     }
 
-    if (id === "timer") return `<div style="font-weight:900;">${timerText()}</div><div class="miniHint" style="margin-top:8px;">Tryck för 1/5/10/15/30</div>`;
+    if (id === "timer")  return `<div style="font-weight:900;">${timerText()}</div><div class="miniHint" style="margin-top:8px;">Tryck för 1/5/10/15/30</div>`;
     if (id === "stocks") return `<div class="miniHint">Placeholder – vi kan lägga TradingView widget här sen.</div>`;
-    if (id === "done") return `<div style="font-weight:900;">Slutförda: ${store.done.length}</div><div class="miniHint" style="margin-top:8px;">Tryck för lista + återställ</div>`;
-    if (id === "lists") return `<div style="font-weight:900;">Listor: ${store.lists.length}</div>`;
-    if (id === "ideas") return `<div style="font-weight:900;">Idéer: ${store.ideas.length}</div>`;
+    if (id === "done")   return `<div style="font-weight:900;">Slutförda: ${store.done.length}</div><div class="miniHint" style="margin-top:8px;">Tryck för lista + återställ</div>`;
+    if (id === "lists")  return `<div style="font-weight:900;">Listor: ${store.lists.length}</div>`;
+    if (id === "ideas")  return `<div style="font-weight:900;">Idéer: ${store.ideas.length}</div>`;
 
     return `<div class="miniHint">Tryck för att öppna.</div>`;
   }
@@ -187,7 +201,11 @@
     previewTitle.textContent = v ? v.label : "Preview";
     previewBody.innerHTML = previewHtmlFor(id);
   }
-    function openSheet() {
+
+  /* =========================
+     SHEET OPEN/CLOSE
+  ========================= */
+  function openSheet() {
     document.body.classList.add("sheetOpen");
     sheetWrap?.setAttribute("aria-hidden", "false");
   }
@@ -199,7 +217,6 @@
 
   sheetCloseBtn?.addEventListener("click", closeSheet);
 
-  // drag-to-close
   let sheetDragStartY = null;
 
   sheet?.addEventListener("pointerdown", (e) => {
@@ -319,12 +336,17 @@
     openSheet();
     renderView(VIEW_DEFS[activeIndex].id, { fast: true });
   });
+  
     /* =========================
      TIMER: wheel ring + fullscreen pulse + alarm
   ========================= */
+
   const wheelSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   wheelSvg.setAttribute("class", "wheelTimerSvg");
-  wheelSvg.innerHTML = `<circle id="wheelTimerBg"></circle><circle id="wheelTimerProg"></circle>`;
+  wheelSvg.innerHTML = `
+    <circle id="wheelTimerBg"></circle>
+    <circle id="wheelTimerProg"></circle>
+  `;
   wheel?.appendChild(wheelSvg);
 
   function updateWheelTimerProgress() {
@@ -338,12 +360,20 @@
     const cy = size / 2;
 
     wheelSvg.setAttribute("viewBox", `0 0 ${size} ${size}`);
-    bg.setAttribute("cx", cx); bg.setAttribute("cy", cy); bg.setAttribute("r", r);
-    prog.setAttribute("cx", cx); prog.setAttribute("cy", cy); prog.setAttribute("r", r);
+
+    bg.setAttribute("cx", cx);
+    bg.setAttribute("cy", cy);
+    bg.setAttribute("r", r);
+
+    prog.setAttribute("cx", cx);
+    prog.setAttribute("cy", cy);
+    prog.setAttribute("r", r);
 
     const C = 2 * Math.PI * r;
+
     bg.style.strokeDasharray = String(C);
     bg.style.strokeDashoffset = "0";
+
     prog.style.strokeDasharray = String(C);
 
     const pct = TIMER.total ? (TIMER.left / TIMER.total) : 0;
@@ -353,11 +383,13 @@
     else if (pct > 0.15) prog.style.stroke = "rgba(255,165,0,.92)";
     else prog.style.stroke = "rgba(255,70,70,.92)";
   }
+
   window.addEventListener("resize", updateWheelTimerProgress);
 
   function ensureFullscreenPulse(on) {
     const id = "timerPulseFullscreen";
     let el = document.getElementById(id);
+
     if (on) {
       if (!el) {
         el = document.createElement("div");
@@ -381,7 +413,10 @@
       o.connect(g);
       g.connect(ctx.destination);
       o.start();
-      setTimeout(() => { o.stop(); ctx.close(); }, 900);
+      setTimeout(() => {
+        o.stop();
+        ctx.close();
+      }, 900);
     } catch {}
   }
 
@@ -417,6 +452,9 @@
 
     updateWheelTimerProgress();
     renderPreview("timer");
+
+    const big = document.getElementById("timerBig");
+    if (big) big.textContent = timerText();
   }
 
   function resetTimer() {
@@ -432,8 +470,8 @@
     updateWheelTimerProgress();
     renderPreview("timer");
 
-    const t = document.getElementById("timerBig");
-    if (t) t.textContent = timerText();
+    const big = document.getElementById("timerBig");
+    if (big) big.textContent = timerText();
   }
 
   function timerLoop() {
@@ -445,8 +483,8 @@
     updateWheelTimerProgress();
     renderPreview("timer");
 
-    const t = document.getElementById("timerBig");
-    if (t) t.textContent = timerText();
+    const big = document.getElementById("timerBig");
+    if (big) big.textContent = timerText();
 
     if (TIMER.left <= 0) {
       TIMER.running = false;
@@ -463,9 +501,11 @@
 
     TIMER.raf = requestAnimationFrame(timerLoop);
   }
-    /* =========================
-     DONE + LISTS + CAL/WEATHER/NEWS + VIEW SWITCH + INIT
+
+  /* =========================
+     DONE + RESTORE
   ========================= */
+
   function toDone(origin, item) {
     store.done.unshift({
       id: item.id,
@@ -481,6 +521,7 @@
   function restoreFromDone(id) {
     const i = store.done.findIndex(x => x.id === id);
     if (i === -1) return;
+
     const item = store.done.splice(i, 1)[0];
     const { origin, doneAt, ...rest } = item;
 
@@ -492,9 +533,14 @@
     saveStore();
     updatePrioCount();
     renderPreview(VIEW_DEFS[activeIndex].id);
-    if (document.body.classList.contains("sheetOpen")) renderView(VIEW_DEFS[activeIndex].id, { fast: true });
-  }
 
+    if (document.body.classList.contains("sheetOpen")) {
+      renderView(VIEW_DEFS[activeIndex].id, { fast: true });
+    }
+  }
+    /* =========================
+     MODAL (dark backdrop – fixes white artifacts)
+  ========================= */
   function openModal(item, type) {
     const wrap = document.createElement("div");
     wrap.className = "modalWrap open";
@@ -508,6 +554,7 @@
         <div style="padding:14px; height:calc(100% - 70px); overflow:auto; -webkit-overflow-scrolling:touch;">
           <div style="font-weight:900; margin-bottom:10px;">${escapeHtml(item.text)}</div>
           <textarea class="modalTextArea" style="width:100%; min-height:160px; border-radius:18px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.20); color:rgba(255,255,255,.92); padding:12px; outline:none; font-size:16px;" placeholder="Skriv mer…"></textarea>
+
           ${type === "lists" ? `
             <div style="margin-top:14px; font-weight:900;">Checklist</div>
             <div style="display:flex; gap:10px; margin-top:10px;">
@@ -541,7 +588,9 @@
       const listEl = wrap.querySelector("#subTaskList");
 
       const sortChecklist = () => {
-        item.checklist.sort((a, b) => (a.done === b.done) ? (b.createdAt - a.createdAt) : (a.done ? 1 : -1));
+        item.checklist.sort((a, b) =>
+          (a.done === b.done) ? (b.createdAt - a.createdAt) : (a.done ? 1 : -1)
+        );
       };
 
       const draw = () => {
@@ -586,13 +635,6 @@
     }
   }
 
-  function listProgress(item) {
-    if (!Array.isArray(item.checklist) || item.checklist.length === 0) return "";
-    const total = item.checklist.length;
-    const done = item.checklist.filter(x => x.done).length;
-    return `${done}/${total}`;
-  }
-
   function mkRow({ item, meta, stat }, onComplete, onOpen) {
     const li = document.createElement("li");
     li.className = "checkItem";
@@ -610,7 +652,6 @@
     const t = document.createElement("div");
     t.className = "checkText";
     t.textContent = item.text;
-
     mid.appendChild(t);
 
     const right = document.createElement("div");
@@ -645,6 +686,13 @@
     });
 
     return li;
+  }
+
+  function listProgress(item) {
+    if (!Array.isArray(item.checklist) || item.checklist.length === 0) return "";
+    const total = item.checklist.length;
+    const done = item.checklist.filter(x => x.done).length;
+    return `${done}/${total}`;
   }
 
   function renderList(type, label, allowModal) {
@@ -713,7 +761,7 @@
     sheetTitle.textContent = "Slutförda";
     sheetContent.innerHTML = `
       <ul id="doneList" class="miniList"></ul>
-      <div class="miniHint" style="margin-top:10px;">Tryck på en slutförd rad för att återställa.</div>
+      <div class="miniHint" style="margin-top:10px;">Tryck på en slutförd rad för att återställa till rätt lista.</div>
     `;
 
     const listEl = $("doneList");
@@ -734,24 +782,233 @@
     });
   }
 
+  /* =========================
+     CALENDAR
+  ========================= */
   const CAL_SRC =
     "https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0";
 
   function renderCalendar() {
     sheetTitle.textContent = "Kalender";
     sheetContent.innerHTML = `
-      <div class="calScale">
-        <iframe class="calFrame" src="${CAL_SRC}" scrolling="yes"></iframe>
-        <div class="calOverlay" aria-hidden="true"></div>
-      </div>
-      <div class="miniHint" style="margin-top:10px;">Overlay dämpar om Google blir för vit.</div>
+      <iframe class="calFrame" src="${CAL_SRC}" scrolling="yes"></iframe>
+      <div class="calOverlay" aria-hidden="true"></div>
     `;
   }
 
-  async function renderWeather() { /* (samma som du hade, behåll) */ await Promise.resolve(); sheetTitle.textContent="Väder"; sheetContent.innerHTML=`<div class="miniHint">Väderfunktion saknas i denna del – säg till så lägger jag in exakt din version här.</div>`; }
+  /* =========================
+     WEATHER (Open-Meteo)
+  ========================= */
+  async function renderWeather() {
+    sheetTitle.textContent = "Väder";
+    sheetContent.innerHTML = `
+      <div class="weatherBlock">
+        <div id="wxNow" class="weatherRow">Laddar…</div>
+        <div id="wxMore" class="miniHint"></div>
+        <div style="margin-top:12px; font-weight:900;">Imorgon</div>
+        <div id="wxTom" class="miniHint" style="margin-top:6px;">—</div>
+      </div>
+    `;
 
-  function renderNews() { sheetTitle.textContent="Nyheter"; sheetContent.innerHTML=`<div class="miniHint">Nyhetsfunktionen är i din tidigare del – vill du att jag klistrar in den här också, säg “ja” så får du exakt RSS-blocket komplett.</div>`; }
+    const lat = 59.3293, lon = 18.0686;
+    const url =
+      `https://api.open-meteo.com/v1/forecast` +
+      `?latitude=${lat}&longitude=${lon}` +
+      `&current=temperature_2m,wind_speed_10m,weather_code` +
+      `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
+      `&forecast_days=2` +
+      `&timezone=Europe%2FStockholm`;
 
+    try {
+      const r = await fetch(url, { cache: "no-store" });
+      const data = await r.json();
+      lastWeather = data;
+
+      const t = Math.round(data.current.temperature_2m);
+      const w = Math.round(data.current.wind_speed_10m);
+      const code = data.current.weather_code;
+
+      const tmax = Math.round(data.daily.temperature_2m_max[0]);
+      const tmin = Math.round(data.daily.temperature_2m_min[0]);
+
+      const tomMax = Math.round(data.daily.temperature_2m_max[1]);
+      const tomMin = Math.round(data.daily.temperature_2m_min[1]);
+      const tomCode = data.daily.weather_code[1];
+
+      $("wxNow").innerHTML = `<div>Nu: <b>${t}°</b></div><div>Vind: <b>${w} m/s</b></div>`;
+      $("wxMore").innerHTML = `Idag: <b>${tmin}°</b> – <b>${tmax}°</b> • ${wxText(code)}`;
+      $("wxTom").innerHTML = `${wxText(tomCode)} • ${tomMin}° – ${tomMax}°`;
+
+      renderPreview("weather");
+    } catch {
+      const el = $("wxNow");
+      if (el) el.textContent = "Kunde inte hämta väder.";
+    }
+  }
+
+  /* =========================
+     NEWS (cache-first + bg refresh)
+  ========================= */
+  const RSS_URL_BASE = "https://news.google.com/rss?hl=sv&gl=SE&ceid=SE:sv";
+
+  const PROXIES = [
+    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//, "")}`,
+    (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+  ];
+
+  function saveNewsCache(items) {
+    try { localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify({ updatedAt: Date.now(), items })); } catch {}
+  }
+  function loadNewsCache() {
+    try { return JSON.parse(localStorage.getItem(NEWS_CACHE_KEY) || "null"); } catch { return null; }
+  }
+
+  async function fetchTextWithFallback(url) {
+    let lastErr = null;
+    for (const mk of PROXIES) {
+      try {
+        const proxyUrl = mk(url);
+        const res = await fetch(proxyUrl, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const txt = await res.text();
+
+        if (proxyUrl.includes("/get?url=")) {
+          const obj = JSON.parse(txt);
+          if (obj?.contents) return obj.contents;
+          throw new Error("No contents in allorigins get");
+        }
+        return txt;
+      } catch (e) { lastErr = e; }
+    }
+    throw (lastErr || new Error("All proxies failed"));
+  }
+
+  function parseRss(xmlText, max = 10) {
+    const xml = new DOMParser().parseFromString(xmlText, "text/xml");
+    const items = Array.from(xml.querySelectorAll("item")).slice(0, max);
+    return items.map((item) => ({
+      title: item.querySelector("title")?.textContent?.trim() || "Nyhet",
+      link: item.querySelector("link")?.textContent?.trim() || "#",
+      pubDate: item.querySelector("pubDate")?.textContent?.trim() || "",
+    }));
+  }
+
+  function renderNewsList(items, metaText) {
+    const newsList = document.getElementById("newsList");
+    const newsMeta = document.getElementById("newsMeta");
+    if (!newsList || !newsMeta) return;
+
+    newsMeta.textContent = metaText || "";
+    newsList.innerHTML = "";
+
+    if (!items?.length) {
+      newsList.innerHTML = `<li class="miniHint">Inget att visa just nu.</li>`;
+      return;
+    }
+
+    items.forEach((it) => {
+      const li = document.createElement("li");
+      li.className = "miniRow";
+
+      const left = document.createElement("div");
+      left.className = "miniRowLeft";
+
+      const a = document.createElement("a");
+      a.href = it.link;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = it.title;
+      a.style.color = "var(--text)";
+      a.style.textDecoration = "none";
+      a.style.fontWeight = "900";
+      a.style.fontSize = "12px";
+      a.style.whiteSpace = "nowrap";
+      a.style.overflow = "hidden";
+      a.style.textOverflow = "ellipsis";
+
+      left.appendChild(a);
+
+      const right = document.createElement("div");
+      right.className = "miniMeta";
+      if (it.pubDate) {
+        const d = new Date(it.pubDate);
+        if (!isNaN(d.getTime())) {
+          right.textContent = d.toLocaleString("sv-SE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        }
+      }
+
+      li.appendChild(left);
+      li.appendChild(right);
+      newsList.appendChild(li);
+    });
+  }
+
+  let newsLoading = false;
+
+  async function refreshNewsBackground() {
+    if (newsLoading) return;
+    newsLoading = true;
+
+    try {
+      const url = `${RSS_URL_BASE}&_=${Date.now()}`;
+      const xmlText = await fetchTextWithFallback(url);
+      const items = parseRss(xmlText, 12);
+
+      const now = Date.now();
+      const fresh = items.filter(it => {
+        const t = it.pubDate ? new Date(it.pubDate).getTime() : 0;
+        return t && (now - t) < (72 * 60 * 60 * 1000);
+      });
+      const finalItems = fresh.length ? fresh : items;
+
+      lastNews = finalItems;
+      saveNewsCache(finalItems);
+
+      if (document.getElementById("newsList") && document.getElementById("newsMeta")) {
+        renderNewsList(finalItems, `Uppdaterad: ${new Date().toLocaleString("sv-SE", { hour: "2-digit", minute: "2-digit" })}`);
+      }
+
+      renderPreview("news");
+    } catch {
+      // ignore; cache already shown
+    } finally {
+      newsLoading = false;
+    }
+  }
+
+  function loadNewsCacheFirst() {
+    const c = loadNewsCache();
+    if (c?.items?.length) {
+      lastNews = c.items;
+      renderPreview("news");
+    }
+  }
+
+  function renderNews({ fast = false } = {}) {
+    sheetTitle.textContent = "Nyheter";
+    sheetContent.innerHTML = `
+      <ul id="newsList" class="miniList"></ul>
+      <div id="newsMeta" class="miniHint" style="margin-top:8px;">Laddar…</div>
+    `;
+
+    const c = loadNewsCache();
+    if (c?.items?.length) {
+      lastNews = c.items;
+      renderNewsList(c.items, `Cache: ${new Date(c.updatedAt).toLocaleString("sv-SE", { hour:"2-digit", minute:"2-digit" })}`);
+      refreshNewsBackground();
+      return;
+    }
+
+    if (!fast) refreshNewsBackground();
+    else setTimeout(refreshNewsBackground, 0);
+  }
+
+  setInterval(refreshNewsBackground, 10 * 60 * 1000);
+
+  /* =========================
+     STOCKS (placeholder)
+  ========================= */
   function renderStocks() {
     sheetTitle.textContent = "Aktier";
     sheetContent.innerHTML = `
@@ -759,6 +1016,9 @@
     `;
   }
 
+  /* =========================
+     TIMER VIEW
+  ========================= */
   function renderTimer() {
     sheetTitle.textContent = "Timer";
     sheetContent.innerHTML = `
@@ -772,6 +1032,7 @@
           <button class="timerBtn" data-min="30">30</button>
           <button class="timerBtn timerBtnReset" id="tReset">Reset</button>
         </div>
+        <div class="miniHint">När timer går: Siri-lik puls över hela skärmen</div>
       </div>
     `;
 
@@ -781,6 +1042,9 @@
     document.getElementById("tReset")?.addEventListener("click", resetTimer);
   }
 
+  /* =========================
+     VIEW SWITCH
+  ========================= */
   function renderView(id, { fast = false } = {}) {
     if (id === "calendar") return renderCalendar();
     if (id === "prio")     return renderList("prio", "Prios", true);
@@ -793,9 +1057,15 @@
     if (id === "timer")    return renderTimer();
   }
 
-  // INIT
+  /* =========================
+     INIT
+  ========================= */
   setRotation(0);
   updateWheelTimerProgress();
+
+  loadNewsCacheFirst();
+  refreshNewsBackground();
+
   renderPreview(VIEW_DEFS[0].id);
 
 })();

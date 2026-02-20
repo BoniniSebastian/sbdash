@@ -374,7 +374,7 @@ body.sheetOpen .wheelWrap{
 .calScale{
   width:100%;
   position:relative;
-  border-radius: 18px;
+  border-radius: 28px;
   overflow:hidden;
   border: 1px solid rgba(255,255,255,.10);
   background: rgba(0,0,0,.12);

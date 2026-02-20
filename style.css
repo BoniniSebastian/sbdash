@@ -140,7 +140,7 @@ body.sheetOpen .startIconWrap{
   right: 14px;
 
   /* här är “gamla storleken”: upp mot toppen, men lämna plats för wheel */
-  top: 110px;
+  top: 10px;
   bottom: calc(22px + env(safe-area-inset-bottom) + 240px);
 
   border-radius: 28px;

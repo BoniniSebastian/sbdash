@@ -1,5 +1,7 @@
 Här är hela app.js igen (komplett fil). Ersätt allt i din nuvarande app.js med detta:
 
+alert("app.js loaded");
+
 /* =========================
    SB Dash – app.js (FULL)
    - Wheel navigation + full-height sheet (behind wheel)

@@ -79,7 +79,7 @@ body.sheetOpen .previewWrap{
 }
 
 .previewCard{
-  border-radius: var(--r);
+  border-radius: fixed);
   background: linear-gradient(180deg, rgba(0,220,255,.10), rgba(255,255,255,.04));
   border: 1px solid var(--stroke);
   box-shadow: var(--shadow);

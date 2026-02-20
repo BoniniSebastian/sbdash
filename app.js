@@ -1,4 +1,4 @@
-alert("app.js loaded");
+console.log("SB Dash boot OK");
 
 /* =========================
    SB Dash – app.js (FULL)

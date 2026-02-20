@@ -1,4 +1,4 @@
-console.log("SB Dash boot OK");
+
 
 /* =========================
    SB Dash – app.js (FULL)

@@ -106,13 +106,13 @@ const prev = VIEW_DEFS[prevIndex].label;   // <-- ska ner
 
   if (!wheelCenterText) return;
 
-  wheelCenterText.innerHTML = `
-    <div class="wheelNav">
-      <div class="navPrev">${prev}</div>
-      <div class="navActive">${active}</div>
-      <div class="navNext">${next}</div>
-    </div>
-  `;
+ wheelCenterText.innerHTML = `
+  <div class="wheelNav">
+    <div class="navPrev">${next}</div>
+    <div class="navActive">${active}</div>
+    <div class="navNext">${prev}</div>
+  </div>
+`;
 }
 
   function setStartIcon(src) {

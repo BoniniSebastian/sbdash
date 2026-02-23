@@ -782,17 +782,17 @@
     });
   }
 
-  /* =========================
-     CALENDAR
-  ========================= */
-  const CAL_SRC =
-    "https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0";
+/* =========================
+   CALENDAR
+========================= */
+const CAL_SRC =
+  "https://calendar.google.com/calendar/embed?src=ZXJpY3Nzb25ib25pbmlAZ21haWwuY29t&mode=AGENDA&ctz=Europe%2FStockholm&hl=sv&bgcolor=%230b1118&showTitle=0&showTabs=0&showNav=0&showPrint=0&showCalendars=0&showDate=0";
 
 function renderCalendar() {
   sheetTitle.textContent = "Kalender";
   sheetContent.innerHTML = `
     <div class="calendarWrap">
-      <iframe src="${CAL_SRC}" loading="lazy"></iframe>
+      <iframe src="${CAL_SRC}" loading="lazy" scrolling="no"></iframe>
     </div>
   `;
 }
@@ -1068,5 +1068,6 @@ function renderCalendar() {
   refreshNewsBackground();
 
   renderPreview(VIEW_DEFS[0].id);
+   
 
 })();

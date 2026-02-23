@@ -1226,28 +1226,40 @@ async function renderWeather() {
   /* =========================
      TIMER VIEW
   ========================= */
-  function renderTimer() {
-    sheetTitle.textContent = "Timer";
-    sheetContent.innerHTML = `
-      <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
-        <div id="timerBig" style="font-size:52px; font-weight:900; letter-spacing:.06em;">${timerText()}</div>
-        <div class="timerBtns">
-          <button class="timerBtn" data-min="1">1</button>
-          <button class="timerBtn" data-min="5">5</button>
-          <button class="timerBtn" data-min="10">10</button>
-          <button class="timerBtn" data-min="15">15</button>
-          <button class="timerBtn" data-min="30">30</button>
-          <button class="timerBtn timerBtnReset" id="tReset">Reset</button>
-        </div>
-        <div class="miniHint">När timer går: Siri-lik puls över hela skärmen</div>
+ function renderTimer() {
+  sheetTitle.textContent = "Timer";
+  sheetContent.innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
+      <div id="timerBig" style="font-size:52px; font-weight:900; letter-spacing:.06em;">${timerText()}</div>
+      <div class="timerBtns">
+        <button class="timerBtn" data-min="1">1</button>
+        <button class="timerBtn" data-min="5">5</button>
+        <button class="timerBtn" data-min="10">10</button>
+        <button class="timerBtn" data-min="15">15</button>
+        <button class="timerBtn" data-min="30">30</button>
+        <button class="timerBtn timerBtnReset" data-action="reset">Reset</button>
       </div>
-    `;
+      <div class="miniHint">När timer går: Siri-lik puls över hela skärmen</div>
+    </div>
+  `;
 
-    sheetContent.querySelectorAll("[data-min]").forEach(btn => {
-      btn.addEventListener("click", () => setTimerMinutesAndStart(btn.dataset.min));
-    });
-    document.getElementById("tReset")?.addEventListener("click", resetTimer);
-  }
+  // Bombsäker click-hantering (fungerar alltid)
+  sheetContent.onclick = (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+
+    const min = btn.getAttribute("data-min");
+    if (min) {
+      console.log("TIMER CLICK:", min);     // <-- debug
+      setTimerMinutesAndStart(min);
+      return;
+    }
+    if (btn.getAttribute("data-action") === "reset") {
+      console.log("TIMER RESET");          // <-- debug
+      resetTimer();
+    }
+  };
+}
 
   /* =========================
      VIEW SWITCH

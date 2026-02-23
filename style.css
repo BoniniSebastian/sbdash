@@ -579,3 +579,27 @@ body.sheetOpen .wheelWrap{
 .weatherCard[data-theme="storm"]{
   background: linear-gradient(135deg, rgba(180,90,255,.16), rgba(11,17,24,.7));
 }
+.wheelNav{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  pointer-events:none;
+  user-select:none;
+}
+
+.navPrev,
+.navNext{
+  font-size:11px;
+  opacity:.35;
+  letter-spacing:.18em;
+  transform:scale(.85);
+}
+
+.navActive{
+  font-size:18px;
+  font-weight:900;
+  letter-spacing:.18em;
+  margin:4px 0;
+}

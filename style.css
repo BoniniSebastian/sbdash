@@ -429,3 +429,7 @@ body.sheetOpen .wheelWrap{
   height: 100%;
   border: 0;
 }
+
+.sheetContent{
+  padding: 0 !important;
+}

@@ -116,17 +116,18 @@ body.sheetOpen .previewWrap{
   position:absolute;
   left:0;
   right:0;
-  top:50%;
-  transform: translateY(-55%);
+
+  /* ytan ovanför hjulet */
+  top: 0;
+  bottom: calc(var(--wheelH) + env(safe-area-inset-bottom) + 12px);
+
   display:flex;
   justify-content:center;
+  align-items:center;
+
   z-index:4;
   pointer-events:none;
   transition:.20s ease;
-}
-body.sheetOpen .startIconWrap{
-  opacity:0;
-  transform: translateY(-18px);
 }
 
 .startIcon{

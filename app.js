@@ -1058,11 +1058,11 @@ async function renderWeather() {
   ========================= */
   const RSS_URL_BASE = "https://news.google.com/rss?hl=sv&gl=SE&ceid=SE:sv";
 
-  const PROXIES = [
-    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-    (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//, "")}`,
-    (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
-  ];
+ const PROXIES = [
+  // Jina funkar ofta men kan ibland ge 451. Vi kör både https och http-varianter.
+  (u) => `https://r.jina.ai/https://${u.replace(/^https?:\/\//, "")}`,
+  (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//, "")}`,
+];
 
   function saveNewsCache(items) {
     try { localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify({ updatedAt: Date.now(), items })); } catch {}

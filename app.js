@@ -96,9 +96,24 @@
     return ((raw % VIEW_DEFS.length) + VIEW_DEFS.length) % VIEW_DEFS.length;
   }
 
-  function setWheelCenterText(text) {
-    if (wheelCenterText) wheelCenterText.textContent = text || "—";
-  }
+ function renderWheelNav() {
+  const prevIndex = (activeIndex - 1 + VIEW_DEFS.length) % VIEW_DEFS.length;
+  const nextIndex = (activeIndex + 1) % VIEW_DEFS.length;
+
+  const prev = VIEW_DEFS[prevIndex].label;
+  const active = VIEW_DEFS[activeIndex].label;
+  const next = VIEW_DEFS[nextIndex].label;
+
+  if (!wheelCenterText) return;
+
+  wheelCenterText.innerHTML = `
+    <div class="wheelNav">
+      <div class="navPrev">${prev}</div>
+      <div class="navActive">${active}</div>
+      <div class="navNext">${next}</div>
+    </div>
+  `;
+}
 
   function setStartIcon(src) {
     if (startIcon && src) startIcon.src = src;
@@ -266,7 +281,7 @@
     if (idx !== activeIndex) {
       activeIndex = idx;
       const v = VIEW_DEFS[activeIndex];
-      setWheelCenterText(v.label);
+      renderWheelNav();
       setStartIcon(v.icon);
       renderPreview(v.id);
 

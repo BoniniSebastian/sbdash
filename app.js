@@ -97,12 +97,12 @@
   }
 
  function renderWheelNav() {
-  const prevIndex = (activeIndex - 1 + VIEW_DEFS.length) % VIEW_DEFS.length;
   const nextIndex = (activeIndex + 1) % VIEW_DEFS.length;
+const prevIndex = (activeIndex - 1 + VIEW_DEFS.length) % VIEW_DEFS.length;
 
-  const prev = VIEW_DEFS[prevIndex].label;
-  const active = VIEW_DEFS[activeIndex].label;
-  const next = VIEW_DEFS[nextIndex].label;
+const next = VIEW_DEFS[nextIndex].label;   // <-- ska upp
+const active = VIEW_DEFS[activeIndex].label;
+const prev = VIEW_DEFS[prevIndex].label;   // <-- ska ner
 
   if (!wheelCenterText) return;
 

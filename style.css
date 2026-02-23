@@ -9,6 +9,7 @@
   --cyan: rgba(0,209,255,.95);
   --shadow: 0 18px 60px rgba(0,0,0,.55);
   --r: 22px;
+  --wheelH: 300px;
 }
 
 *{ box-sizing:border-box; }
@@ -59,8 +60,18 @@ input, textarea, button { font-size:16px; }
 .shell{
   position:fixed;
   inset:84px 0 0 0;
-  padding: 10px 14px 14px 14px;
+
+  padding:
+    10px
+    14px
+    calc(14px + var(--wheelH) + env(safe-area-inset-bottom))
+    14px;
+
   overflow:hidden;
+
+  height: 100vh;   /* fallback */
+  height: 100svh;  /* safari */
+  height: 100dvh;  /* modern */
 }
 
 /* ================= PREVIEW ================= */
@@ -103,13 +114,15 @@ body.sheetOpen .previewWrap{
 /* ================= START ICON ================= */
 .startIconWrap{
   position:absolute;
-  left:0; right:0;
-  top: 175px;
+  left:0;
+  right:0;
+  top:50%;
+  transform: translateY(-55%);
   display:flex;
   justify-content:center;
   z-index:4;
   pointer-events:none;
-  transition: .20s ease;
+  transition:.20s ease;
 }
 body.sheetOpen .startIconWrap{
   opacity:0;
@@ -602,4 +615,8 @@ body.sheetOpen .wheelWrap{
   font-weight:900;
   letter-spacing:.18em;
   margin:4px 0;
+}
+html, body{
+  height:100%;
+  min-height:100%;
 }

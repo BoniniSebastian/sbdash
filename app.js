@@ -160,24 +160,86 @@ const prev = VIEW_DEFS[prevIndex].label;   // <-- ska ner
     return m[code] || `Väderkod ${code}`;
   }
 
-  /* =========================
-     TIMER STATE
-  ========================= */
-  const TIMER = {
-    total: 5 * 60,
-    left:  5 * 60,
-    running: false,
-    t0: 0,
-    pausedLeft: 5 * 60,
-    raf: 0
-  };
+ /* =========================
+   TIMER (STABIL – funkar på desktop)
+========================= */
+const TIMER = {
+  total: 5 * 60,
+  left:  5 * 60,
+  running: false,
+  endAt: 0,
+  intervalId: 0,
+};
 
-  function timerText() {
-    const safe = Math.max(0, TIMER.left);
-    const mm = Math.floor(safe / 60);
-    const ss = safe % 60;
-    return `${pad2(mm)}:${pad2(ss)}`;
+function timerText() {
+  const safe = Math.max(0, Math.floor(TIMER.left));
+  const mm = Math.floor(safe / 60);
+  const ss = safe % 60;
+  return `${pad2(mm)}:${pad2(ss)}`;
+}
+
+function stopTimerInternal() {
+  TIMER.running = false;
+  if (TIMER.intervalId) {
+    clearInterval(TIMER.intervalId);
+    TIMER.intervalId = 0;
   }
+  document.body.classList.remove("timerRunning");
+  ensureFullscreenPulse(false);
+}
+
+function tickTimer() {
+  if (!TIMER.running) return;
+
+  const now = Date.now();
+  const left = Math.max(0, Math.ceil((TIMER.endAt - now) / 1000));
+  TIMER.left = left;
+
+  updateWheelTimerProgress();
+  renderPreview("timer");
+
+  const big = document.getElementById("timerBig");
+  if (big) big.textContent = timerText();
+
+  if (left <= 0) {
+    stopTimerInternal();
+    updateWheelTimerProgress();
+    alarm();               // <- ljud (om du har alarm() kvar)
+    renderPreview("timer");
+  }
+}
+
+function setTimerMinutesAndStart(min) {
+  const m = Number(min);
+  if (!Number.isFinite(m) || m <= 0) return;
+
+  stopTimerInternal();
+
+  TIMER.total = Math.round(m * 60);
+  TIMER.left = TIMER.total;
+  TIMER.endAt = Date.now() + TIMER.total * 1000;
+  TIMER.running = true;
+
+  document.body.classList.add("timerRunning");
+  ensureFullscreenPulse(true);
+
+  // tick direkt + sen intervall
+  tickTimer();
+  TIMER.intervalId = setInterval(tickTimer, 250);
+
+  updateWheelTimerProgress();
+  renderPreview("timer");
+}
+
+function resetTimer() {
+  stopTimerInternal();
+  TIMER.left = TIMER.total;
+  updateWheelTimerProgress();
+  renderPreview("timer");
+
+  const big = document.getElementById("timerBig");
+  if (big) big.textContent = timerText();
+}
 
   /* =========================
      PREVIEW

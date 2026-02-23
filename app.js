@@ -797,55 +797,169 @@ function renderCalendar() {
   `;
 }
 
-  /* =========================
-     WEATHER (Open-Meteo)
-  ========================= */
-  async function renderWeather() {
-    sheetTitle.textContent = "Väder";
-    sheetContent.innerHTML = `
-      <div class="weatherBlock">
-        <div id="wxNow" class="weatherRow">Laddar…</div>
-        <div id="wxMore" class="miniHint"></div>
-        <div style="margin-top:12px; font-weight:900;">Imorgon</div>
-        <div id="wxTom" class="miniHint" style="margin-top:6px;">—</div>
+ /* =========================
+   WEATHER (Open-Meteo)
+========================= */
+function fmtHour(iso){
+  const d = new Date(iso);
+  return d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+}
+
+function wmoToText(code){
+  if (code === 0) return "Klart";
+  if ([1,2].includes(code)) return "Mest klart";
+  if (code === 3) return "Molnigt";
+  if ([45,48].includes(code)) return "Dimma";
+  if ([51,53,55].includes(code)) return "Duggregn";
+  if ([61,63,65].includes(code)) return "Regn";
+  if ([66,67].includes(code)) return "Underkylt regn";
+  if ([71,73,75,77].includes(code)) return "Snö";
+  if ([80,81,82].includes(code)) return "Skurar";
+  if ([85,86].includes(code)) return "Snöbyar";
+  if ([95,96,99].includes(code)) return "Åska";
+  return "Väder";
+}
+
+function wmoToIcon(code){
+  if (code === 0) return "☀️";
+  if ([1,2].includes(code)) return "🌤️";
+  if (code === 3) return "☁️";
+  if ([45,48].includes(code)) return "🌫️";
+  if ([51,53,55].includes(code)) return "🌦️";
+  if ([61,63,65,80,81,82].includes(code)) return "🌧️";
+  if ([66,67].includes(code)) return "🧊🌧️";
+  if ([71,73,75,77,85,86].includes(code)) return "❄️";
+  if ([95,96,99].includes(code)) return "⛈️";
+  return "🌡️";
+}
+
+function wmoToTheme(code){
+  if (code === 0) return "sun";
+  if ([1,2,3,45,48].includes(code)) return "cloud";
+  if ([51,53,55,61,63,65,66,67,80,81,82].includes(code)) return "rain";
+  if ([71,73,75,77,85,86].includes(code)) return "snow";
+  if ([95,96,99].includes(code)) return "storm";
+  return "cloud";
+}
+
+async function renderWeather() {
+  const lat = 59.3293, lon = 18.0686;
+
+  const url =
+    `https://api.open-meteo.com/v1/forecast` +
+    `?latitude=${lat}&longitude=${lon}` +
+    `&current=temperature_2m,apparent_temperature,wind_speed_10m,weather_code` +
+    `&hourly=temperature_2m,precipitation_probability,precipitation,weather_code` +
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
+    `&forecast_days=2` +
+    `&timezone=Europe%2FStockholm`;
+
+  sheetTitle.textContent = "Väder";
+  sheetContent.innerHTML = `
+    <div class="weatherCard" data-theme="cloud">
+      <div class="weatherTop">
+        <div class="weatherNow">
+          <div class="weatherTemp">—°</div>
+          <div class="weatherDesc">Laddar…</div>
+        </div>
+        <div class="weatherIconBig">🌡️</div>
       </div>
-    `;
 
-    const lat = 59.3293, lon = 18.0686;
-    const url =
-      `https://api.open-meteo.com/v1/forecast` +
-      `?latitude=${lat}&longitude=${lon}` +
-      `&current=temperature_2m,wind_speed_10m,weather_code` +
-      `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
-      `&forecast_days=2` +
-      `&timezone=Europe%2FStockholm`;
+      <div class="weatherMetaRow">
+        <div class="weatherPill"><div class="k">Känns som</div><div class="v">—°</div></div>
+        <div class="weatherPill"><div class="k">Vind</div><div class="v">— m/s</div></div>
+        <div class="weatherPill"><div class="k">Nederbörd (nästa)</div><div class="v">— mm</div></div>
+        <div class="weatherPill"><div class="k">Regnrisk (nästa)</div><div class="v">—%</div></div>
+      </div>
 
-    try {
-      const r = await fetch(url, { cache: "no-store" });
-      const data = await r.json();
-      lastWeather = data;
+      <div class="weatherHours" aria-label="Kommande timmar"></div>
 
-      const t = Math.round(data.current.temperature_2m);
-      const w = Math.round(data.current.wind_speed_10m);
-      const code = data.current.weather_code;
+      <div class="miniHint" style="margin-top:14px; opacity:.85;">
+        Idag: <b id="wxTodayRange">—</b> • <span id="wxTodayText">—</span><br/>
+        Imorgon: <b id="wxTomRange">—</b> • <span id="wxTomText">—</span>
+      </div>
+    </div>
+  `;
 
-      const tmax = Math.round(data.daily.temperature_2m_max[0]);
-      const tmin = Math.round(data.daily.temperature_2m_min[0]);
+  try {
+    const r = await fetch(url, { cache: "no-store" });
+    const data = await r.json();
+    lastWeather = data;
 
-      const tomMax = Math.round(data.daily.temperature_2m_max[1]);
-      const tomMin = Math.round(data.daily.temperature_2m_min[1]);
-      const tomCode = data.daily.weather_code[1];
+    const cur = data.current;
+    const t = Math.round(cur.temperature_2m);
+    const feels = Math.round(cur.apparent_temperature);
+    const w = Math.round(cur.wind_speed_10m);
+    const code = Number(cur.weather_code);
 
-      $("wxNow").innerHTML = `<div>Nu: <b>${t}°</b></div><div>Vind: <b>${w} m/s</b></div>`;
-      $("wxMore").innerHTML = `Idag: <b>${tmin}°</b> – <b>${tmax}°</b> • ${wxText(code)}`;
-      $("wxTom").innerHTML = `${wxText(tomCode)} • ${tomMin}° – ${tomMax}°`;
+    const tmax = Math.round(data.daily.temperature_2m_max[0]);
+    const tmin = Math.round(data.daily.temperature_2m_min[0]);
+    const tomMax = Math.round(data.daily.temperature_2m_max[1]);
+    const tomMin = Math.round(data.daily.temperature_2m_min[1]);
+    const tomCode = Number(data.daily.weather_code[1]);
 
-      renderPreview("weather");
-    } catch {
-      const el = $("wxNow");
-      if (el) el.textContent = "Kunde inte hämta väder.";
+    const times = data.hourly.time;
+    const temps = data.hourly.temperature_2m;
+    const pop = data.hourly.precipitation_probability;
+    const mm = data.hourly.precipitation;
+
+    const now = Date.now();
+    let start = 0;
+    for (let i = 0; i < times.length; i++) {
+      if (new Date(times[i]).getTime() >= now) { start = i; break; }
     }
+
+    const next = [];
+    for (let i = start; i < Math.min(times.length, start + 6); i++) {
+      next.push({
+        time: times[i],
+        temp: Math.round(temps[i]),
+        pop: pop?.[i] ?? null,
+        mm: mm?.[i] ?? null,
+      });
+    }
+
+    const card = sheetContent.querySelector(".weatherCard");
+    const iconEl = sheetContent.querySelector(".weatherIconBig");
+    const tempEl = sheetContent.querySelector(".weatherTemp");
+    const descEl = sheetContent.querySelector(".weatherDesc");
+    const pills = sheetContent.querySelectorAll(".weatherPill .v");
+
+    card.setAttribute("data-theme", wmoToTheme(code));
+    iconEl.textContent = wmoToIcon(code);
+    tempEl.textContent = `${t}°`;
+
+    // Om du har wxText() i din app, använd den. Annars wmoToText()
+    const txt = (typeof wxText === "function") ? wxText(code) : wmoToText(code);
+    descEl.textContent = txt;
+
+    if (pills[0]) pills[0].textContent = `${feels}°`;
+    if (pills[1]) pills[1].textContent = `${w} m/s`;
+    if (pills[2]) pills[2].textContent = `${(next[0]?.mm ?? "—")} mm`;
+    if (pills[3]) pills[3].textContent = `${(next[0]?.pop ?? "—")}%`;
+
+    const hoursWrap = sheetContent.querySelector(".weatherHours");
+    hoursWrap.innerHTML = next.map(x => `
+      <div class="weatherHour">
+        <div class="t">${fmtHour(x.time)}</div>
+        <div class="temp">${x.temp}°</div>
+        <div class="t">${(x.pop ?? "—")}%</div>
+      </div>
+    `).join("");
+
+    $("wxTodayRange").innerHTML = `${tmin}° – ${tmax}°`;
+    $("wxTodayText").innerHTML = txt;
+
+    const txtTom = (typeof wxText === "function") ? wxText(tomCode) : wmoToText(tomCode);
+    $("wxTomRange").innerHTML = `${tomMin}° – ${tomMax}°`;
+    $("wxTomText").innerHTML = txtTom;
+
+    renderPreview("weather");
+  } catch {
+    const el = sheetContent.querySelector(".weatherDesc");
+    if (el) el.textContent = "Kunde inte hämta väder.";
   }
+}
 
   /* =========================
      NEWS (cache-first + bg refresh)

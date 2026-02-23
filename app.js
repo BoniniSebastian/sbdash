@@ -24,6 +24,22 @@
   const previewTitle = $("previewTitle");
   const previewBody = $("previewBody");
   const startIcon = $("startIcon");
+   const wheelWrap = $("wheelWrap");
+   /* =========================
+   RESPONSIVE: wheel height -> CSS var
+========================= */
+function updateWheelCssVars() {
+  const el = wheelWrap || document.getElementById("wheelWrap");
+  if (!el) return;
+
+  const h = Math.round(el.getBoundingClientRect().height || 300);
+  document.documentElement.style.setProperty("--wheelH", `${h}px`);
+}
+
+updateWheelCssVars();
+window.addEventListener("resize", updateWheelCssVars, { passive: true });
+window.addEventListener("orientationchange", updateWheelCssVars, { passive: true });
+setTimeout(updateWheelCssVars, 200);
 
   function clamp01(x) { return Math.max(0, Math.min(1, x)); }
   function pad2(n) { return String(n).padStart(2, "0"); }
@@ -1189,6 +1205,7 @@ async function renderWeather() {
   /* =========================
      INIT
   ========================= */
+updateWheelCssVars();
   setRotation(0);
   updateWheelTimerProgress();
 

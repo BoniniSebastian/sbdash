@@ -1144,14 +1144,91 @@ async function renderWeather() {
   setInterval(refreshNewsBackground, 10 * 60 * 1000);
 
   /* =========================
-     STOCKS (placeholder)
-  ========================= */
-  function renderStocks() {
-    sheetTitle.textContent = "Aktier";
-    sheetContent.innerHTML = `
-      <div class="miniHint">Här kan vi lägga TradingView widgets.</div>
+   STOCKS (tabs + lazy render)
+========================= */
+let stocksTab = "chart"; // default
+
+function renderStocks() {
+  sheetTitle.textContent = "Aktier";
+
+  sheetContent.innerHTML = `
+    <div class="stTabs">
+      <button class="stTab" data-tab="chart">Chart</button>
+      <button class="stTab" data-tab="tape">Tape</button>
+      <button class="stTab" data-tab="links">Links</button>
+    </div>
+    <div class="stPane" id="stPane"></div>
+  `;
+
+  const pane = document.getElementById("stPane");
+
+  const draw = () => {
+    // markera aktiv tab
+    sheetContent.querySelectorAll(".stTab").forEach(b => {
+      b.classList.toggle("active", b.dataset.tab === stocksTab);
+    });
+
+    // IMPORTANT: rendera bara EN pane åt gången (max 1 iframe)
+    if (stocksTab === "chart") {
+      // Exempel: TradingView Advanced Chart (1 iframe)
+      // Byt symbol / inställningar senare.
+      pane.innerHTML = `
+        <div class="miniHint" style="margin-bottom:10px;">
+          1 iframe åt gången (bäst prestanda på iPhone).
+        </div>
+        <iframe
+          class="stFrame"
+          loading="lazy"
+          src="https://s.tradingview.com/widgetembed/?frameElementId=tv_chart&symbol=NASDAQ%3AAAPL&interval=D&hidesidetoolbar=1&symboledit=1&saveimage=0&toolbarbg=0b1118&studies=%5B%5D&theme=dark&style=1&timezone=Europe%2FStockholm&withdateranges=1&hidevolume=0&hidelegend=1&allow_symbol_change=1"
+        ></iframe>
+      `;
+      return;
+    }
+
+    if (stocksTab === "tape") {
+      // Lättare widget (ticker tape) – fortfarande iframe men “billigare”
+      pane.innerHTML = `
+        <div class="miniHint" style="margin-bottom:10px;">Snabb överblick.</div>
+        <iframe
+          class="stFrame"
+          style="height:140px;"
+          loading="lazy"
+          src="https://s.tradingview.com/embed-widget/ticker-tape/?locale=sv#%7B%22symbols%22%3A%5B%7B%22proName%22%3A%22NASDAQ%3AAAPL%22%2C%22title%22%3A%22Apple%22%7D%2C%7B%22proName%22%3A%22NASDAQ%3ATSLA%22%2C%22title%22%3A%22Tesla%22%7D%2C%7B%22proName%22%3A%22FOREXCOM%3ASPXUSD%22%2C%22title%22%3A%22S%26P%20500%22%7D%2C%7B%22proName%22%3A%22TVC%3AVIX%22%2C%22title%22%3A%22VIX%22%7D%2C%7B%22proName%22%3A%22OANDA%3AXAUUSD%22%2C%22title%22%3A%22Gold%22%7D%5D%2C%22showSymbolLogo%22%3Atrue%2C%22colorTheme%22%3A%22dark%22%2C%22isTransparent%22%3Atrue%2C%22displayMode%22%3A%22adaptive%22%2C%22largeChartUrl%22%3A%22%22%7D"
+        ></iframe>
+      `;
+      return;
+    }
+
+    // links (helt utan iframe -> snabbast)
+    pane.innerHTML = `
+      <div class="miniHint" style="margin-bottom:10px;">Snabbaste läget (ingen widget).</div>
+      <ul class="miniList">
+        <li class="miniRow">
+          <div class="miniRowLeft"><a href="https://www.tradingview.com/markets/" target="_blank" rel="noopener noreferrer" style="color:var(--text); text-decoration:none; font-weight:900;">TradingView Markets</a></div>
+          <div class="miniMeta">↗</div>
+        </li>
+        <li class="miniRow">
+          <div class="miniRowLeft"><a href="https://www.tradingview.com/symbols/NASDAQ-AAPL/" target="_blank" rel="noopener noreferrer" style="color:var(--text); text-decoration:none; font-weight:900;">AAPL</a></div>
+          <div class="miniMeta">↗</div>
+        </li>
+        <li class="miniRow">
+          <div class="miniRowLeft"><a href="https://www.tradingview.com/symbols/NASDAQ-TSLA/" target="_blank" rel="noopener noreferrer" style="color:var(--text); text-decoration:none; font-weight:900;">TSLA</a></div>
+          <div class="miniMeta">↗</div>
+        </li>
+      </ul>
     `;
-  }
+  };
+
+  // klick på tabs
+  sheetContent.querySelector(".stTabs").addEventListener("click", (e) => {
+    const btn = e.target.closest(".stTab");
+    if (!btn) return;
+    stocksTab = btn.dataset.tab;
+    draw();
+  });
+
+  draw();
+}
 
   /* =========================
      TIMER VIEW

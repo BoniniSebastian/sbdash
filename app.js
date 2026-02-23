@@ -274,25 +274,24 @@
   }
 
   function setRotation(deg) {
-    rotationDeg = deg;
-    if (wheelRing) wheelRing.style.transform = `rotate(${deg}deg)`;
+  rotationDeg = deg;
+  if (wheelRing) wheelRing.style.transform = `rotate(${deg}deg)`;
 
-    const idx = sectorFromDeg(deg);
-    if (idx !== activeIndex) {
-      activeIndex = idx;
-      const v = VIEW_DEFS[activeIndex];
-      renderWheelNav();
-      setStartIcon(v.icon);
-      renderPreview(v.id);
+  const idx = sectorFromDeg(deg);
+  if (idx !== activeIndex) {
+    activeIndex = idx;
+    const v = VIEW_DEFS[activeIndex];
+    renderWheelNav();
+    setStartIcon(v.icon);
+    renderPreview(v.id);
 
-      if (document.body.classList.contains("sheetOpen")) {
-        renderView(v.id, { fast: true });
-      }
-    } else {
-      const v = VIEW_DEFS[activeIndex];
-      setWheelCenterText(v.label);
+    if (document.body.classList.contains("sheetOpen")) {
+      renderView(v.id, { fast: true });
     }
+  } else {
+    renderWheelNav(); // <-- viktigt
   }
+}
 
   wheel?.addEventListener("pointerdown", (e) => {
     dragging = true;

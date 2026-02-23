@@ -154,7 +154,7 @@ body.sheetOpen .startIconWrap{
 
   /* här är “gamla storleken”: upp mot toppen, men lämna plats för wheel */
   top: 10px;
-  bottom: calc(22px + env(safe-area-inset-bottom) + 240px);
+  bottom: calc(22px + env(safe-area-inset-bottom) + var(--wheelH));
 
   border-radius: 28px;
   background: linear-gradient(180deg, rgba(0,220,255,.10), rgba(255,255,255,.05));
@@ -425,27 +425,7 @@ body.sheetOpen .wheelWrap{
   cursor:pointer;
 }
 
-/* Google Calendar wrapper – rundade hörn */
-.calendarWrap{
-  position: relative;
-  width: 100%;
-  height: 75vh;        /* justera vid behov */
-  border-radius: 32px; /* rundning */
-  overflow: hidden;    /* KLIPPER iframe till rundade hörn */
-  background: #fff;    /* gör hörnen rena */
-}
 
-.calendarWrap iframe{
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border: 0;
-}
-
-.sheetContent{
-  padding: 0 !important;
-}
 /* =========================
    GOOGLE CALENDAR
 ========================= */

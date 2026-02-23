@@ -10,6 +10,7 @@
   --shadow: 0 18px 60px rgba(0,0,0,.55);
   --r: 22px;
   --wheelH: 300px;
+  --topH: 84px;
 }
 
 *{ box-sizing:border-box; }
@@ -33,13 +34,17 @@ input, textarea, button { font-size:16px; }
 .topbar{
   position:fixed;
   inset:0 0 auto 0;
-  height:84px;
-  padding: 14px 16px calc(10px + env(safe-area-inset-top)) 16px;
+
+  height: calc(var(--topH) + env(safe-area-inset-top));
+
+  padding: calc(14px + env(safe-area-inset-top)) 16px 10px 16px;
+
   display:flex;
   align-items:flex-end;
   justify-content:space-between;
   gap:12px;
   z-index:50;
+
   background: linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,0));
 }
 
@@ -59,7 +64,7 @@ input, textarea, button { font-size:16px; }
 /* ================= SHELL ================= */
 .shell{
   position:fixed;
-  inset:84px 0 0 0;
+  inset: calc(var(--topH) + env(safe-area-inset-top)) 0 0 0;
 
   padding:
     10px

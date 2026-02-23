@@ -522,77 +522,7 @@ function resetTimer() {
     beepFallback();
   }
 
-  function setTimerMinutesAndStart(min) {
-    const m = Number(min);
-    if (!Number.isFinite(m) || m <= 0) return;
-
-    TIMER.running = false;
-    cancelAnimationFrame(TIMER.raf);
-
-    TIMER.total = Math.round(m * 60);
-    TIMER.left = TIMER.total;
-    TIMER.pausedLeft = TIMER.left;
-
-    TIMER.running = true;
-    TIMER.t0 = performance.now();
-
-    document.body.classList.add("timerRunning");
-    ensureFullscreenPulse(true);
-
-    cancelAnimationFrame(TIMER.raf);
-    TIMER.raf = requestAnimationFrame(timerLoop);
-
-    updateWheelTimerProgress();
-    renderPreview("timer");
-
-    const big = document.getElementById("timerBig");
-    if (big) big.textContent = timerText();
-  }
-
-  function resetTimer() {
-    TIMER.running = false;
-    cancelAnimationFrame(TIMER.raf);
-
-    TIMER.left = TIMER.total;
-    TIMER.pausedLeft = TIMER.left;
-
-    document.body.classList.remove("timerRunning");
-    ensureFullscreenPulse(false);
-
-    updateWheelTimerProgress();
-    renderPreview("timer");
-
-    const big = document.getElementById("timerBig");
-    if (big) big.textContent = timerText();
-  }
-
-  function timerLoop() {
-    if (!TIMER.running) return;
-
-    const elapsed = (performance.now() - TIMER.t0) / 1000;
-    TIMER.left = Math.max(0, Math.floor(TIMER.pausedLeft - elapsed));
-
-    updateWheelTimerProgress();
-    renderPreview("timer");
-
-    const big = document.getElementById("timerBig");
-    if (big) big.textContent = timerText();
-
-    if (TIMER.left <= 0) {
-      TIMER.running = false;
-      cancelAnimationFrame(TIMER.raf);
-
-      document.body.classList.remove("timerRunning");
-      ensureFullscreenPulse(false);
-
-      updateWheelTimerProgress();
-      alarm();
-      renderPreview("timer");
-      return;
-    }
-
-    TIMER.raf = requestAnimationFrame(timerLoop);
-  }
+ 
 
   /* =========================
      DONE + RESTORE
